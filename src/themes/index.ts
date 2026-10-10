@@ -45,7 +45,6 @@ export type Theme = {
   decor: 'stars' | 'orb' | 'none';
   tagline: 'moon' | 'streak' | 'none';
   romanDays: boolean;
-  greetingSuffix?: string;
 };
 
 const inter = {
@@ -248,7 +247,6 @@ export const themes: Theme[] = [
     decor: 'none',
     tagline: 'none',
     romanDays: false,
-    greetingSuffix: 'babe',
   },
   {
     id: 'oldmoney',

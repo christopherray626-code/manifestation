@@ -7,10 +7,10 @@ import { moonPhase } from '@/lib/moon';
 import { useStore } from '@/lib/store';
 import { dayOfGoal, todaysAffirmation } from '@/lib/today';
 
-function greeting(name: string, suffix?: string) {
+function greeting(name: string) {
   const hour = new Date().getHours();
   const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const who = name.trim() || suffix;
+  const who = name.trim();
   return who ? `${part}, ${who}` : part;
 }
 
@@ -52,7 +52,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Txt variant="muted">{greeting(settings.name, t.greetingSuffix)}</Txt>
+        <Txt variant="muted">{greeting(settings.name)}</Txt>
         <Tagline />
       </View>
       {moon && (
