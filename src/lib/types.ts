@@ -13,7 +13,7 @@ export type Affirmation = {
   recording?: string;
 };
 
-export type TapeMode = 'spoken' | 'subliminal' | 'sleep';
+export type TapeMode = 'spoken' | 'subliminal';
 export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'none';
 
 export type PlayerPrefs = {

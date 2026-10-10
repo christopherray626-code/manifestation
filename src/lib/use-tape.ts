@@ -1,4 +1,4 @@
-import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 
@@ -12,40 +12,46 @@ export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
 };
 
 /** What each mode does by default. People can still change the levels and timer after. */
-export const MODES: Record<TapeMode, { label: string; about: string; voiceVolume: number; soundVolume: number; gapMs: number; rate: number; timer: number }> = {
+export const MODES: Record<TapeMode, { label: string; about: string; voiceVolume: number; soundVolume: number; gapMs: number }> = {
   spoken: {
     label: 'Spoken',
     about: 'Your affirmations read out clearly over a soft background.',
     voiceVolume: 1,
     soundVolume: 0.35,
     gapMs: 1500,
-    rate: 0.9,
-    timer: 0,
   },
   subliminal: {
     label: 'Subliminal',
-    about: 'The voice sits far below the background, so you hear the sound, not the words.',
-    voiceVolume: 0.08,
-    soundVolume: 0.9,
-    gapMs: 300,
-    rate: 1,
-    timer: 0,
-  },
-  sleep: {
-    label: 'Sleep',
-    about: 'Slower and softer with long pauses, then fades out when the timer ends.',
-    voiceVolume: 0.5,
-    soundVolume: 0.45,
-    gapMs: 4000,
-    rate: 0.8,
-    timer: 30,
+    about: 'Your affirmations layered far below the background. You hear the sound, not the words. Set a timer to fall asleep to it.',
+    // About 30 dB under a full-volume background: present, but too quiet to make out.
+    voiceVolume: 0.03,
+    soundVolume: 1,
+    gapMs: 150,
   },
 };
 
+/** Subliminal voice levels. Both sit well below the background. */
+export const SUBLIMINAL_LEVELS = [
+  { value: 0.015, label: 'Silent' },
+  { value: 0.03, label: 'Faint' },
+];
+
+/** Overlapping voice tracks in a subliminal, each starting at a different affirmation. */
+const SUBLIMINAL_LAYERS = 3;
+
+export function modeOf(prefs: PlayerPrefs): TapeMode {
+  // Older saves may say "sleep", which became subliminal with a timer.
+  return prefs.mode in MODES ? prefs.mode : 'subliminal';
+}
+
+/** The audio file for an affirmation in this voice, if there is one. */
+export function audioFor(item: Affirmation, voice: Voice) {
+  return voice === 'my-voice' && item.recording ? recordingUri(item.recording) : undefined;
+}
+
 /*
- * The phone's built-in voices stand in until natural AI voices exist. Phones ship several,
- * so pick the most natural one of the right kind instead of bending the pitch, which is what
- * makes them sound robotic.
+ * The phone's built-in voices are the fallback for spoken tapes until natural voices exist.
+ * Pick the most natural one of the right kind rather than bending the pitch.
  */
 const FEMALE_NAMES = /samantha|ava|allison|zoe|susan|karen|moira|tessa|serena|victoria|nicky|joelle|jenny|aria|zira|female/i;
 const MALE_NAMES = /daniel|alex\b|tom\b|aaron|evan|nathan|fred|arthur|oliver|guy\b|david|mark\b|rishi|\bmale\b/i;
@@ -63,6 +69,7 @@ function pickVoice(voices: Speech.Voice[], kind: 'calm-female' | 'deep-male') {
 }
 
 const FADE_MS = 20000;
+const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
 export function useTape({
   affirmations,
@@ -73,21 +80,27 @@ export function useTape({
   voice: Voice;
   prefs: PlayerPrefs;
 }) {
+  const mode = modeOf(prefs);
   const background = useAudioPlayer(SOUNDS.pad);
-  const voicePlayer = useAudioPlayer(null);
+  const layer0 = useAudioPlayer(null);
+  const layer1 = useAudioPlayer(null);
+  const layer2 = useAudioPlayer(null);
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
   const [endsAt, setEndsAt] = useState<number | null>(null);
 
   // Each start/stop bumps the run number, so callbacks from an old run do nothing.
   const run = useRef(0);
-  const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onRecordingDone = useRef<(() => void) | null>(null);
+  const gapTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null]);
+  const onDone = useRef<((() => void) | null)[]>([null, null, null]);
   const fade = useRef<ReturnType<typeof setInterval> | null>(null);
-  const latest = useRef({ affirmations, voice, prefs });
-  latest.current = { affirmations, voice, prefs };
-
   const voiceIds = useRef<{ 'calm-female'?: string; 'deep-male'?: string }>({});
+  const latest = useRef({ affirmations, voice, prefs, mode });
+  latest.current = { affirmations, voice, prefs, mode };
+
+  const withAudio = affirmations.filter((a) => audioFor(a, voice));
+  /** Subliminals need real audio files: live phone speech can't be mixed quietly enough. */
+  const ready = mode === 'spoken' ? affirmations.length > 0 : withAudio.length > 0;
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => {});
@@ -99,15 +112,17 @@ export function useTape({
   }, []);
 
   useEffect(() => {
-    const sub = voicePlayer.addListener('playbackStatusUpdate', (status) => {
-      if (status.didJustFinish && onRecordingDone.current) {
-        const done = onRecordingDone.current;
-        onRecordingDone.current = null;
-        done();
-      }
-    });
-    return () => sub.remove();
-  }, [voicePlayer]);
+    const subs = [layer0, layer1, layer2].map((player, k) =>
+      player.addListener('playbackStatusUpdate', (status) => {
+        const done = onDone.current[k];
+        if (status.didJustFinish && done) {
+          onDone.current[k] = null;
+          done();
+        }
+      }),
+    );
+    return () => subs.forEach((s) => s.remove());
+  }, [layer0, layer1, layer2]);
 
   // Background sound: swap it when changed, keep looping.
   useEffect(() => {
@@ -125,54 +140,92 @@ export function useTape({
 
   useEffect(() => {
     if (!fade.current) background.volume = prefs.soundVolume;
-    voicePlayer.volume = prefs.voiceVolume;
-  }, [prefs.soundVolume, prefs.voiceVolume, background, voicePlayer]);
+    for (const player of [layer0, layer1, layer2]) player.volume = prefs.voiceVolume;
+  }, [prefs.soundVolume, prefs.voiceVolume, background, layer0, layer1, layer2]);
 
-  function silence() {
+  function stopVoices() {
     run.current++;
-    if (gapTimer.current) clearTimeout(gapTimer.current);
-    if (fade.current) clearInterval(fade.current);
-    fade.current = null;
-    onRecordingDone.current = null;
+    gapTimers.current.forEach((t) => t && clearTimeout(t));
+    onDone.current = [null, null, null];
     Speech.stop();
-    voicePlayer.pause();
+    for (const player of [layer0, layer1, layer2]) player.pause();
   }
 
+  function silence() {
+    stopVoices();
+    if (fade.current) clearInterval(fade.current);
+    fade.current = null;
+  }
+
+  function playFile(k: number, player: AudioPlayer, uri: string, volume: number, then: () => void) {
+    onDone.current[k] = then;
+    player.replace({ uri });
+    player.volume = volume;
+    player.play();
+  }
+
+  /** Spoken: one affirmation at a time, a recording when there is one, else the phone's voice. */
   function speakAt(i: number, thisRun: number) {
     if (thisRun !== run.current) return;
     const { affirmations: list, voice: v, prefs: p } = latest.current;
     if (!list.length) return;
-    const at = ((i % list.length) + list.length) % list.length;
+    const at = wrap(i, list.length);
     const item = list[at];
     setIndex(at);
-    const mode = MODES[p.mode];
     const next = () => {
       if (thisRun !== run.current) return;
-      gapTimer.current = setTimeout(() => speakAt(at + 1, thisRun), mode.gapMs);
+      gapTimers.current[0] = setTimeout(() => speakAt(at + 1, thisRun), MODES.spoken.gapMs);
     };
 
-    if (v === 'my-voice' && item.recording) {
-      onRecordingDone.current = next;
-      voicePlayer.replace({ uri: recordingUri(item.recording) });
-      voicePlayer.volume = p.voiceVolume;
-      voicePlayer.play();
-    } else {
-      const kind = v === 'my-voice' ? 'calm-female' : v;
-      const id = voiceIds.current[kind];
-      Speech.speak(item.text, {
-        voice: id,
-        rate: mode.rate,
-        // Only nudge the pitch when the phone has no male voice to use.
-        pitch: kind === 'deep-male' && !id ? 0.9 : 1,
-        volume: p.voiceVolume,
-        onDone: next,
-        onError: next,
-      });
+    const uri = audioFor(item, v);
+    if (uri) {
+      playFile(0, layer0, uri, p.voiceVolume, next);
+      return;
+    }
+    const kind = v === 'my-voice' ? 'calm-female' : v;
+    const id = voiceIds.current[kind];
+    Speech.speak(item.text, {
+      voice: id,
+      rate: 0.9,
+      // Only nudge the pitch when the phone has no male voice to use.
+      pitch: kind === 'deep-male' && !id ? 0.9 : 1,
+      volume: p.voiceVolume,
+      onDone: next,
+      onError: next,
+    });
+  }
+
+  /** Subliminal: each layer loops through the recordings on its own, overlapping the others. */
+  function layerAt(k: number, i: number, thisRun: number) {
+    if (thisRun !== run.current) return;
+    const { affirmations: list, voice: v, prefs: p } = latest.current;
+    const files = list.filter((a) => audioFor(a, v));
+    if (!files.length) return;
+    const at = wrap(i, files.length);
+    if (k === 0) setIndex(list.indexOf(files[at]));
+    playFile(k, [layer0, layer1, layer2][k], audioFor(files[at], v)!, p.voiceVolume, () => {
+      if (thisRun !== run.current) return;
+      gapTimers.current[k] = setTimeout(() => layerAt(k, at + 1, thisRun), MODES.subliminal.gapMs);
+    });
+  }
+
+  function startVoices(from: number) {
+    const thisRun = run.current;
+    if (latest.current.mode === 'spoken') {
+      speakAt(from, thisRun);
+      return;
+    }
+    const count = withAudio.length;
+    const layers = Math.min(SUBLIMINAL_LAYERS, count);
+    for (let k = 0; k < layers; k++) {
+      // Spread the layers out so they say different affirmations at once, and stagger their starts.
+      const startAt = from + Math.floor((count * k) / layers);
+      gapTimers.current[k] = setTimeout(() => layerAt(k, startAt, thisRun), k * 700);
     }
   }
 
   function play() {
-    if (!latest.current.affirmations.length) return;
+    if (!ready) return;
     silence();
     setPlaying(true);
     if (prefs.sound !== 'none') {
@@ -181,7 +234,7 @@ export function useTape({
       background.play();
     }
     setEndsAt(prefs.timer ? Date.now() + prefs.timer * 60000 : null);
-    speakAt(index, run.current);
+    startVoices(mode === 'spoken' ? index : Math.max(withAudio.indexOf(affirmations[index]), 0));
   }
 
   function pause() {
@@ -192,14 +245,14 @@ export function useTape({
   }
 
   function skip(by: number) {
-    const count = latest.current.affirmations.length;
+    const count = affirmations.length;
     if (!count) return;
-    const target = (((index + by) % count) + count) % count;
-    if (!playing) {
+    const target = wrap(index + by, count);
+    if (!playing || mode === 'subliminal') {
       setIndex(target);
       return;
     }
-    silence();
+    stopVoices();
     speakAt(target, run.current);
   }
 
@@ -208,16 +261,22 @@ export function useTape({
     if (playing) setEndsAt(minutes ? Date.now() + minutes * 60000 : null);
   }
 
-  // Sleep timer: fade the background (and stop the voice) gently, then stop.
+  /** Switching mode mid-tape restarts the voices in the new style. */
+  function restart() {
+    if (!playing) return;
+    stopVoices();
+    // Let the new mode reach latest.current before starting again.
+    setTimeout(() => startVoices(index), 0);
+  }
+
+  // Timer: stop the voices, fade the background out gently, then stop.
   useEffect(() => {
     if (!playing || !endsAt) return;
     const wait = setTimeout(() => {
       const start = background.volume;
       const steps = 40;
       let step = 0;
-      run.current++;
-      Speech.stop();
-      voicePlayer.pause();
+      stopVoices();
       fade.current = setInterval(() => {
         step++;
         background.volume = start * (1 - step / steps);
@@ -225,7 +284,7 @@ export function useTape({
       }, FADE_MS / steps);
     }, Math.max(endsAt - Date.now() - FADE_MS, 0));
     return () => clearTimeout(wait);
-    // pause() is recreated each render; the timer only depends on when it ends.
+    // pause() and stopVoices() are recreated each render; the timer only depends on when it ends.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, endsAt]);
 
@@ -237,5 +296,5 @@ export function useTape({
     [],
   );
 
-  return { playing, index, endsAt, play, pause, skip, retime };
+  return { playing, index, endsAt, ready, mode, play, pause, skip, retime, restart };
 }

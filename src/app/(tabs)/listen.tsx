@@ -5,7 +5,7 @@ import { Animated, Easing, Pressable, View } from 'react-native';
 import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import type { BackgroundSound, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
-import { MODES, useTape } from '@/lib/use-tape';
+import { MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
 
 const SOUND_CHOICES: { id: BackgroundSound; label: string }[] = [
   { id: 'pad', label: 'Soft pad' },
@@ -14,16 +14,17 @@ const SOUND_CHOICES: { id: BackgroundSound; label: string }[] = [
   { id: 'none', label: 'None' },
 ];
 
-const VOICE_LEVELS = [
-  { value: 0.08, label: 'Whisper' },
-  { value: 0.5, label: 'Soft' },
+const SPOKEN_LEVELS = [
+  { value: 0.3, label: 'Soft' },
+  { value: 0.65, label: 'Medium' },
   { value: 1, label: 'Full' },
 ];
 
 const SOUND_LEVELS = [
   { value: 0.15, label: 'Low' },
   { value: 0.4, label: 'Medium' },
-  { value: 0.9, label: 'High' },
+  { value: 0.7, label: 'High' },
+  { value: 1, label: 'Full' },
 ];
 
 const TIMERS = [
@@ -90,8 +91,14 @@ export default function ListenScreen() {
 
   function setMode(mode: TapeMode) {
     const m = MODES[mode];
-    setPrefs({ mode, voiceVolume: m.voiceVolume, soundVolume: m.soundVolume, timer: m.timer });
-    tape.retime(m.timer);
+    setPrefs({
+      mode,
+      voiceVolume: m.voiceVolume,
+      soundVolume: m.soundVolume,
+      // Subliminals need something to sit under.
+      sound: mode === 'subliminal' && prefs.sound === 'none' ? 'pad' : prefs.sound,
+    });
+    tape.restart();
   }
 
   if (!goal) {
@@ -110,6 +117,7 @@ export default function ListenScreen() {
   const recorded = goal.affirmations.filter((a) => a.recording).length;
   const current = list[tape.index];
   const showOrb = t.group === 'mystical';
+  const voiceLevels = tape.mode === 'subliminal' ? SUBLIMINAL_LEVELS : SPOKEN_LEVELS;
 
   return (
     <Screen>
@@ -131,10 +139,31 @@ export default function ListenScreen() {
 
       <ChipRow>
         {(Object.keys(MODES) as TapeMode[]).map((m) => (
-          <Chip key={m} label={MODES[m].label} selected={prefs.mode === m} onPress={() => setMode(m)} />
+          <Chip key={m} label={MODES[m].label} selected={tape.mode === m} onPress={() => setMode(m)} />
         ))}
       </ChipRow>
-      <Txt variant="muted">{MODES[prefs.mode].about}</Txt>
+      <Txt variant="muted">{MODES[tape.mode].about}</Txt>
+
+      {!tape.ready && tape.mode === 'subliminal' && (
+        <Card highlight>
+          <View style={{ gap: 10 }}>
+            <Txt variant="title">Subliminals need a recorded voice</Txt>
+            <Txt variant="muted">
+              {goal.voice === 'my-voice'
+                ? 'Record at least one affirmation in your voice and it gets mixed in properly, far below the sound.'
+                : 'The phone’s built-in voice can’t be mixed quietly enough. Switch the voice to My voice and record a few affirmations. Natural voices are coming.'}
+            </Txt>
+            <Button
+              title="Record my voice"
+              icon="mic-outline"
+              onPress={() => {
+                if (goal.voice !== 'my-voice') updateGoal(goal.id, (g) => ({ ...g, voice: 'my-voice' }));
+                router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } });
+              }}
+            />
+          </View>
+        </Card>
+      )}
 
       {showOrb ? (
         <PulsingOrb playing={tape.playing} />
@@ -151,7 +180,7 @@ export default function ListenScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 36 }}>
-        <Pressable onPress={() => tape.skip(-1)} hitSlop={12} accessibilityLabel="Previous affirmation">
+        <Pressable onPress={() => tape.skip(-1)} hitSlop={12} accessibilityLabel="Previous affirmation" disabled={tape.mode === 'subliminal'} style={{ opacity: tape.mode === 'subliminal' ? 0 : 1 }}>
           <Icon name="play-skip-back-outline" size={24} color={t.colors.muted} />
         </Pressable>
         <Pressable
@@ -168,7 +197,7 @@ export default function ListenScreen() {
           }}>
           <Icon name={tape.playing ? 'pause' : 'play'} size={30} color={t.colors.onAccent} />
         </Pressable>
-        <Pressable onPress={() => tape.skip(1)} hitSlop={12} accessibilityLabel="Next affirmation">
+        <Pressable onPress={() => tape.skip(1)} hitSlop={12} accessibilityLabel="Next affirmation" disabled={tape.mode === 'subliminal'} style={{ opacity: tape.mode === 'subliminal' ? 0 : 1 }}>
           <Icon name="play-skip-forward-outline" size={24} color={t.colors.muted} />
         </Pressable>
       </View>
@@ -194,7 +223,9 @@ export default function ListenScreen() {
             <Txt variant="muted" style={{ color: t.colors.accent }}>
               {recorded === goal.affirmations.length
                 ? 'All recorded in your voice'
-                : `${recorded} of ${goal.affirmations.length} recorded. The rest use the calm voice. Record more`}
+                : tape.mode === 'subliminal'
+                  ? `${recorded} of ${goal.affirmations.length} recorded. Only recorded ones go in the subliminal. Record more`
+                  : `${recorded} of ${goal.affirmations.length} recorded. The rest use the calm voice. Record more`}
             </Txt>
           </Pressable>
         )}
@@ -202,7 +233,7 @@ export default function ListenScreen() {
 
       <Section label="Background">
         <ChipRow>
-          {SOUND_CHOICES.map((s) => (
+          {SOUND_CHOICES.filter((s) => tape.mode === 'spoken' || s.id !== 'none').map((s) => (
             <Chip key={s.id} label={s.label} selected={prefs.sound === s.id} onPress={() => setPrefs({ sound: s.id })} />
           ))}
         </ChipRow>
@@ -222,10 +253,10 @@ export default function ListenScreen() {
       {showSettings && (
         <Card>
           <View style={{ gap: 14 }}>
-            <Section label="Voice volume">
+            <Section label={tape.mode === 'subliminal' ? 'How faint' : 'Voice volume'}>
               <ChipRow>
-                {VOICE_LEVELS.map((l) => (
-                  <Chip key={l.label} label={l.label} selected={nearest(VOICE_LEVELS, prefs.voiceVolume) === l.value} onPress={() => setPrefs({ voiceVolume: l.value })} />
+                {voiceLevels.map((l) => (
+                  <Chip key={l.label} label={l.label} selected={nearest(voiceLevels, prefs.voiceVolume) === l.value} onPress={() => setPrefs({ voiceVolume: l.value })} />
                 ))}
               </ChipRow>
             </Section>
@@ -236,7 +267,7 @@ export default function ListenScreen() {
                 ))}
               </ChipRow>
             </Section>
-            <Section label="Sleep timer">
+            <Section label="Timer">
               <ChipRow>
                 {TIMERS.map((l) => (
                   <Chip key={l.label} label={l.label} selected={prefs.timer === l.value} onPress={() => {
