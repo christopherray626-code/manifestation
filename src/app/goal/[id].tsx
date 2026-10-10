@@ -5,6 +5,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, TextInput, View } fro
 import { RotationPicker } from '@/components/goal-bits';
 import { BackHeader, Button, Card, Field, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { writeAffirmations } from '@/lib/affirmations';
+import { deleteRecording } from '@/lib/recordings';
 import { useStore } from '@/lib/store';
 import { todaysAffirmation } from '@/lib/today';
 import { makeAffirmation, type Affirmation, type Goal } from '@/lib/types';
@@ -52,6 +53,7 @@ export default function GoalScreen() {
   }
 
   function remove(aff: Affirmation) {
+    deleteRecording(aff.recording);
     change((g) => ({
       ...g,
       affirmations: g.affirmations.filter((a) => a.id !== aff.id),
@@ -76,6 +78,7 @@ export default function GoalScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
+          goal!.affirmations.forEach((a) => deleteRecording(a.recording));
           deleteGoal(goal!.id);
           router.back();
         },
@@ -120,7 +123,7 @@ export default function GoalScreen() {
           <Txt variant="muted">Edit, remove, or keep. Tap the heart on your favorites.</Txt>
         </Section>
 
-        {goal.affirmations.map((a) => {
+        {goal.affirmations.map((a, i) => {
           const isToday = today?.id === a.id;
           return (
             <Card key={a.id} highlight={a.mine}>
@@ -158,6 +161,12 @@ export default function GoalScreen() {
                     )}
                   </Pressable>
                   <View style={{ flexDirection: 'row', gap: 14, paddingTop: 2 }}>
+                    <Pressable
+                      onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id, start: String(i) } })}
+                      hitSlop={8}
+                      accessibilityLabel={a.recording ? 'Re-record in your voice' : 'Record in your voice'}>
+                      <Icon name={a.recording ? 'mic' : 'mic-outline'} size={19} color={a.recording ? t.colors.accent : t.colors.muted} />
+                    </Pressable>
                     <Pressable onPress={() => pin(a)} hitSlop={8} accessibilityLabel="Make this today's affirmation">
                       <Icon name={isToday ? 'pin' : 'pin-outline'} size={19} color={isToday ? t.colors.accent : t.colors.muted} />
                     </Pressable>
@@ -202,13 +211,31 @@ export default function GoalScreen() {
         </Pressable>
         {note ? <Txt variant="muted" style={{ textAlign: 'center' }}>{note}</Txt> : null}
 
-        <Button title="Make my tape" onPress={() => router.push('/listen')} />
+        {goal.affirmations.length > 0 && (
+          <Button
+            title={recordedLabel(goal)}
+            kind="ghost"
+            icon="mic-outline"
+            onPress={() => {
+              const next = goal.affirmations.findIndex((a) => !a.recording);
+              router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id, start: String(Math.max(next, 0)) } });
+            }}
+          />
+        )}
+        <Button title="Make my tape" onPress={() => router.push({ pathname: '/listen', params: { goal: goal.id } })} />
         <Pressable onPress={confirmDelete} style={{ alignSelf: 'center', padding: 8 }} accessibilityRole="button">
           <Txt variant="muted">Delete goal</Txt>
         </Pressable>
       </Screen>
     </KeyboardAvoidingView>
   );
+}
+
+function recordedLabel(goal: Goal) {
+  const done = goal.affirmations.filter((a) => a.recording).length;
+  if (!done) return 'Record my voice';
+  if (done === goal.affirmations.length) return 'All recorded in your voice';
+  return `Record my voice (${done} of ${goal.affirmations.length} done)`;
 }
 
 function rotationSummary(goal: Goal) {

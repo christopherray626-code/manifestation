@@ -13,6 +13,7 @@ const defaultState: State = {
     name: '',
     onboarded: false,
     defaultRotation: { every: 1, order: 'inOrder', favoritesOnly: false },
+    player: { mode: 'spoken', sound: 'pad', voiceVolume: 1, soundVolume: 0.35, timer: 0, favoritesOnly: false },
   },
   goals: [],
 };

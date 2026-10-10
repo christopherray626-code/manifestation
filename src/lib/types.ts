@@ -9,6 +9,22 @@ export type Affirmation = {
   mine: boolean;
   favorite: boolean;
   createdAt: number;
+  /** File name of the user's own recording, if they've recorded it. */
+  recording?: string;
+};
+
+export type TapeMode = 'spoken' | 'subliminal' | 'sleep';
+export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'none';
+
+export type PlayerPrefs = {
+  mode: TapeMode;
+  sound: BackgroundSound;
+  /** 0-1 levels. */
+  voiceVolume: number;
+  soundVolume: number;
+  /** Minutes until the tape fades out; 0 means play until stopped. */
+  timer: number;
+  favoritesOnly: boolean;
 };
 
 /**
@@ -42,6 +58,7 @@ export type Settings = {
   name: string;
   onboarded: boolean;
   defaultRotation: Pick<Rotation, 'every' | 'order' | 'favoritesOnly'>;
+  player: PlayerPrefs;
 };
 
 export function newId() {
