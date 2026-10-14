@@ -3,6 +3,7 @@ import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 
 import { recordingUri } from '@/lib/recordings';
+import { naturalVoices, voiceAudioUri } from '@/lib/voices';
 import type { Affirmation, BackgroundSound, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
 
 export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
@@ -46,7 +47,8 @@ export function modeOf(prefs: PlayerPrefs): TapeMode {
 
 /** The audio file for an affirmation in this voice, if there is one. */
 export function audioFor(item: Affirmation, voice: Voice) {
-  return voice === 'my-voice' && item.recording ? recordingUri(item.recording) : undefined;
+  if (voice === 'my-voice') return item.recording ? recordingUri(item.recording) : undefined;
+  return voiceAudioUri(item.text, voice);
 }
 
 /*
@@ -98,9 +100,9 @@ export function useTape({
   const latest = useRef({ affirmations, voice, prefs, mode });
   latest.current = { affirmations, voice, prefs, mode };
 
-  const withAudio = affirmations.filter((a) => audioFor(a, voice));
   /** Subliminals need real audio files: live phone speech can't be mixed quietly enough. */
-  const ready = mode === 'spoken' ? affirmations.length > 0 : withAudio.length > 0;
+  const ready =
+    mode === 'spoken' ? affirmations.length > 0 : affirmations.some((a) => audioFor(a, voice)) || (voice !== 'my-voice' && naturalVoices);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => {});
@@ -215,7 +217,8 @@ export function useTape({
       speakAt(from, thisRun);
       return;
     }
-    const count = withAudio.length;
+    const { affirmations: list, voice: v } = latest.current;
+    const count = list.filter((a) => audioFor(a, v)).length;
     const layers = Math.min(SUBLIMINAL_LAYERS, count);
     for (let k = 0; k < layers; k++) {
       // Spread the layers out so they say different affirmations at once, and stagger their starts.
@@ -225,7 +228,9 @@ export function useTape({
   }
 
   function play() {
-    if (!ready) return;
+    // Check the files fresh: voice audio may have just been made before this call.
+    const files = affirmations.filter((a) => audioFor(a, voice));
+    if (mode === 'spoken' ? !affirmations.length : !files.length) return;
     silence();
     setPlaying(true);
     if (prefs.sound !== 'none') {
@@ -234,7 +239,7 @@ export function useTape({
       background.play();
     }
     setEndsAt(prefs.timer ? Date.now() + prefs.timer * 60000 : null);
-    startVoices(mode === 'spoken' ? index : Math.max(withAudio.indexOf(affirmations[index]), 0));
+    startVoices(mode === 'spoken' ? index : Math.max(files.indexOf(affirmations[index]), 0));
   }
 
   function pause() {

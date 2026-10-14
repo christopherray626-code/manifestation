@@ -5,7 +5,8 @@ import { Animated, Easing, Pressable, View } from 'react-native';
 import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import type { BackgroundSound, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
-import { MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
+import { audioFor, MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
+import { naturalVoices, prepareVoice } from '@/lib/voices';
 
 const SOUND_CHOICES: { id: BackgroundSound; label: string }[] = [
   { id: 'pad', label: 'Soft pad' },
@@ -86,6 +87,31 @@ export default function ListenScreen() {
   const favorites = goal?.affirmations.filter((a) => a.favorite) ?? [];
   const list = prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
   const tape = useTape({ affirmations: list, voice: goal?.voice ?? 'calm-female', prefs });
+  const [prep, setPrep] = useState<{ done: number; total: number } | null>(null);
+  const [voiceError, setVoiceError] = useState('');
+
+  /** Makes any missing natural-voice audio first, then plays. */
+  async function start() {
+    if (!goal || prep) return;
+    const voice = goal.voice;
+    const missing = voice === 'my-voice' || !naturalVoices ? [] : list.filter((a) => !audioFor(a, voice));
+    if (missing.length) {
+      setVoiceError('');
+      try {
+        await prepareVoice(
+          missing.map((a) => a.text),
+          voice,
+          (done, total) => setPrep({ done, total }),
+        );
+      } catch (e) {
+        setVoiceError(e instanceof Error ? e.message : "Couldn't make the voice. Try again.");
+        return;
+      } finally {
+        setPrep(null);
+      }
+    }
+    tape.play();
+  }
 
   const setPrefs = (patch: Partial<PlayerPrefs>) => updateSettings({ player: { ...prefs, ...patch } });
 
@@ -184,7 +210,8 @@ export default function ListenScreen() {
           <Icon name="play-skip-back-outline" size={24} color={t.colors.muted} />
         </Pressable>
         <Pressable
-          onPress={tape.playing ? tape.pause : tape.play}
+          onPress={tape.playing ? tape.pause : start}
+          disabled={!!prep}
           accessibilityRole="button"
           accessibilityLabel={tape.playing ? 'Pause' : 'Play'}
           style={{
@@ -206,6 +233,12 @@ export default function ListenScreen() {
         {list.length ? `${tape.index + 1} of ${list.length}` : ''}
         {tape.endsAt ? ` · stops at ${new Date(tape.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
       </Txt>
+      {prep && (
+        <Txt variant="muted" style={{ textAlign: 'center', color: t.colors.accent }}>
+          Getting your voice ready… {prep.done} of {prep.total}
+        </Txt>
+      )}
+      {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
 
       <Section label="Voice">
         <ChipRow>
