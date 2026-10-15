@@ -1,4 +1,5 @@
 import { RotationPicker } from '@/components/goal-bits';
+import { ReminderList } from '@/components/reminder-list';
 import { ThemePicker } from '@/components/theme-picker';
 import { Card, Field, Screen, Section, Txt } from '@/components/ui';
 import { useStore } from '@/lib/store';
@@ -17,6 +18,10 @@ export default function YouScreen() {
           placeholder="What should we call you?"
           autoCapitalize="words"
         />
+      </Section>
+
+      <Section label="Reminders">
+        <ReminderList />
       </Section>
 
       <Section label="Theme">

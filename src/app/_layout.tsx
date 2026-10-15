@@ -19,6 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { useTheme } from '@/components/ui';
+import { useReminders } from '@/lib/reminders';
 import { StoreProvider, useStore } from '@/lib/store';
 
 SplashScreen.preventAutoHideAsync();
@@ -46,9 +47,10 @@ export default function RootLayout() {
 }
 
 function Root({ fontsReady }: { fontsReady: boolean }) {
-  const { loaded } = useStore();
+  const { loaded, settings, goals } = useStore();
   const t = useTheme();
   const ready = fontsReady && loaded;
+  useReminders(settings.reminders, goals, ready && settings.onboarded);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();

@@ -25,6 +25,7 @@
     },
     "plugins": [
       "expo-router",
+      ["expo-notifications", { "color": "#0B1026" }],
       [
         "expo-splash-screen",
         {

@@ -53,12 +53,22 @@ export type Goal = {
   rotation: Rotation;
 };
 
+/** A daily notification at a set time that opens today's affirmation or the tape. */
+export type Reminder = {
+  id: string;
+  hour: number;
+  minute: number;
+  opens: 'affirmation' | 'tape';
+  enabled: boolean;
+};
+
 export type Settings = {
   themeId: string;
   name: string;
   onboarded: boolean;
   defaultRotation: Pick<Rotation, 'every' | 'order' | 'favoritesOnly'>;
   player: PlayerPrefs;
+  reminders: Reminder[];
 };
 
 export function newId() {
