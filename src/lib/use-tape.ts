@@ -3,6 +3,7 @@ import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 
 import { recordingUri } from '@/lib/recordings';
+import { success } from '@/lib/haptics';
 import { useToneLayer } from '@/lib/tone';
 import { naturalVoices, voiceAudioUri } from '@/lib/voices';
 import type { Affirmation, BackgroundSound, Frequency, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
@@ -92,7 +93,6 @@ function pickVoice(voices: Speech.Voice[], kind: 'calm-female' | 'deep-male') {
   return best && names.test(`${best.name} ${best.identifier}`) ? best.identifier : undefined;
 }
 
-const FADE_MS = 20000;
 const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
 export function useTape({
@@ -107,6 +107,7 @@ export function useTape({
   const mode = modeOf(prefs);
   const background = useAudioPlayer(SOUNDS.pad);
   const tone = useToneLayer(FREQUENCY_FILES);
+  const ending = useAudioPlayer(null);
   const frequency = prefs.frequency ?? 'none';
   const frequencyVolume = prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME;
   const layer0 = useAudioPlayer(null);
@@ -330,9 +331,23 @@ export function useTape({
     setTimeout(() => startVoices(index), 0);
   }
 
+  /** The timer's ending: a soft sound and, on phones, a buzz, if they asked for them. */
+  function timerEnded() {
+    const p = latest.current.prefs;
+    if (p.timerVibrate !== false) success();
+    if (p.endSound && p.endSound !== 'none') {
+      ending.replace(SOUNDS[p.endSound]);
+      ending.volume = 0.6;
+      ending.play();
+      // The sounds are loops; let one ring out, then stop.
+      setTimeout(() => ending.pause(), 7000);
+    }
+  }
+
   // Timer: stop the voices, fade the background out gently, then stop.
   useEffect(() => {
     if (!playing || !endsAt) return;
+    const fadeMs = (prefs.fadeSec ?? 20) * 1000;
     const wait = setTimeout(() => {
       const start = background.volume;
       const steps = 40;
@@ -342,9 +357,12 @@ export function useTape({
         step++;
         background.volume = start * (1 - step / steps);
         tone.setVolume(frequencyVolume * (1 - step / steps));
-        if (step >= steps) pause();
-      }, FADE_MS / steps);
-    }, Math.max(endsAt - Date.now() - FADE_MS, 0));
+        if (step >= steps) {
+          pause();
+          timerEnded();
+        }
+      }, fadeMs / steps);
+    }, Math.max(endsAt - Date.now() - fadeMs, 0));
     return () => clearTimeout(wait);
     // pause() and stopVoices() are recreated each render; the timer only depends on when it ends.
     // eslint-disable-next-line react-hooks/exhaustive-deps

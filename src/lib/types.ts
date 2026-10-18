@@ -44,6 +44,10 @@ export type PlayerPrefs = {
   /** A steady tone or binaural beat under everything. Missing in older saves, which means none. */
   frequency?: Frequency | 'none';
   frequencyVolume?: number;
+  /** Timer extras: seconds of fade at the end, a sound when it ends, and a buzz on phones. */
+  fadeSec?: number;
+  endSound?: 'none' | 'bowls' | 'chimes';
+  timerVibrate?: boolean;
   /** How fast the voice reads, 1 to 2. Missing in older saves, which means normal speed. */
   speed?: number;
   /** 0-1 levels. */

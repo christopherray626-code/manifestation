@@ -19,15 +19,6 @@ import type { TapeMode } from '@/lib/types';
 import { FREQUENCY_LIST } from '@/lib/frequencies';
 import { FREQUENCY_DEFAULT_VOLUME, MODES } from '@/lib/use-tape';
 
-const TIMERS = [
-  { value: 0, label: 'Off' },
-  { value: 5, label: '5 min' },
-  { value: 10, label: '10 min' },
-  { value: 15, label: '15 min' },
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
-  { value: 60, label: '1 hour' },
-];
 
 function PulsingOrb({ playing }: { playing: boolean }) {
   const [scale] = useState(() => new Animated.Value(1));
@@ -65,8 +56,6 @@ export default function PlayerScreen() {
   const { goal, track, list, voice, setVoice, tape, prep, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
 
-  const [timerOpen, setTimerOpen] = useState(false);
-
   function pickGoal(id: string) {
     choose({ kind: 'goal', id });
   }
@@ -77,13 +66,8 @@ export default function PlayerScreen() {
   const icon = track ? track.icon : goal ? categoryIcon(goal.category) : 'sparkles-outline';
   const tintIndex = track ? TRACKS.indexOf(track) : Math.max(goals.findIndex((g) => g.id === goal?.id), 0);
   const tint = t.colors.tints[tintIndex % t.colors.tints.length];
-  const timerAt = TIMERS.findIndex((l) => l.value === prefs.timer);
 
-  function setTimer(minutes: number) {
-    setPrefs({ timer: minutes });
-    tape.retime(minutes);
-    setTimerOpen(false);
-  }
+
 
   function favoriteCurrent() {
     if (!goal || !current) return;
@@ -174,24 +158,12 @@ export default function PlayerScreen() {
           </Pressable>
           <HeroButton
             icon="hourglass-outline"
-            label={prefs.timer ? (TIMERS[timerAt]?.label ?? 'Timer') : 'Add timer'}
-            onPress={() => setTimerOpen((o) => !o)}
+            label={prefs.timer ? timerLabel(prefs.timer) : 'Add timer'}
+            onPress={() => router.push('/timer')}
             active={!!prefs.timer}
           />
         </View>
 
-        {timerOpen && (
-          <View style={{ gap: 8, alignItems: 'center' }}>
-            <Txt variant="muted" style={{ color: t.colors.text }}>
-              Fades out gently, then stops
-            </Txt>
-            <ChipRow>
-              {TIMERS.map((l) => (
-                <Chip key={l.label} label={l.label} selected={prefs.timer === l.value} onPress={() => setTimer(l.value)} />
-              ))}
-            </ChipRow>
-          </View>
-        )}
 
         <Txt variant="muted" style={{ textAlign: 'center' }}>
           {tape.mode === 'spoken' && list.length ? `${tape.index + 1} of ${list.length}` : ''}
@@ -409,4 +381,10 @@ function MixRow({
       {!disabled && <Slider value={Math.min(1, Math.max(0, value))} onChange={onChange} label={`${label} volume`} />}
     </View>
   );
+}
+
+function timerLabel(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? `${h}h ${m ? `${m}m` : ''}`.trim() : `${m} min`;
 }
