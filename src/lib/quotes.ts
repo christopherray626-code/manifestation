@@ -41,8 +41,6 @@ export const QUOTES: Quote[] = [
     text: 'You are today where your thoughts have brought you; you will be tomorrow where your thoughts take you.',
     who: 'James Allen',
   },
-  // Henry Ford
-  { text: 'Whether you think you can, or you think you can’t, you’re right.', who: 'Henry Ford' },
   // Marcus Aurelius
   { text: 'Our life is what our thoughts make it.', who: 'Marcus Aurelius' },
 ];
