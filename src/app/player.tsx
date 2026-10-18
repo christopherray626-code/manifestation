@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, Share, View } from 'react-native';
 
@@ -8,20 +7,20 @@ import { Slider } from '@/components/slider';
 import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
-import { categoryIcon } from '@/components/goal-bits';
-import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme, type IconName } from '@/components/ui';
+import { Button, Card, Chip, ChipRow, Icon, ThemeOrb, Screen, Section, Txt, useTheme, type IconName } from '@/components/ui';
 import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
-import { TRACKS } from '@/lib/tracks';
 import type { TapeMode } from '@/lib/types';
 import { FREQUENCY_LIST } from '@/lib/frequencies';
 import { FREQUENCY_DEFAULT_VOLUME, MODES } from '@/lib/use-tape';
 
 
-function PulsingOrb({ playing }: { playing: boolean }) {
+/** The orb at the heart of the player: it breathes while playing and swells softly as each line begins. */
+function PulsingOrb({ playing, line }: { playing: boolean; line: number }) {
   const [scale] = useState(() => new Animated.Value(1));
+  const [swell] = useState(() => new Animated.Value(1));
   const [still, setStill] = useState(false);
   // People who turn on Reduce motion get a still orb.
   useEffect(() => {
@@ -43,9 +42,14 @@ function PulsingOrb({ playing }: { playing: boolean }) {
     loop.start();
     return () => loop.stop();
   }, [playing, still, scale]);
+  useEffect(() => {
+    if (!playing || still) return;
+    swell.setValue(1.06);
+    Animated.spring(swell, { toValue: 1, friction: 5, tension: 30, useNativeDriver: true }).start();
+  }, [line, playing, still, swell]);
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Orb size={190} />
+    <Animated.View style={{ transform: [{ scale }, { scale: swell }] }}>
+      <ThemeOrb size={240} />
     </Animated.View>
   );
 }
@@ -63,9 +67,6 @@ export default function PlayerScreen() {
   const recorded = goal?.affirmations.filter((a) => a.recording).length ?? 0;
   const current = list[tape.index];
   const title = track?.title ?? goal?.title ?? '';
-  const icon = track ? track.icon : goal ? categoryIcon(goal.category) : 'sparkles-outline';
-  const tintIndex = track ? TRACKS.indexOf(track) : Math.max(goals.findIndex((g) => g.id === goal?.id), 0);
-  const tint = t.colors.tints[tintIndex % t.colors.tints.length];
 
 
 
@@ -83,14 +84,8 @@ export default function PlayerScreen() {
 
   return (
     <Screen>
-      {/* The hero: what's playing, the mode, and the big controls, over the goal's or track's colours. */}
-      <LinearGradient
-        colors={[tint, t.colors.bg]}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={{ marginHorizontal: -20, marginTop: -20, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 18, gap: 18 }}>
-        {/* A wash of the background over the colour, so light text stays readable on bright tints. */}
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.colors.bg, opacity: t.dark ? 0.4 : 0.2 }} />
+      {/* The hero: what's playing, the mode, the orb and the big controls, floating on the sky. */}
+      <View style={{ gap: 18, paddingTop: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
@@ -126,13 +121,7 @@ export default function PlayerScreen() {
         </View>
 
         <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-          {t.group === 'mystical' ? (
-            <PulsingOrb playing={tape.playing} />
-          ) : (
-            <View style={{ width: 170, height: 170, borderRadius: 85, backgroundColor: t.colors.card, alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name={icon} size={64} color={t.colors.accent} />
-            </View>
-          )}
+          <PulsingOrb playing={tape.playing} line={tape.index} />
         </View>
 
         <View style={{ minHeight: 64, justifyContent: 'center' }}>
@@ -175,7 +164,7 @@ export default function PlayerScreen() {
           </Txt>
         )}
         {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
-      </LinearGradient>
+      </View>
 
       {goal && !tape.ready && tape.mode === 'subliminal' && (
         <Card highlight>

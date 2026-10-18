@@ -1,6 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -59,6 +62,109 @@ function Stars() {
   );
 }
 
+/**
+ * A soft glow made of stacked circles, each a little more see-through than the last, so it fades out
+ * like light instead of ending in a hard edge.
+ */
+function Glow({ color, size, opacity }: { color: string; size: number; opacity: number }) {
+  return (
+    <View pointerEvents="none" style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {Array.from({ length: 14 }, (_, i) => {
+        const d = size * (1 - i * 0.065);
+        return (
+          <View
+            key={i}
+            style={{ position: 'absolute', width: d, height: d, borderRadius: d, backgroundColor: color, opacity: opacity / 14 }}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * The sky behind every screen: two slow glows in the theme's colours drifting about, and stars on dark
+ * themes. It's what makes the app feel like its own place rather than a stack of panels. Holds still
+ * when Reduce motion is on.
+ */
+function Ambient() {
+  const t = useTheme();
+  const [drift] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    let loop: Animated.CompositeAnimation | undefined;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((still) => {
+        if (still) return;
+        loop = Animated.loop(
+          Animated.sequence([
+            Animated.timing(drift, { toValue: 1, duration: 14000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            Animated.timing(drift, { toValue: 0, duration: 14000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          ]),
+        );
+        loop.start();
+      })
+      .catch(() => {});
+    return () => loop?.stop();
+  }, [drift]);
+  const a = t.colors.tints[0];
+  const b = t.colors.accent;
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: -140,
+          left: -160,
+          transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 60] }) }, { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 40] }) }],
+        }}>
+        <Glow color={a} size={460} opacity={t.dark ? 0.35 : 0.25} />
+      </Animated.View>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          bottom: -180,
+          right: -200,
+          transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, -50] }) }, { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, -60] }) }],
+        }}>
+        <Glow color={b} size={520} opacity={t.dark ? 0.28 : 0.2} />
+      </Animated.View>
+      {t.dark && <Stars />}
+    </View>
+  );
+}
+
+/** A glowing orb in the theme's own colours; the player's centrepiece. */
+export function ThemeOrb({ size = 220 }: { size?: number }) {
+  const t = useTheme();
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute' }}>
+        <Glow color={t.colors.accent} size={size} opacity={0.55} />
+      </View>
+      <View
+        style={{
+          width: size * 0.42,
+          height: size * 0.42,
+          borderRadius: size,
+          backgroundColor: t.colors.accent,
+          opacity: 0.9,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          width: size * 0.42,
+          height: size * 0.42,
+          borderRadius: size,
+          borderWidth: 1,
+          borderColor: t.colors.text,
+          opacity: 0.25,
+        }}
+      />
+    </View>
+  );
+}
+
 /** The aura theme's glowing orb: stacked circles from dark to bright. */
 export function Orb({ size = 150 }: { size?: number }) {
   const rings = ['#2E1652', '#4B2385', '#8A4FD8', '#E7B8FF'];
@@ -81,7 +187,7 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   const t = useTheme();
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      {t.decor === 'stars' && <Stars />}
+      <Ambient />
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         {scroll ? (
           <ScrollView
@@ -145,12 +251,13 @@ export function cardStyle(t: Theme, highlight = false): ViewStyle {
     case 'outline':
       return { borderWidth: 1, borderColor: border, borderRadius: t.radius, padding: 16 };
     case 'filled':
+      // See-through so the sky shows behind, with a hairline edge instead of a heavy block.
       return {
-        backgroundColor: t.colors.card,
+        backgroundColor: t.colors.card + 'B3',
         borderRadius: t.radius,
         padding: 16,
-        borderWidth: highlight ? 1 : 0,
-        borderColor: border,
+        borderWidth: 1,
+        borderColor: highlight ? t.colors.accent : t.colors.border + '99',
       };
     case 'white':
       return { backgroundColor: t.colors.card, borderWidth: 1, borderColor: border, borderRadius: t.radius, padding: 16 };

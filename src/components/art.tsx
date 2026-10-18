@@ -64,7 +64,10 @@ export function Shelf({ children }: { children: ReactNode }) {
   );
 }
 
-/** A picture card on a shelf: the art, then a title and a small line under it. */
+/**
+ * A card on a shelf: a tall poster. The theme's colour falls from the top into the dark, a soft glow
+ * sits behind the icon, and the title is written on the card itself, with a small line under it.
+ */
 export function ShelfCard({
   icon,
   index,
@@ -80,22 +83,40 @@ export function ShelfCard({
   subtitle: string;
   onPress: () => void;
   selected?: boolean;
+  /** The card's width; it's a third taller than it is wide. */
   size?: number;
 }) {
+  const t = useTheme();
+  const tint = t.colors.tints[index % t.colors.tints.length];
+  const height = Math.round(size * 1.35);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={title}
-      style={({ pressed }) => ({ width: size, gap: 8, opacity: pressed ? 0.75 : 1 })}>
-      <Art icon={icon} index={index} size={size} selected={selected} />
-      <View>
-        <Txt variant="medium" numberOfLines={1}>
-          {title}
-        </Txt>
-        <Txt variant="muted" style={{ fontSize: 12.5 }} numberOfLines={1}>
-          {subtitle}
-        </Txt>
+      accessibilityLabel={`${title}. ${subtitle}`}
+      style={({ pressed }) => ({ width: size, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      <View
+        style={{
+          width: size,
+          height,
+          borderRadius: Math.max(t.radius, 16),
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: selected ? t.colors.accent : t.colors.border,
+        }}>
+        <LinearGradient colors={[tint + 'CC', t.colors.card, t.colors.bg]} locations={[0, 0.55, 1]} style={{ flex: 1, padding: 12 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ position: 'absolute', width: size * 0.7, height: size * 0.7, borderRadius: size, backgroundColor: tint, opacity: 0.18 }} />
+            <View style={{ position: 'absolute', width: size * 0.45, height: size * 0.45, borderRadius: size, backgroundColor: tint, opacity: 0.18 }} />
+            <Icon name={icon} size={size * 0.24} color={t.colors.text} />
+          </View>
+          <Txt variant="medium" numberOfLines={2} style={{ fontSize: 14, lineHeight: 18 }}>
+            {title}
+          </Txt>
+          <Txt variant="muted" numberOfLines={1} style={{ fontSize: 12, lineHeight: 16, marginTop: 2 }}>
+            {subtitle}
+          </Txt>
+        </LinearGradient>
       </View>
     </Pressable>
   );

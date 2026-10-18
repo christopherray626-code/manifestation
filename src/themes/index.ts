@@ -114,7 +114,7 @@ export const themes: Theme[] = [
     },
     fonts: {
       ...inter,
-      display: 'Inter_500Medium',
+      display: 'DMSerifDisplay_400Regular',
       label: 'Inter_500Medium',
       quote: 'Inter_400Regular',
       button: 'Inter_500Medium',

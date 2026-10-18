@@ -212,7 +212,7 @@ export default function HomeScreen() {
   );
 }
 
-/** The last card on the goals shelf: start another one. */
+/** The last card on the shelf: claim something new. */
 function NewGoalCard() {
   const t = useTheme();
   return (
@@ -220,20 +220,19 @@ function NewGoalCard() {
       onPress={() => router.push('/goal/new')}
       accessibilityRole="button"
       accessibilityLabel="Claim something new"
-      style={({ pressed }) => ({ width: 128, gap: 8, opacity: pressed ? 0.75 : 1 })}>
-      <View
-        style={{
-          width: 128,
-          height: 128,
-          borderRadius: Math.max(t.radius, 14),
-          borderWidth: 1,
-          borderStyle: 'dashed',
-          borderColor: t.colors.border,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-        <Icon name="add" size={34} color={t.colors.accent} />
-      </View>
+      style={({ pressed }) => ({
+        width: 128,
+        height: Math.round(128 * 1.35),
+        borderRadius: Math.max(t.radius, 16),
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: t.colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        opacity: pressed ? 0.75 : 1,
+      })}>
+      <Icon name="add" size={30} color={t.colors.accent} />
       <Txt variant="medium">Claim</Txt>
     </Pressable>
   );
