@@ -10,7 +10,7 @@ const BENEFITS: { icon: IconName; text: string }[] = [
   { icon: 'mic-outline', text: 'Affirmations in your own voice' },
   { icon: 'people-outline', text: 'All 10 natural voices' },
   { icon: 'sparkles-outline', text: 'Claim as much as you want, written around you' },
-  { icon: 'pulse-outline', text: 'Every frequency, from Abundance to Higher self' },
+  { icon: 'pulse-outline', text: 'Every sound and frequency' },
 ];
 
 /**

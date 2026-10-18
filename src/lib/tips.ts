@@ -12,7 +12,7 @@ export type Tip = { title: string; body: string };
 export const TIPS: Tip[] = [
   {
     title: 'Speak from the end',
-    body: 'Say it as if it’s already happened. Neville Goddard called this living in the end: you don’t chase the wish, you think from it.',
+    body: 'Say it as if it’s already happened. Don’t chase it; think from the place of already having it.',
   },
   {
     title: 'Feeling is the secret',
@@ -60,7 +60,7 @@ export const TIPS: Tip[] = [
   },
   {
     title: 'Persist',
-    body: 'Neville taught that an assumption, persisted in, hardens into fact. One listen is a nudge; a daily listen is a new normal.',
+    body: 'Belief is built by repetition. One listen is a nudge; a daily listen becomes your new normal.',
   },
   {
     title: 'Your own voice is powerful',
@@ -72,7 +72,7 @@ export const TIPS: Tip[] = [
   },
   {
     title: 'Revise the day',
-    body: 'Before sleep, replay anything that went wrong today the way you wish it had gone. Neville called this revision.',
+    body: 'Before sleep, replay anything that went wrong today the way you wish it had gone. It changes how you carry it into tomorrow.',
   },
   {
     title: 'Watch your self-talk',
@@ -108,7 +108,7 @@ export const WHY = {
   subliminal:
     'The words sit far below the music, so the part of you that argues never gets a chance. It’s most powerful as you drift off to sleep, when the mind is most open.',
   frequencies:
-    'Each frequency is a quiet tone set to an intention. Let it sit under the voice and the music, and let your body settle into it. Dream state, Deep rest and Flow work best with headphones.',
+    'Each frequency is a quiet, steady tone. Let it sit under the voice and the music, and let your body settle into it. Dream state, Deep rest and Flow work best with headphones.',
   voices:
     'A calm, warm voice helps you relax, and a relaxed mind takes words in more easily. Your own voice is the most familiar of all: it sounds like your own thoughts.',
   presentTense:

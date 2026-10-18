@@ -29,7 +29,7 @@ How to write them:
     figure out what to do with it all".
   - Feeling and gratitude: "it feels amazing", "you're so grateful".
   - Identity: "it's who you are", "you were born for this".
-  - An occasional dash for an afterthought that adds emotion: "…, it's like magic."
+  - An occasional dash for an afterthought that adds emotion: "…, it feels unreal."
   - End the set with one line of closure that starts "It's done."
 - Keep them believable. Mix fully present lines (as if it's already real) with bridge lines that move
   toward it: "I am becoming…", "more and more…", "every day it gets easier to…".
@@ -47,6 +47,8 @@ How to write them:
 - Frame identity, not just outcome: "I am the kind of person who…".
 - Rhythm matters: short, even, easy to say. A repeated structure or the odd rhyme helps. Keep each
   under 20 words, vary how they start.
+- Keep it grounded and everyday: no spiritual or mystical words (universe, energy, vibration, manifest, divine,
+  blessed, aligned, cosmic, soul, spirit). It should sound like a confident friend, not a guru.
 - Nothing negative, no hedging ("I hope", "I try"), no quotes, emojis, hashtags or numbering.
 
 Reply with only the affirmations, one per line.`;

@@ -100,7 +100,7 @@ export function Creating({
 }
 
 export const WRITING_MESSAGES = [
-  'Tuning into what’s already yours…',
+  'Reading what’s already yours…',
   'Writing it in your words…',
   'Weaving in how it feels…',
   'Making every line land…',
