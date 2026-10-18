@@ -4,7 +4,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, TextInput, View } fro
 
 import { RotationPicker } from '@/components/goal-bits';
 import { BackHeader, Button, Card, Field, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
-import { writeAffirmations } from '@/lib/affirmations';
+import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { deleteRecording } from '@/lib/recordings';
 import { useStore } from '@/lib/store';
 import { todaysAffirmation } from '@/lib/today';
@@ -12,7 +12,7 @@ import { makeAffirmation, type Affirmation, type Goal } from '@/lib/types';
 
 export default function GoalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { goals, updateGoal, deleteGoal } = useStore();
+  const { goals, updateGoal, deleteGoal, settings } = useStore();
   const t = useTheme();
   const goal = goals.find((g) => g.id === id);
 
@@ -21,6 +21,7 @@ export default function GoalScreen() {
   const [editText, setEditText] = useState('');
   const [showRotation, setShowRotation] = useState(false);
   const [note, setNote] = useState('');
+  const [writing, setWriting] = useState(false);
 
   if (!goal) {
     return (
@@ -42,8 +43,16 @@ export default function GoalScreen() {
     setDraft('');
   }
 
-  function writeMore() {
-    const more = writeAffirmations(goal!, goal!.affirmations.map((a) => a.text), 4);
+  async function writeMore() {
+    if (writing) return;
+    setWriting(true);
+    setNote('');
+    const more = await writeAffirmationsSmart(
+      { title: goal!.title, category: goal!.category, feeling: goal!.feeling, details: goal!.details, name: settings.name },
+      goal!.affirmations.map((a) => a.text),
+      4,
+    );
+    setWriting(false);
     if (!more.length) {
       setNote("That's every one I can write for now. Add your own below.");
       return;
@@ -207,7 +216,7 @@ export default function GoalScreen() {
 
         <Pressable onPress={writeMore} style={{ flexDirection: 'row', gap: 6, alignSelf: 'center', padding: 6 }} accessibilityRole="button">
           <Icon name="refresh" size={15} color={t.colors.muted} />
-          <Txt variant="muted">Write more for me</Txt>
+          <Txt variant="muted">{writing ? 'Writing…' : 'Write more for me'}</Txt>
         </Pressable>
         {note ? <Txt variant="muted" style={{ textAlign: 'center' }}>{note}</Txt> : null}
 

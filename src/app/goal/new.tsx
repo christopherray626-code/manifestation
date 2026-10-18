@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import { CATEGORIES } from '@/components/goal-bits';
 import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt } from '@/components/ui';
-import { writeAffirmations } from '@/lib/affirmations';
+import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { useStore } from '@/lib/store';
 import { newId, type Category, type Goal, type Voice } from '@/lib/types';
 
@@ -23,11 +23,22 @@ export default function NewGoalScreen() {
   const [writeForMe, setWriteForMe] = useState(true);
   const [voice, setVoice] = useState<Voice>('calm-female');
   const [error, setError] = useState('');
+  const [writing, setWriting] = useState(false);
 
-  function create() {
+  async function create() {
+    if (writing) return;
     if (!title.trim()) {
       setError('Give your goal a name first.');
       return;
+    }
+    let affirmations: Goal['affirmations'] = [];
+    if (writeForMe) {
+      setWriting(true);
+      affirmations = await writeAffirmationsSmart(
+        { title: title.trim(), category, feeling, details: details.trim(), name: settings.name },
+        [],
+        12,
+      );
     }
     const now = Date.now();
     const goal: Goal = {
@@ -38,7 +49,7 @@ export default function NewGoalScreen() {
       feeling: feeling.trim(),
       voice,
       createdAt: now,
-      affirmations: writeForMe ? writeAffirmations({ title, category, feeling }, [], 12) : [],
+      affirmations,
       rotation: { ...settings.defaultRotation, anchor: now },
     };
     addGoal(goal);
@@ -102,7 +113,10 @@ export default function NewGoalScreen() {
         </Section>
 
         <View style={{ marginTop: 8 }}>
-          <Button title={writeForMe ? 'Write my affirmations' : 'Continue'} onPress={create} />
+          <Button
+            title={writing ? 'Writing your affirmations…' : writeForMe ? 'Write my affirmations' : 'Continue'}
+            onPress={create}
+          />
         </View>
       </Screen>
     </KeyboardAvoidingView>

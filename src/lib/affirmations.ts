@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { makeAffirmation, type Affirmation, type Category } from '@/lib/types';
 
 /*
@@ -187,4 +189,43 @@ export function writeAffirmations(
     .filter((t) => !taken.has(t.toLowerCase()))
     .slice(0, count)
     .map((text) => makeAffirmation(text, false));
+}
+
+// The Claude writer lives on the same server as the voices (api/write.ts). On the web that's the app's own
+// site; the phone app needs its address.
+const SERVER =
+  process.env.EXPO_PUBLIC_VOICE_SERVER?.replace(/\/$/, '') ?? (Platform.OS === 'web' ? '' : undefined);
+
+/**
+ * Affirmations written by Claude around the goal, falling back to the templates above if the writer isn't
+ * set up, is down, or takes too long. Never fails.
+ */
+export async function writeAffirmationsSmart(
+  goal: { title: string; category: Category; feeling: string; details?: string; name?: string },
+  existing: string[] = [],
+  count = 8,
+): Promise<Affirmation[]> {
+  if (SERVER !== undefined) {
+    const stop = new AbortController();
+    const timer = setTimeout(() => stop.abort(), 20000);
+    try {
+      const res = await fetch(`${SERVER}/api/write`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...goal, existing, count }),
+        signal: stop.signal,
+      });
+      if (res.ok) {
+        const { affirmations } = (await res.json()) as { affirmations?: string[] };
+        const taken = new Set(existing.map((t) => t.toLowerCase()));
+        const fresh = (affirmations ?? []).filter((t) => !taken.has(t.toLowerCase()));
+        if (fresh.length) return fresh.slice(0, count).map((text) => makeAffirmation(text, false));
+      }
+    } catch {
+      // Offline, timed out, or no writer: the templates below still give them something.
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return writeAffirmations(goal, existing, count);
 }
