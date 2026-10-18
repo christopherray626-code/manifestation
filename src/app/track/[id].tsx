@@ -3,8 +3,10 @@ import { View } from 'react-native';
 
 import { Art } from '@/components/art';
 import { BackHeader, Button, Card, Screen, Txt, useTheme } from '@/components/ui';
+import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
+import { WHY } from '@/lib/tips';
 import { trackById, TRACKS, type Track } from '@/lib/tracks';
 import { makeAffirmation, newId, type Category, type Goal, type Settings } from '@/lib/types';
 
@@ -86,6 +88,8 @@ export default function TrackScreen() {
           ))}
         </View>
       </Card>
+
+      <Why text={WHY.youAndWhy} label="Why it’s written this way" />
 
       <View style={{ gap: 8 }}>
         <Button title="Make it mine" icon="add" kind="ghost" onPress={makeItMine} />

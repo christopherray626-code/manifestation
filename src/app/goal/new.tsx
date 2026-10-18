@@ -4,9 +4,11 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import { CATEGORIES } from '@/components/goal-bits';
 import { VoicePicker } from '@/components/voice-picker';
+import { Why } from '@/components/why';
 import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt } from '@/components/ui';
 import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { useStore } from '@/lib/store';
+import { WHY } from '@/lib/tips';
 import { newId, type Category, type Goal, type Voice } from '@/lib/types';
 
 
@@ -58,6 +60,7 @@ export default function NewGoalScreen() {
         <BackHeader title="" onBack={() => router.back()} />
         <Txt variant="display">What are you calling in?</Txt>
         <Txt variant="muted">Be specific. The more detail, the more personal your affirmations.</Txt>
+        <Why text={WHY.presentTense} label="Why it’s written as already yours" />
 
         <Section label="Name it">
           <Field

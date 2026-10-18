@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 
 import { Shelf, ShelfCard } from '@/components/art';
@@ -8,6 +9,7 @@ import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '
 import { moonPhase } from '@/lib/moon';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
+import { tipOfTheDay } from '@/lib/tips';
 import { MILESTONES, streakOf } from '@/lib/streak';
 import { todaysAffirmation } from '@/lib/today';
 import { quoteOfThisVisit } from '@/lib/quotes';
@@ -86,6 +88,28 @@ function QuoteLine() {
   );
 }
 
+/** One short tip a day about how manifestation works: the title shows, tap to read it. */
+function TipCard() {
+  const t = useTheme();
+  const tip = tipOfTheDay();
+  const [open, setOpen] = useState(false);
+  return (
+    <Card onPress={() => setOpen((o) => !o)}>
+      <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Icon name="bulb-outline" size={18} color={t.colors.accent} />
+          <Txt variant="label" style={{ flex: 1 }}>
+            Today’s tip
+          </Txt>
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.muted} />
+        </View>
+        <Txt variant="medium">{tip.title}</Txt>
+        {open && <Txt variant="muted">{tip.body}</Txt>}
+      </View>
+    </Card>
+  );
+}
+
 /** The one main action on Today: play your first goal's tape (the mini-player covers anything else). */
 function PlayToday() {
   const { goals } = useStore();
@@ -148,6 +172,8 @@ export default function HomeScreen() {
 
       <TodayCard />
       <PlayToday />
+
+      <TipCard />
 
       <Section label="Your manifestations">
         {goals.length === 0 ? (

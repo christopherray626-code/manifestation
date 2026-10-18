@@ -8,8 +8,10 @@ import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
 import { categoryIcon } from '@/components/goal-bits';
 import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme, type IconName } from '@/components/ui';
+import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
+import { WHY } from '@/lib/tips';
 import { TRACKS } from '@/lib/tracks';
 import type { TapeMode } from '@/lib/types';
 import { FREQUENCY_LEVELS, FREQUENCY_LIST } from '@/lib/frequencies';
@@ -237,6 +239,7 @@ export default function PlayerScreen() {
 
       <PanelCard label="Voice" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
         <VoicePicker value={voice} allowMine={!!goal} onChange={setVoice} />
+        <Why text={WHY.voices} label="Why the voice matters" />
         {goal && goal.voice === 'my-voice' && (
           <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}>
             <Txt variant="muted" style={{ color: t.colors.accent }}>
@@ -268,6 +271,7 @@ export default function PlayerScreen() {
       </PanelCard>
 
       <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
+        <Why text={WHY.frequencies} label="What these do" />
         <View style={{ gap: 6 }}>
           <Txt variant="muted" style={{ fontSize: 12 }}>
             Solfeggio tones
@@ -310,6 +314,7 @@ export default function PlayerScreen() {
           {MODES[tape.mode].about}
           {track ? ` This track has ${track.lines.length} affirmations.` : ''}
         </Txt>
+        <Why text={tape.mode === 'subliminal' ? WHY.subliminal : WHY.spoken} />
         {track && (
           <Pressable onPress={() => router.push({ pathname: '/track/[id]', params: { id: track.id } })} accessibilityRole="button">
             <Txt variant="medium" style={{ color: t.colors.accent }}>
