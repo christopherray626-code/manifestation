@@ -42,7 +42,7 @@ export const MODES: Record<TapeMode, { label: string; about: string; voiceVolume
     about: 'Your affirmations read out clearly over a soft background.',
     voiceVolume: 1,
     soundVolume: 0.35,
-    gapMs: 650,
+    gapMs: 250,
   },
   subliminal: {
     label: 'Subliminal',
@@ -93,6 +93,8 @@ function pickVoice(voices: Speech.Voice[], kind: 'calm-female' | 'deep-male') {
   return best && names.test(`${best.name} ${best.identifier}`) ? best.identifier : undefined;
 }
 
+// How much of each voice clip's tail to skip into the next line (it's silence).
+const TAIL_SEC = 0.35;
 const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
 export function useTape({
@@ -110,9 +112,10 @@ export function useTape({
   const ending = useAudioPlayer(null);
   const frequency = prefs.frequency ?? 'none';
   const frequencyVolume = prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME;
-  const layer0 = useAudioPlayer(null);
-  const layer1 = useAudioPlayer(null);
-  const layer2 = useAudioPlayer(null);
+  // Frequent status updates on the voice players, so a line can hand over to the next on time.
+  const layer0 = useAudioPlayer(null, { updateInterval: 100 });
+  const layer1 = useAudioPlayer(null, { updateInterval: 100 });
+  const layer2 = useAudioPlayer(null, { updateInterval: 100 });
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
   const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -152,7 +155,14 @@ export function useTape({
     const subs = [layer0, layer1, layer2].map((player, k) =>
       player.addListener('playbackStatusUpdate', (status) => {
         const done = onDone.current[k];
-        if (status.didJustFinish && done) {
+        // Spoken tapes move on just before the clip ends: the voice recordings trail off with a
+        // little silence, and waiting it out made the gaps between lines feel long.
+        const nearlyDone =
+          k < 2 &&
+          latest.current.mode === 'spoken' &&
+          status.duration > 1 &&
+          status.currentTime >= status.duration - TAIL_SEC * (latest.current.prefs.speed ?? 1);
+        if ((status.didJustFinish || nearlyDone) && done) {
           onDone.current[k] = null;
           done();
         }
