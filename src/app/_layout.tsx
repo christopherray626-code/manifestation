@@ -17,6 +17,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { useTheme } from '@/components/ui';
 import { useReminders } from '@/lib/reminders';
@@ -55,6 +56,21 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  // On the web, paint the page itself in the theme colour too, so the strip the phone keeps for its
+  // gesture bar (and any overscroll) matches the app instead of showing white.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    document.documentElement.style.backgroundColor = t.colors.bg;
+    document.body.style.backgroundColor = t.colors.bg;
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = t.colors.bg;
+  }, [t.colors.bg]);
 
   if (!ready) return null;
 
