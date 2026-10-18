@@ -8,7 +8,8 @@ import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '
 import { moonPhase } from '@/lib/moon';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
-import { dayOfGoal, todaysAffirmation } from '@/lib/today';
+import { MILESTONES, streakOf } from '@/lib/streak';
+import { todaysAffirmation } from '@/lib/today';
 import { quoteOfThisVisit } from '@/lib/quotes';
 
 function greeting(name: string) {
@@ -18,32 +19,55 @@ function greeting(name: string) {
   return who ? `${part}, ${who}` : part;
 }
 
+/** The top line: your listening streak, and the moon phase on themes that show it. */
 function Tagline() {
   const t = useTheme();
-  const { goals } = useStore();
-  if (t.tagline === 'moon') {
-    const moon = moonPhase();
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-        <Icon name="moon-outline" size={13} color={t.colors.accent} />
-        <Txt variant="muted" style={{ color: t.colors.accent, fontSize: 12 }}>
-          {moon.name}
-        </Txt>
+  const { settings } = useStore();
+  const streak = streakOf(settings.listenDays);
+  const moon = t.tagline === 'moon' ? moonPhase() : undefined;
+  if (!streak && !moon) return null;
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      {streak ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Icon name="flame" size={15} color={t.colors.accent} />
+          <Txt variant="muted" style={{ color: t.colors.accent }}>
+            {`${streak}-day streak`}
+          </Txt>
+        </View>
+      ) : (
+        <View />
+      )}
+      {moon && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Icon name="moon-outline" size={13} color={t.colors.accent} />
+          <Txt variant="muted" style={{ color: t.colors.accent, fontSize: 12 }}>
+            {moon.name}
+          </Txt>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** A small celebration the first time you reach 3, 7, 30 or 100 days in a row. */
+function Milestone() {
+  const t = useTheme();
+  const { settings, updateSettings } = useStore();
+  const streak = streakOf(settings.listenDays);
+  if (!MILESTONES.includes(streak) || settings.celebrated === streak) return null;
+  return (
+    <Card highlight onPress={() => updateSettings({ celebrated: streak })}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Icon name="sparkles" size={26} color={t.colors.accent} />
+        <View style={{ flex: 1 }}>
+          <Txt variant="title">{`${streak} days in a row`}</Txt>
+          <Txt variant="muted">You keep showing up for yourself. It’s working.</Txt>
+        </View>
+        <Icon name="close" size={18} color={t.colors.muted} />
       </View>
-    );
-  }
-  if (t.tagline === 'streak' && goals.length) {
-    const days = Math.max(...goals.map((g) => dayOfGoal(g)));
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-        <Icon name="flame-outline" size={14} color={t.colors.accent} />
-        <Txt variant="muted" style={{ color: t.colors.accent, fontSize: 12 }}>
-          Day {days}
-        </Txt>
-      </View>
-    );
-  }
-  return null;
+    </Card>
+  );
 }
 
 /** A quote from a manifestation or spiritual teacher, new each time the app opens. Quiet, not a card. */
@@ -110,9 +134,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={{ gap: 6, marginTop: 8 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-          <Tagline />
-        </View>
+        <Tagline />
         <Txt variant="display">{greeting(settings.name)}</Txt>
         <QuoteLine />
         {moon && (
@@ -121,6 +143,8 @@ export default function HomeScreen() {
           </Txt>
         )}
       </View>
+
+      <Milestone />
 
       <TodayCard />
       <PlayToday />

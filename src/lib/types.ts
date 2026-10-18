@@ -92,6 +92,10 @@ export type Settings = {
   defaultRotation: Pick<Rotation, 'every' | 'order' | 'favoritesOnly'>;
   player: PlayerPrefs;
   reminders: Reminder[];
+  /** Local day numbers with at least one listen, for the streak. */
+  listenDays?: number[];
+  /** The last streak milestone shown, so each is celebrated once. */
+  celebrated?: number;
   /** What they picked in onboarding (track ids), for "Picked for you". */
   intentions?: string[];
   /** Small vibrations on taps and milestones. Missing means on. */

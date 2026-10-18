@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
-import { tap } from '@/lib/haptics';
+import { success, tap } from '@/lib/haptics';
+import { MILESTONES, streakOf, withToday } from '@/lib/streak';
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS, type Track } from '@/lib/tracks';
 import type { Affirmation, Goal, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
@@ -84,7 +85,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     }
     tape.play();
-    if (source) updateSettings({ lastPlayed: source });
+    const listenDays = withToday(settings.listenDays);
+    if (listenDays.length !== (settings.listenDays ?? []).length) {
+      const streak = streakOf(listenDays);
+      if (MILESTONES.includes(streak)) success();
+    }
+    updateSettings({ ...(source ? { lastPlayed: source } : {}), listenDays });
   }
 
   function toggle() {
