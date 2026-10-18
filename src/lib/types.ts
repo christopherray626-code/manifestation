@@ -1,6 +1,15 @@
 export type Category = 'car' | 'money' | 'love' | 'home' | 'health' | 'career' | 'other';
 
-export type Voice = 'calm-female' | 'deep-male' | 'my-voice';
+export type Voice =
+  | 'calm-female'
+  | 'soft-female'
+  | 'warm-female'
+  | 'velvet-female'
+  | 'deep-male'
+  | 'narrator-male'
+  | 'gentle-male'
+  | 'steady-male'
+  | 'my-voice';
 
 export type Affirmation = {
   id: string;

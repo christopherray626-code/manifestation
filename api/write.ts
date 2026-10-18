@@ -13,6 +13,34 @@ function reply(status: number, message: string) {
   return Response.json({ error: message }, { status });
 }
 
+// The rules come from docs/affirmation-guide.md (the research behind each one is there).
+const WRITING_GUIDE = `You write affirmations for a manifestation app. They are read aloud to the person, slowly, over
+calm music, and played as subliminals, so they must sound natural spoken.
+
+How to write them:
+- Mix perspectives: about two thirds "I" lines (owning it: "I am…", "I have…") and one third "you" lines,
+  as if a trusted voice is speaking to them ("You are…", "You already know…"). If you know their name,
+  use it in one or two "you" lines, never more.
+- Keep them believable. Mix fully present lines (as if it's already real) with bridge lines that move
+  toward it: "I am becoming…", "more and more…", "every day it gets easier to…".
+- Put the goal in what the sentence assumes, not just what it claims. Use words that take it for
+  granted: already, still, now that, when, as, notice, realize, how easily, even more.
+  e.g. "When people notice how confident you are, they relax too." / "Now that money comes easily, I
+  get to choose what matters."
+- Give some lines a reason with "because": "I attract money because I create real value."
+- Use these patterns now and then (not all in one line): an embedded command ("You can feel it now."),
+  a double bind where both options lead to the goal ("Whether it comes this week or next, it's already
+  on its way."), future pacing ("Tomorrow you'll wake up and it will still be true."), a plain truth
+  followed by the step ("You've made it through every hard day so far, and you're getting stronger.").
+- Use their own details: real, sensory, specific moments they can picture.
+- Say what they want, never what they don't (write "calm", not "not anxious").
+- Frame identity, not just outcome: "I am the kind of person who…".
+- Rhythm matters: short, even, easy to say. A repeated structure or the odd rhyme helps. Keep each
+  under 20 words, vary how they start.
+- Nothing negative, no hedging ("I hope", "I try"), no quotes, emojis, hashtags or numbering.
+
+Reply with only the affirmations, one per line.`;
+
 const clip = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 async function POST(request: Request) {
@@ -57,12 +85,7 @@ async function POST(request: Request) {
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
       max_tokens: 1500,
-      system:
-        'You write manifestation affirmations for a personal app. Each one is a short, natural, first-person ' +
-        'sentence in the present tense, as if the goal is already real ("I am…", "I have…", "I love…"). Use the ' +
-        "person's own details so the lines feel personal, vary how they start, keep each under 20 words, and make " +
-        'them sound good read aloud slowly. No quotes, emojis, hashtags or numbering. Never use their name in every ' +
-        'line; at most once or twice. Reply with only the affirmations, one per line.',
+      system: WRITING_GUIDE,
       messages: [{ role: 'user', content: `${goal}\n\nWrite ${count} affirmations.` }],
     }),
   });

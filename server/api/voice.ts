@@ -10,6 +10,13 @@
 const VOICES: Record<string, string> = {
   'calm-female': process.env.VOICE_ID_CALM || '21m00Tcm4TlvDq8ikWAM',
   'deep-male': process.env.VOICE_ID_DEEP || 'pNInz6obpgDQGcFmaJgB',
+  // ElevenLabs' own premade voices, so they work on any plan.
+  'soft-female': 'EXAVITQu4vr4xnSDxMaL', // Sarah
+  'warm-female': 'XrExE9yKIg1WjnnlVkGX', // Matilda
+  'velvet-female': 'pFZP5JICA0tqhD9ehrhH', // Lily, British
+  'narrator-male': 'nPczCjzI2devNBz1zQrb', // Brian
+  'gentle-male': 'JBFqnCBsd6RMkjVDRZzb', // George, British
+  'steady-male': 'onwK4e9ZLuTAKqWW03F9', // Daniel, British
 };
 
 const MAX_CHARS = 300;

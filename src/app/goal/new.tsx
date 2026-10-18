@@ -3,16 +3,12 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import { CATEGORIES } from '@/components/goal-bits';
+import { VoicePicker } from '@/components/voice-picker';
 import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt } from '@/components/ui';
 import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { useStore } from '@/lib/store';
 import { newId, type Category, type Goal, type Voice } from '@/lib/types';
 
-const VOICES: { id: Voice; label: string }[] = [
-  { id: 'calm-female', label: 'Calm female' },
-  { id: 'deep-male', label: 'Deep male' },
-  { id: 'my-voice', label: 'My voice' },
-];
 
 export default function NewGoalScreen() {
   const { addGoal, settings } = useStore();
@@ -105,11 +101,7 @@ export default function NewGoalScreen() {
         </Section>
 
         <Section label="Voice">
-          <ChipRow>
-            {VOICES.map((v) => (
-              <Chip key={v.id} label={v.label} selected={voice === v.id} onPress={() => setVoice(v.id)} />
-            ))}
-          </ChipRow>
+          <VoicePicker value={voice} onChange={setVoice} />
         </Section>
 
         <View style={{ marginTop: 8 }}>

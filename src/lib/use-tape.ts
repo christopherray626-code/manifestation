@@ -196,7 +196,8 @@ export function useTape({
       playFile(0, layer0, uri, p.voiceVolume, next);
       return;
     }
-    const kind = v === 'my-voice' ? 'calm-female' : v;
+    // The phone's own voices only come in two kinds; pick the closer one.
+    const kind = v.endsWith('-male') ? 'deep-male' : 'calm-female';
     const id = voiceIds.current[kind];
     Speech.speak(item.text, {
       voice: id,

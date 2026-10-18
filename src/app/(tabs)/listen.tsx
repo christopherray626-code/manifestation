@@ -4,6 +4,7 @@ import { Animated, Easing, Pressable, View } from 'react-native';
 
 import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
+import { VoicePicker } from '@/components/voice-picker';
 import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS } from '@/lib/tracks';
@@ -32,11 +33,6 @@ const TIMERS = [
   { value: 60, label: '1 hour' },
 ];
 
-const VOICES: { id: Voice; label: string }[] = [
-  { id: 'calm-female', label: 'Calm' },
-  { id: 'deep-male', label: 'Deep' },
-  { id: 'my-voice', label: 'My voice' },
-];
 
 function nearest(levels: { value: number }[], value: number) {
   return levels.reduce((best, l) => (Math.abs(l.value - value) < Math.abs(best.value - value) ? l : best)).value;
@@ -245,20 +241,15 @@ export default function ListenScreen() {
       {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
 
       <Section label="Voice">
-        <ChipRow>
-          {VOICES.filter((v) => goal || v.id !== 'my-voice').map((v) => (
-            <Chip
-              key={v.id}
-              label={v.label}
-              selected={voice === v.id}
-              onPress={() => {
-                tape.pause();
-                if (goal) updateGoal(goal.id, (g) => ({ ...g, voice: v.id }));
-                else setTrackVoice(v.id);
-              }}
-            />
-          ))}
-        </ChipRow>
+        <VoicePicker
+          value={voice}
+          allowMine={!!goal}
+          onChange={(v) => {
+            tape.pause();
+            if (goal) updateGoal(goal.id, (g) => ({ ...g, voice: v }));
+            else setTrackVoice(v);
+          }}
+        />
         {goal && goal.voice === 'my-voice' && (
           <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}>
             <Txt variant="muted" style={{ color: t.colors.accent }}>
