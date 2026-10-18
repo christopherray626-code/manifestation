@@ -21,6 +21,8 @@ import { Platform } from 'react-native';
 
 import { useTheme } from '@/components/ui';
 import { useReminders } from '@/lib/reminders';
+import { setHapticsEnabled } from '@/lib/haptics';
+import { PlayerProvider } from '@/lib/player';
 import { StoreProvider, useStore } from '@/lib/store';
 import { setAppOpens } from '@/lib/today';
 
@@ -45,7 +47,9 @@ export default function RootLayout() {
 
   return (
     <StoreProvider>
-      <Root fontsReady={fontsLoaded || !!fontError} />
+      <PlayerProvider>
+        <Root fontsReady={fontsLoaded || !!fontError} />
+      </PlayerProvider>
     </StoreProvider>
   );
 }
@@ -59,6 +63,8 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  useEffect(() => setHapticsEnabled(settings.haptics !== false), [settings.haptics]);
 
   // Count this launch once the saved state is in, for affirmations that change each time the app opens.
   useEffect(() => {
@@ -109,6 +115,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="goal/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="goal/[id]" />
         <Stack.Screen name="track/[id]" />
+        <Stack.Screen name="player" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="record/[goalId]" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       </Stack>

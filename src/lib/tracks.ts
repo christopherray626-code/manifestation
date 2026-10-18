@@ -10,6 +10,14 @@ import type { Affirmation } from '@/lib/types';
  */
 export type Track = { id: string; title: string; about: string; icon: IconName; lines: string[] };
 
+/** Explore's intention groups, in order, with the tracks in each. */
+export const TRACK_GROUPS: { id: string; label: string; tracks: string[] }[] = [
+  { id: 'money', label: 'Money & success', tracks: ['money-magnet', 'wealth', 'success', 'career', 'luck'] },
+  { id: 'self', label: 'Love & self', tracks: ['confidence', 'self-love', 'love', 'glow-up'] },
+  { id: 'calm', label: 'Calm & sleep', tracks: ['calm', 'sleep', 'gratitude'] },
+  { id: 'body', label: 'Body & mind', tracks: ['health', 'focus'] },
+];
+
 export const TRACKS: Track[] = [
   {
     id: 'money-magnet',

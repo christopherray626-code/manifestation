@@ -6,6 +6,7 @@ import { RotationPicker } from '@/components/goal-bits';
 import { BackHeader, Button, Card, Field, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { deleteRecording } from '@/lib/recordings';
+import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { todaysAffirmation } from '@/lib/today';
 import { makeAffirmation, type Affirmation, type Goal } from '@/lib/types';
@@ -13,6 +14,7 @@ import { makeAffirmation, type Affirmation, type Goal } from '@/lib/types';
 export default function GoalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { goals, updateGoal, deleteGoal, settings } = useStore();
+  const { open } = usePlayer();
   const t = useTheme();
   const goal = goals.find((g) => g.id === id);
 
@@ -231,7 +233,7 @@ export default function GoalScreen() {
             }}
           />
         )}
-        <Button title="Make my tape" onPress={() => router.push({ pathname: '/listen', params: { goal: goal.id } })} />
+        <Button title="Play my tape" icon="play" onPress={() => open({ kind: 'goal', id: goal.id })} />
         <Pressable onPress={confirmDelete} style={{ alignSelf: 'center', padding: 8 }} accessibilityRole="button">
           <Txt variant="muted">Delete goal</Txt>
         </Pressable>

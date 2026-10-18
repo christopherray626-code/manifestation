@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Art } from '@/components/art';
 import { BackHeader, Button, Card, Screen, Txt, useTheme } from '@/components/ui';
+import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { trackById, TRACKS, type Track } from '@/lib/tracks';
 import { makeAffirmation, newId, type Category, type Goal, type Settings } from '@/lib/types';
@@ -38,6 +39,7 @@ export default function TrackScreen() {
   const t = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { addGoal, settings } = useStore();
+  const { open } = usePlayer();
   const track = trackById(id);
 
   if (!track) {
@@ -68,7 +70,7 @@ export default function TrackScreen() {
         </View>
       </View>
 
-      <Button title="Play" icon="play" onPress={() => router.push({ pathname: '/listen', params: { track: track.id } })} />
+      <Button title="Play" icon="play" onPress={() => open({ kind: 'track', id: track.id })} />
 
       <Card>
         <View style={{ gap: 12 }}>

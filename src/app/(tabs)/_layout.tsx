@@ -1,15 +1,23 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
+import { BottomTabBar } from 'expo-router/build/react-navigation/bottom-tabs';
+import { View } from 'react-native';
 
+import { MiniPlayer } from '@/components/mini-player';
 import { useTheme, type IconName } from '@/components/ui';
+import { tap } from '@/lib/haptics';
 import { useStore } from '@/lib/store';
 
+// Four tabs, each a one-word label with an outline icon that fills in when active.
 const TABS: { name: string; title: string; icon: IconName; iconOn: IconName }[] = [
-  { name: 'index', title: 'Home', icon: 'home-outline', iconOn: 'home' },
-  { name: 'board', title: 'Board', icon: 'images-outline', iconOn: 'images' },
-  { name: 'listen', title: 'Listen', icon: 'headset-outline', iconOn: 'headset' },
-  { name: 'you', title: 'You', icon: 'person-outline', iconOn: 'person' },
+  { name: 'index', title: 'Today', icon: 'sunny-outline', iconOn: 'sunny' },
+  { name: 'explore', title: 'Explore', icon: 'compass-outline', iconOn: 'compass' },
+  { name: 'create', title: 'Create', icon: 'create-outline', iconOn: 'create' },
+  { name: 'you', title: 'Me', icon: 'person-outline', iconOn: 'person' },
 ];
+
+// Routes that live in the tab group but don't get a tab.
+const HIDDEN = ['listen', 'board'];
 
 export default function TabLayout() {
   const { settings } = useStore();
@@ -19,6 +27,14 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      // The mini-player rides just above the tab bar on every tab.
+      tabBar={(props) => (
+        <View style={{ backgroundColor: t.colors.bg }}>
+          <MiniPlayer />
+          <BottomTabBar {...props} />
+        </View>
+      )}
+      screenListeners={{ tabPress: () => tap() }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: t.colors.accent,
@@ -38,6 +54,9 @@ export default function TabLayout() {
             ),
           }}
         />
+      ))}
+      {HIDDEN.map((name) => (
+        <Tabs.Screen key={name} name={name} options={{ href: null }} />
       ))}
     </Tabs>
   );

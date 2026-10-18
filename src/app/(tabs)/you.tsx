@@ -1,15 +1,19 @@
+import { router } from 'expo-router';
+import { View } from 'react-native';
+
 import { RotationPicker } from '@/components/goal-bits';
 import { ReminderList } from '@/components/reminder-list';
 import { ThemePicker } from '@/components/theme-picker';
-import { Card, Field, Screen, Section, Txt } from '@/components/ui';
+import { Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { useStore } from '@/lib/store';
 
 export default function YouScreen() {
+  const t = useTheme();
   const { settings, updateSettings } = useStore();
 
   return (
     <Screen>
-      <Txt variant="display">You</Txt>
+      <Txt variant="display">Me</Txt>
 
       <Section label="Your name">
         <Field
@@ -39,6 +43,24 @@ export default function YouScreen() {
           />
         </Card>
       </Section>
+
+      <Section label="Feel">
+        <ChipRow>
+          <Chip label="Vibrations on" selected={settings.haptics !== false} onPress={() => updateSettings({ haptics: true })} />
+          <Chip label="Off" selected={settings.haptics === false} onPress={() => updateSettings({ haptics: false })} />
+        </ChipRow>
+      </Section>
+
+      <Card onPress={() => router.push('/board')}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Icon name="images-outline" size={22} color={t.colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Txt variant="medium">Vision board</Txt>
+            <Txt variant="muted">Coming soon</Txt>
+          </View>
+          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
+        </View>
+      </Card>
 
       <Txt variant="muted" style={{ textAlign: 'center', marginTop: 8 }}>
         Everything you write stays on this phone.

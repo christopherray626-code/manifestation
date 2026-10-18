@@ -1,15 +1,15 @@
 import { router } from 'expo-router';
 import { Pressable, Share, View } from 'react-native';
 
-import { Art, Shelf, ShelfCard } from '@/components/art';
+import { Shelf, ShelfCard } from '@/components/art';
 import { categoryIcon, dayLabel } from '@/components/goal-bits';
 import { TrackShelf } from '@/components/track-shelf';
 import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { moonPhase } from '@/lib/moon';
+import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { dayOfGoal, todaysAffirmation } from '@/lib/today';
 import { quoteOfThisVisit } from '@/lib/quotes';
-import { trackById, TRACKS } from '@/lib/tracks';
 
 function greeting(name: string) {
   const hour = new Date().getHours();
@@ -62,6 +62,15 @@ function QuoteLine() {
   );
 }
 
+/** The one main action on Today: play your first goal's tape (the mini-player covers anything else). */
+function PlayToday() {
+  const { goals } = useStore();
+  const { open } = usePlayer();
+  const goal = goals[0];
+  if (!goal || !goal.affirmations.length) return null;
+  return <Button title={`Play your tape`} icon="play" onPress={() => open({ kind: 'goal', id: goal.id })} />;
+}
+
 /** Today's affirmation from the first goal, with a heart to favorite it and a share button. */
 function TodayCard() {
   const t = useTheme();
@@ -93,39 +102,6 @@ function TodayCard() {
   );
 }
 
-/** Whatever Listen last played, one tap to carry on. */
-function ContinueListening() {
-  const t = useTheme();
-  const { goals, settings } = useStore();
-  const last = settings.lastPlayed;
-  if (!last) return null;
-  const goalIndex = goals.findIndex((g) => g.id === last.id);
-  const goal = last.kind === 'goal' ? goals[goalIndex] : undefined;
-  const track = last.kind === 'track' ? trackById(last.id) : undefined;
-  if (!goal && !track) return null;
-  const open = () => router.push({ pathname: '/listen', params: goal ? { goal: goal.id } : { track: track!.id } });
-  return (
-    <Pressable
-      onPress={open}
-      accessibilityRole="button"
-      accessibilityLabel={`Continue listening to ${goal ? goal.title : track!.title}`}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.7 : 1 })}>
-      <Art icon={goal ? categoryIcon(goal.category) : track!.icon} index={goal ? goalIndex : TRACKS.indexOf(track!)} size={44} />
-      <View style={{ flex: 1 }}>
-        <Txt variant="muted" style={{ fontSize: 12 }}>
-          Continue listening
-        </Txt>
-        <Txt variant="medium" numberOfLines={1}>
-          {goal ? goal.title : track!.title}
-        </Txt>
-      </View>
-      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="play" size={17} color={t.colors.onAccent} />
-      </View>
-    </Pressable>
-  );
-}
-
 export default function HomeScreen() {
   const t = useTheme();
   const { goals, settings } = useStore();
@@ -147,8 +123,7 @@ export default function HomeScreen() {
       </View>
 
       <TodayCard />
-
-      <ContinueListening />
+      <PlayToday />
 
       <Section label="Your goals">
         {goals.length === 0 ? (
