@@ -1,6 +1,6 @@
 /**
  * The starter themes. Every screen reads its look from here, so a theme can change
- * colors, fonts, shapes and small touches (stars, the orb, the moon) without new layouts.
+ * colors, fonts, shapes and small touches (stars, the orb) without new layouts.
  */
 export type Theme = {
   id: string;
@@ -43,7 +43,7 @@ export type Theme = {
   quote: 'frame' | 'card' | 'bar' | 'plain';
   goalIcon: 'ring' | 'tile' | 'none';
   decor: 'stars' | 'orb' | 'none';
-  tagline: 'moon' | 'streak' | 'none';
+  tagline: 'streak' | 'none';
   romanDays: boolean;
 };
 
@@ -89,7 +89,7 @@ export const themes: Theme[] = [
     quote: 'frame',
     goalIcon: 'ring',
     decor: 'stars',
-    tagline: 'moon',
+    tagline: 'none',
     romanDays: false,
   },
   {

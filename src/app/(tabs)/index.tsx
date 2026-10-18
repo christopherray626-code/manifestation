@@ -6,7 +6,6 @@ import { Shelf, ShelfCard } from '@/components/art';
 import { categoryIcon, dayLabel } from '@/components/goal-bits';
 import { TrackShelf } from '@/components/track-shelf';
 import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
-import { moonPhase } from '@/lib/moon';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { tipOfTheDay } from '@/lib/tips';
@@ -21,33 +20,18 @@ function greeting(name: string) {
   return who ? `${part}, ${who}` : part;
 }
 
-/** The top line: your listening streak, and the moon phase on themes that show it. */
+/** The top line: your listening streak, once there is one. */
 function Tagline() {
   const t = useTheme();
   const { settings } = useStore();
   const streak = streakOf(settings.listenDays);
-  const moon = t.tagline === 'moon' ? moonPhase() : undefined;
-  if (!streak && !moon) return null;
+  if (!streak) return null;
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      {streak ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Icon name="flame" size={15} color={t.colors.accent} />
-          <Txt variant="muted" style={{ color: t.colors.accent }}>
-            {`${streak}-day streak`}
-          </Txt>
-        </View>
-      ) : (
-        <View />
-      )}
-      {moon && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Icon name="moon-outline" size={13} color={t.colors.accent} />
-          <Txt variant="muted" style={{ color: t.colors.accent, fontSize: 12 }}>
-            {moon.name}
-          </Txt>
-        </View>
-      )}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+      <Icon name="flame" size={15} color={t.colors.accent} />
+      <Txt variant="muted" style={{ color: t.colors.accent }}>
+        {`${streak}-day streak`}
+      </Txt>
     </View>
   );
 }
@@ -171,7 +155,6 @@ function TodayCard() {
 export default function HomeScreen() {
   const t = useTheme();
   const { goals, settings } = useStore();
-  const moon = t.tagline === 'moon' ? moonPhase() : undefined;
 
   return (
     <Screen>
@@ -179,11 +162,6 @@ export default function HomeScreen() {
         <Tagline />
         <Txt variant="display">{greeting(settings.name)}</Txt>
         <QuoteLine />
-        {moon && (
-          <Txt variant="quote" style={{ fontSize: 15, lineHeight: 20, color: t.colors.muted }}>
-            {moon.hint}
-          </Txt>
-        )}
       </View>
 
       <Milestone />
