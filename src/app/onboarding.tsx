@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Art } from '@/components/art';
+import { Creating, VOICING_MESSAGES, WRITING_MESSAGES } from '@/components/creating';
 import { ThemePicker } from '@/components/theme-picker';
 import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme } from '@/components/ui';
 import { VOICE_LIST } from '@/components/voice-picker';
@@ -234,6 +235,11 @@ export default function Onboarding() {
           </Pressable>
         </View>
       )}
+      <Creating
+        visible={step === 'building' || (step === 'listen' && !!player.prep)}
+        messages={step === 'building' ? WRITING_MESSAGES : VOICING_MESSAGES}
+        detail={player.prep ? `${player.prep.done} of ${player.prep.total} lines` : undefined}
+      />
     </Screen>
   );
 }

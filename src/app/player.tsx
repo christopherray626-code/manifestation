@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, Share, View } from 'react-native';
 
+import { Creating, VOICING_MESSAGES } from '@/components/creating';
 import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
@@ -325,6 +326,11 @@ export default function PlayerScreen() {
           onPick={(picked) => choose({ kind: 'track', id: picked.id })}
         />
       </Section>
+      <Creating
+        visible={!!prep}
+        messages={VOICING_MESSAGES}
+        detail={prep ? `${prep.done} of ${prep.total} lines` : undefined}
+      />
     </Screen>
   );
 }

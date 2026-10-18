@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import { CATEGORIES } from '@/components/goal-bits';
+import { Creating, WRITING_MESSAGES } from '@/components/creating';
 import { VoicePicker } from '@/components/voice-picker';
 import { Why } from '@/components/why';
 import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt } from '@/components/ui';
@@ -92,7 +93,7 @@ export default function NewGoalScreen() {
           />
         </Section>
 
-        <Section label="How it will feel">
+        <Section label="How it feels">
           <Field value={feeling} onChangeText={setFeeling} placeholder="Proud, free, calm" />
         </Section>
 
@@ -114,6 +115,7 @@ export default function NewGoalScreen() {
           />
         </View>
       </Screen>
+      <Creating visible={writing} messages={WRITING_MESSAGES} />
     </KeyboardAvoidingView>
   );
 }
