@@ -115,11 +115,11 @@ export function Txt({
   const v: Record<TxtVariant, TextStyle> = {
     display: {
       fontFamily: t.fonts.display,
-      fontSize: t.displayCaps ? 26 : 30,
-      lineHeight: t.displayCaps ? 30 : 36,
+      fontSize: t.displayCaps ? 28 : 34,
+      lineHeight: t.displayCaps ? 34 : 41,
       textTransform: t.displayCaps ? 'uppercase' : 'none',
     },
-    title: { fontFamily: t.fonts.display, fontSize: 19, lineHeight: 25 },
+    title: { fontFamily: t.fonts.display, fontSize: 20, lineHeight: 26 },
     body: { fontFamily: t.fonts.body, fontSize: 15, lineHeight: 22 },
     medium: { fontFamily: t.fonts.bodyMedium, fontSize: 15, lineHeight: 22 },
     muted: { fontFamily: t.fonts.body, fontSize: 13, lineHeight: 19, color: t.colors.muted },
@@ -143,17 +143,17 @@ export function cardStyle(t: Theme, highlight = false): ViewStyle {
   const border = highlight ? t.colors.accent : t.colors.border;
   switch (t.card) {
     case 'outline':
-      return { borderWidth: 1, borderColor: border, borderRadius: t.radius, padding: 14 };
+      return { borderWidth: 1, borderColor: border, borderRadius: t.radius, padding: 16 };
     case 'filled':
       return {
         backgroundColor: t.colors.card,
         borderRadius: t.radius,
-        padding: 14,
+        padding: 16,
         borderWidth: highlight ? 1 : 0,
         borderColor: border,
       };
     case 'white':
-      return { backgroundColor: t.colors.card, borderWidth: 1, borderColor: border, borderRadius: t.radius, padding: 14 };
+      return { backgroundColor: t.colors.card, borderWidth: 1, borderColor: border, borderRadius: t.radius, padding: 16 };
     case 'line':
       return { borderBottomWidth: 1, borderColor: border, paddingVertical: 14, paddingHorizontal: 4 };
   }
@@ -282,7 +282,7 @@ export function Field(props: TextInputProps & { error?: string }) {
 
 export function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 10 }}>
       <Txt variant="label">{label}</Txt>
       {children}
     </View>
@@ -290,7 +290,7 @@ export function Section({ label, children }: { label: string; children: ReactNod
 }
 
 /** "Today's affirmation" block, drawn in each theme's own way. */
-export function QuoteBlock({ label, text }: { label: string; text: string }) {
+export function QuoteBlock({ label, text, footer }: { label: string; text: string; footer?: ReactNode }) {
   const t = useTheme();
   if (t.quote === 'frame') {
     return (
@@ -301,6 +301,7 @@ export function QuoteBlock({ label, text }: { label: string; text: string }) {
           <Txt variant="quote" style={{ textAlign: 'center' }}>
             {text}
           </Txt>
+          {footer}
         </View>
       </View>
     );
@@ -312,6 +313,7 @@ export function QuoteBlock({ label, text }: { label: string; text: string }) {
         <Txt variant="quote" style={{ textAlign: 'center' }}>
           {text}
         </Txt>
+        {footer}
       </View>
     );
   }
@@ -322,6 +324,7 @@ export function QuoteBlock({ label, text }: { label: string; text: string }) {
         <Txt variant="quote" style={{ fontSize: 18, lineHeight: 25 }}>
           {text}
         </Txt>
+        {footer}
       </View>
     );
   }
@@ -351,7 +354,7 @@ export function BackHeader({ title, onBack }: { title: string; onBack: () => voi
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 48, gap: 14 },
+  content: { padding: 20, paddingBottom: 64, gap: 22 },
   button: {
     flexDirection: 'row',
     alignItems: 'center',

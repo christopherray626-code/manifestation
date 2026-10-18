@@ -2,20 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Pressable, View } from 'react-native';
 
+import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
 import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS } from '@/lib/tracks';
-import type { BackgroundSound, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
+import type { PlayerPrefs, TapeMode, Voice } from '@/lib/types';
 import { audioFor, MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
 import { naturalVoices, prepareVoice } from '@/lib/voices';
 
-const SOUND_CHOICES: { id: BackgroundSound; label: string }[] = [
-  { id: 'pad', label: 'Soft pad' },
-  { id: 'bowls', label: 'Singing bowls' },
-  { id: 'hum', label: 'Soft hum' },
-  { id: 'none', label: 'None' },
-];
 
 const SPOKEN_LEVELS = [
   { value: 0.3, label: 'Soft' },
@@ -122,6 +117,7 @@ export default function ListenScreen() {
       }
     }
     tape.play();
+    updateSettings({ lastPlayed: track ? { kind: 'track', id: track.id } : { kind: 'goal', id: goal!.id } });
   }
 
   const setPrefs = (patch: Partial<PlayerPrefs>) => updateSettings({ player: { ...prefs, ...patch } });
@@ -277,11 +273,7 @@ export default function ListenScreen() {
       </Section>
 
       <Section label="Background">
-        <ChipRow>
-          {SOUND_CHOICES.filter((s) => tape.mode === 'spoken' || s.id !== 'none').map((s) => (
-            <Chip key={s.id} label={s.label} selected={prefs.sound === s.id} onPress={() => setPrefs({ sound: s.id })} />
-          ))}
-        </ChipRow>
+        <SoundList value={prefs.sound} onChange={(sound) => setPrefs({ sound })} allowNone={tape.mode === 'spoken'} />
       </Section>
 
       <Pressable

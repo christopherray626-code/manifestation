@@ -14,7 +14,7 @@ export type Affirmation = {
 };
 
 export type TapeMode = 'spoken' | 'subliminal';
-export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'none';
+export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'space' | 'chimes' | 'ocean' | 'rain' | 'brown' | 'none';
 
 export type PlayerPrefs = {
   mode: TapeMode;
@@ -69,6 +69,8 @@ export type Settings = {
   defaultRotation: Pick<Rotation, 'every' | 'order' | 'favoritesOnly'>;
   player: PlayerPrefs;
   reminders: Reminder[];
+  /** What the Listen tab last played, for "Continue listening" on Home. */
+  lastPlayed?: { kind: 'goal' | 'track'; id: string };
 };
 
 export function newId() {

@@ -10,6 +10,11 @@ export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
   pad: require('@/assets/sounds/pad.wav'),
   bowls: require('@/assets/sounds/bowls.wav'),
   hum: require('@/assets/sounds/hum.wav'),
+  space: require('@/assets/sounds/space.wav'),
+  chimes: require('@/assets/sounds/chimes.wav'),
+  ocean: require('@/assets/sounds/ocean.wav'),
+  rain: require('@/assets/sounds/rain.wav'),
+  brown: require('@/assets/sounds/brown.wav'),
 };
 
 /** What each mode does by default. People can still change the levels and timer after. */
