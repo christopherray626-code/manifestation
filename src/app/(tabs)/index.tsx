@@ -175,18 +175,18 @@ export default function HomeScreen() {
 
       <TipCard />
 
-      <Section label="Your manifestations">
+      <Section label="Already yours">
         {goals.length === 0 ? (
           <View style={{ gap: 14 }}>
             <Card>
               <View style={{ gap: 6 }}>
-                <Txt variant="title">Start your first manifestation</Txt>
+                <Txt variant="title">Claim your first one</Txt>
                 <Txt variant="muted">
-                  {"Describe what you're calling in, and you'll get affirmations written around it. Or write your own."}
+                  {"Describe what’s already yours, and you’ll get affirmations written around it. Or write your own."}
                 </Txt>
               </View>
             </Card>
-            <Button title="New manifestation" icon="add" onPress={() => router.push('/goal/new')} />
+            <Button title="Claim something new" icon="add" onPress={() => router.push('/goal/new')} />
           </View>
         ) : (
           <Shelf>
@@ -221,7 +221,7 @@ function NewGoalCard() {
     <Pressable
       onPress={() => router.push('/goal/new')}
       accessibilityRole="button"
-      accessibilityLabel="New manifestation"
+      accessibilityLabel="Claim something new"
       style={({ pressed }) => ({ width: 128, gap: 8, opacity: pressed ? 0.75 : 1 })}>
       <View
         style={{
@@ -236,7 +236,7 @@ function NewGoalCard() {
         }}>
         <Icon name="add" size={34} color={t.colors.accent} />
       </View>
-      <Txt variant="medium">New</Txt>
+      <Txt variant="medium">Claim</Txt>
     </Pressable>
   );
 }

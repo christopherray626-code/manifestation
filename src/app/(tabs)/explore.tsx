@@ -51,7 +51,7 @@ export default function ExploreScreen() {
           <Icon name="sparkles-outline" size={24} color={t.colors.accent} />
           <View style={{ flex: 1 }}>
             <Txt variant="medium">Want one made just for you?</Txt>
-            <Txt variant="muted">Describe what you’re calling in and get affirmations written around it.</Txt>
+            <Txt variant="muted">Describe what’s already yours and get affirmations written around it.</Txt>
           </View>
           <Icon name="chevron-forward" size={18} color={t.colors.muted} />
         </View>

@@ -36,7 +36,7 @@ export default function YouScreen() {
         <ThemePicker />
       </Section>
 
-      <Section label="For new manifestations">
+      <Section label="When you claim something new">
         <Card>
           <RotationPicker
             value={settings.defaultRotation}
@@ -57,7 +57,7 @@ export default function YouScreen() {
           <Icon name="star-outline" size={22} color={t.colors.accent} />
           <View style={{ flex: 1 }}>
             <Txt variant="medium">Premium</Txt>
-            <Txt variant="muted">{BILLING_LIVE ? 'Every voice, your own voice, unlimited manifestations' : 'Everything is free for now'}</Txt>
+            <Txt variant="muted">{BILLING_LIVE ? 'Every voice, your own voice, claim as much as you want' : 'Everything is free for now'}</Txt>
           </View>
           <Icon name="chevron-forward" size={18} color={t.colors.muted} />
         </View>

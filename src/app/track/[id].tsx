@@ -94,7 +94,7 @@ export default function TrackScreen() {
       <View style={{ gap: 8 }}>
         <Button title="Make it mine" icon="add" kind="ghost" onPress={makeItMine} />
         <Txt variant="muted" style={{ textAlign: 'center', color: t.colors.muted }}>
-          Copies this track into your manifestations, so you can add your own affirmations, edit or remove any, and record them in
+          Copies this track into what’s already yours, so you can add your own affirmations, edit or remove any, and record them in
           your voice.
         </Txt>
       </View>

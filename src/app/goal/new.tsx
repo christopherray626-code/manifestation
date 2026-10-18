@@ -58,8 +58,8 @@ export default function NewGoalScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <BackHeader title="" onBack={() => router.back()} />
-        <Txt variant="display">What are you calling in?</Txt>
-        <Txt variant="muted">Be specific. The more detail, the more personal your affirmations.</Txt>
+        <Txt variant="display">What’s already yours?</Txt>
+        <Txt variant="muted">Describe it as it is now that it’s here. The more detail, the more personal your affirmations.</Txt>
         <Why text={WHY.presentTense} label="Why it’s written as already yours" />
 
         <Section label="Name it">
