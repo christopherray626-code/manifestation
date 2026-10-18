@@ -8,11 +8,20 @@ import type { Affirmation } from '@/lib/types';
  * like a goal's own tape (spoken or subliminal), in the calm or deep voice. Each line's audio is made
  * the first time it's played and kept, so a track only costs anything once.
  */
-export type Track = { id: string; title: string; about: string; icon: IconName; lines: string[] };
+export type Track = {
+  id: string;
+  title: string;
+  about: string;
+  icon: IconName;
+  lines: string[];
+  /** Combined tracks only: each line's id in the track it came from, and those tracks. */
+  lineIds?: string[];
+  parts?: Track[];
+};
 
 /** Explore's intention groups, in order, with the tracks in each. */
 export const TRACK_GROUPS: { id: string; label: string; tracks: string[] }[] = [
-  { id: 'money', label: 'Money & success', tracks: ['money-magnet', 'wealth', 'success', 'career', 'luck'] },
+  { id: 'money', label: 'Money & success', tracks: ['money-magnet', 'success', 'career', 'luck'] },
   { id: 'self', label: 'Love & self', tracks: ['confidence', 'self-love', 'love', 'glow-up'] },
   { id: 'calm', label: 'Calm & sleep', tracks: ['calm', 'sleep', 'gratitude'] },
   { id: 'body', label: 'Body & mind', tracks: ['health', 'focus'] },
@@ -21,40 +30,25 @@ export const TRACK_GROUPS: { id: string; label: string; tracks: string[] }[] = [
 export const TRACKS: Track[] = [
   {
     id: 'money-magnet',
-    title: 'Money magnet',
-    about: 'Attract money easily',
+    title: 'Money & abundance',
+    about: 'Money, wealth and more than enough',
     icon: 'cash-outline',
     lines: [
       'Money finds you so easily now, you barely notice it arriving.',
       'Why does money keep showing up for you like this?',
-      'You’re so used to having plenty that checking your balance feels fun.',
-      'Every week brings another reason to smile at your bank account.',
-      'Money is drawn to you, because you know you’re worth it.',
-      'You’ve always been lucky with money, and now it’s obvious to everyone.',
-      'Why is it so easy for you to receive?',
-      'Payments, gifts and opportunities keep landing in your lap.',
-      'You spend with joy, because you know more is already on the way.',
-      'Being rich just feels normal to you now.',
-      'You’re so grateful for how naturally money flows to you.',
-      'It’s done. Money is simply part of who you are.',
-    ],
-  },
-  {
-    id: 'wealth',
-    title: 'Wealth & abundance',
-    about: 'Live in abundance',
-    icon: 'diamond-outline',
-    lines: [
       'You live in so much abundance it almost feels unfair.',
+      'You’re so used to having plenty that checking your balance feels fun.',
       'Why does everything you touch seem to multiply?',
       'Your wealth keeps growing, even while you sleep.',
+      'You’ve always been lucky with money, and now it’s obvious to everyone.',
+      'Payments, gifts and opportunities keep landing in your lap.',
       'You get to choose what to build, where to travel and who to bless.',
-      'Financial freedom isn’t a goal for you anymore. It’s just your life.',
-      'You were made for this level of abundance, and you know it.',
       'Why do you always have more than enough? It feels so good.',
-      'The people after you will feel the wealth you’re building now.',
+      'You spend with joy, because you know more is already on the way.',
       'You give generously, and it comes back to you bigger every time.',
-      'It’s done. You are wealthy, and it feels completely natural.',
+      'Being rich just feels normal to you now.',
+      'You’re so grateful for how naturally money flows to you.',
+      'It’s done. You are wealthy, and money is simply part of who you are.',
     ],
   },
   {
@@ -275,11 +269,43 @@ export const TRACKS: Track[] = [
   },
 ];
 
-export function trackById(id: string | undefined) {
-  return TRACKS.find((t) => t.id === id);
+// Tracks that were folded into another one, so old saves and links still open.
+const MERGED: Record<string, string> = { wealth: 'money-magnet' };
+
+/** Track ids joined with "+" make a combined track, e.g. "money-magnet+luck". */
+export const comboId = (ids: string[]) => ids.join('+');
+
+/**
+ * A ready-made track, or several played back to back as one. A combined track keeps only the last
+ * part's closing "It’s done." line, so it ends once.
+ */
+export function trackById(id: string | undefined): Track | undefined {
+  if (!id) return undefined;
+  const ids = [...new Set(id.split('+').map((part) => MERGED[part] ?? part))];
+  const parts = ids.map((part) => TRACKS.find((t) => t.id === part)).filter((t): t is Track => !!t);
+  if (parts.length <= 1) return parts[0];
+  const lines = parts.flatMap((part) => part.lines.map((text, i) => ({ text, id: `track-${part.id}-${i}` })));
+  const keep = lines.filter((l, i) => i === lines.length - 1 || !isClosing(l.text));
+  return {
+    id: comboId(parts.map((t) => t.id)),
+    title: parts.map((t) => t.title).join(' + '),
+    about: 'Combined',
+    icon: parts[0].icon,
+    lines: keep.map((l) => l.text),
+    lineIds: keep.map((l) => l.id),
+    parts,
+  };
 }
+
+const isClosing = (text: string) => /^It[’']s done\b/.test(text);
 
 /** A track's lines as affirmations the player understands. The ids stay the same between visits. */
 export function trackAffirmations(track: Track): Affirmation[] {
-  return track.lines.map((text, i) => ({ id: `track-${track.id}-${i}`, text, mine: false, favorite: false, createdAt: 0 }));
+  return track.lines.map((text, i) => ({
+    id: track.lineIds?.[i] ?? `track-${track.id}-${i}`,
+    text,
+    mine: false,
+    favorite: false,
+    createdAt: 0,
+  }));
 }

@@ -1,19 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Art } from '@/components/art';
-import { BackHeader, Button, Card, Screen, Txt, useTheme } from '@/components/ui';
+import { BackHeader, Button, Card, Chip, ChipRow, Screen, Txt, useTheme } from '@/components/ui';
 import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
-import { trackById, TRACKS, type Track } from '@/lib/tracks';
+import { comboId, trackById, TRACKS, type Track } from '@/lib/tracks';
 import { DEFAULT_VOICE, makeAffirmation, newId, type Category, type Goal, type Settings } from '@/lib/types';
 
 // Which goal category a track's copy lands in when you make it your own.
 const CATEGORY_OF: Record<string, Category> = {
   'money-magnet': 'money',
-  wealth: 'money',
   love: 'love',
   'self-love': 'love',
   health: 'health',
@@ -26,7 +26,7 @@ function goalFromTrack(track: Track, rotation: Settings['defaultRotation']): Goa
   return {
     id: newId(),
     title: track.title,
-    category: CATEGORY_OF[track.id] ?? 'other',
+    category: CATEGORY_OF[(track.parts?.[0] ?? track).id] ?? 'other',
     details: '',
     feeling: '',
     voice: DEFAULT_VOICE,
@@ -42,7 +42,12 @@ export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { addGoal, settings } = useStore();
   const { open } = usePlayer();
-  const track = trackById(id);
+  const base = trackById(id);
+  // Other tracks to play along with this one, back to back.
+  const [added, setAdded] = useState<string[]>([]);
+  const baseIds = base?.parts?.map((p) => p.id) ?? (base ? [base.id] : []);
+  const track = trackById(comboId([...baseIds, ...added]));
+  const toggle = (other: string) => setAdded((now) => (now.includes(other) ? now.filter((x) => x !== other) : [...now, other]));
 
   if (!track) {
     return (
@@ -63,7 +68,7 @@ export default function TrackScreen() {
     <Screen>
       <BackHeader title="" onBack={() => router.back()} />
       <View style={{ alignItems: 'center', gap: 14 }}>
-        <Art icon={track.icon} index={TRACKS.indexOf(track)} size={180} />
+        <Art icon={track.icon} index={TRACKS.indexOf(track.parts?.[0] ?? track)} size={180} />
         <View style={{ alignItems: 'center', gap: 4 }}>
           <Txt variant="display" style={{ textAlign: 'center' }}>
             {track.title}
@@ -74,10 +79,20 @@ export default function TrackScreen() {
 
       <Button title="Play" icon="play" onPress={() => open({ kind: 'track', id: track.id })} />
 
+      <View style={{ gap: 8 }}>
+        <Txt variant="title">Combine with</Txt>
+        <Txt variant="muted">Add other tracks to play one after another in a single session.</Txt>
+        <ChipRow>
+          {TRACKS.filter((other) => !baseIds.includes(other.id)).map((other) => (
+            <Chip key={other.id} label={other.title} selected={added.includes(other.id)} onPress={() => toggle(other.id)} />
+          ))}
+        </ChipRow>
+      </View>
+
       <Card>
         <View style={{ gap: 12 }}>
           {track.lines.map((line, i) => (
-            <View key={line} style={{ flexDirection: 'row', gap: 12 }}>
+            <View key={`${i}-${line}`} style={{ flexDirection: 'row', gap: 12 }}>
               <Txt variant="muted" style={{ width: 20, textAlign: 'right' }}>
                 {i + 1}
               </Txt>
