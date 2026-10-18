@@ -52,7 +52,7 @@ const byCategory: Record<Category, string[]> = {
   ],
   other: [
     'I am ready to receive {it}.',
-    'Everything is lining up for {it}.',
+    'The universe is lining everything up for {it}.',
     'I trust that {it} is on its way.',
   ],
 };
@@ -82,7 +82,7 @@ const beTemplates = [
   'I feel {feel} being {state}.',
   'I deserve to be {state}, and I accept it with ease.',
   'Every day it gets easier to be {state}.',
-  'Life keeps showing me how to be {state}.',
+  'The universe is helping me be {state}.',
   'Everything I need to be {state} is already inside me.',
 ];
 
@@ -93,7 +93,7 @@ const doTemplates = [
   'I deserve to {act}, and I will.',
   'I feel {feel} knowing I will {act}.',
   'I have everything I need to {act}.',
-  'Everything is lining up for me to {act}.',
+  'The universe is lining everything up for me to {act}.',
   'Every day I move closer to the day I {act}.',
 ];
 
