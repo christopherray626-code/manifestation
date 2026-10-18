@@ -12,6 +12,7 @@ export const SOUND_LIST: { id: Exclude<BackgroundSound, 'none'>; label: string; 
   { id: 'chimes', label: 'Wind chimes', tags: 'Bright · Peaceful', icon: 'musical-notes-outline', kind: 'tones' },
   { id: 'ocean', label: 'Ocean waves', tags: 'Water · Waves', icon: 'water-outline', kind: 'nature' },
   { id: 'rain', label: 'Soft rain', tags: 'Water · Calm', icon: 'rainy-outline', kind: 'nature' },
+  { id: 'birds', label: 'Morning birds', tags: 'Nature · Birdsong', icon: 'leaf-outline', kind: 'nature' },
   { id: 'brown', label: 'Brown noise', tags: 'Deep static · Focus', icon: 'radio-outline', kind: 'noise' },
 ];
 

@@ -14,6 +14,7 @@ export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
   chimes: require('@/assets/sounds/chimes.wav'),
   ocean: require('@/assets/sounds/ocean.mp3'),
   rain: require('@/assets/sounds/rain.mp3'),
+  birds: require('@/assets/sounds/birds.mp3'),
   brown: require('@/assets/sounds/brown.wav'),
 };
 

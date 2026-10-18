@@ -23,7 +23,7 @@ export type Affirmation = {
 };
 
 export type TapeMode = 'spoken' | 'subliminal';
-export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'space' | 'chimes' | 'ocean' | 'rain' | 'brown' | 'none';
+export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'space' | 'chimes' | 'ocean' | 'rain' | 'birds' | 'brown' | 'none';
 
 export type Frequency =
   | 'hz-396'
