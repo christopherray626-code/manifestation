@@ -8,7 +8,7 @@ import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
 import { trackById, TRACKS, type Track } from '@/lib/tracks';
-import { makeAffirmation, newId, type Category, type Goal, type Settings } from '@/lib/types';
+import { DEFAULT_VOICE, makeAffirmation, newId, type Category, type Goal, type Settings } from '@/lib/types';
 
 // Which goal category a track's copy lands in when you make it your own.
 const CATEGORY_OF: Record<string, Category> = {
@@ -29,7 +29,7 @@ function goalFromTrack(track: Track, rotation: Settings['defaultRotation']): Goa
     category: CATEGORY_OF[track.id] ?? 'other',
     details: '',
     feeling: '',
-    voice: 'calm-female',
+    voice: DEFAULT_VOICE,
     createdAt: now,
     affirmations: track.lines.map((text) => makeAffirmation(text, false)),
     rotation: { ...rotation, anchor: now },

@@ -11,7 +11,7 @@ import { usePlayer } from '@/lib/player';
 import { askPermission, supported as remindersSupported } from '@/lib/reminders';
 import { useStore } from '@/lib/store';
 import { trackById, TRACKS } from '@/lib/tracks';
-import { newId, type Voice } from '@/lib/types';
+import { DEFAULT_VOICE, newId, type Voice } from '@/lib/types';
 
 /*
  * Onboarding: a few one-tap questions that each change something, then a first listen built from the
@@ -48,7 +48,7 @@ export default function Onboarding() {
   const player = usePlayer();
   const [step, setStep] = useState<Step>('welcome');
   const [picked, setPicked] = useState<string[]>([]);
-  const [voice, setVoice] = useState<Voice>('calm-female');
+  const [voice, setVoice] = useState<Voice>(DEFAULT_VOICE);
 
   const first = trackById(picked[0]) ?? TRACKS[0];
   const at = STEPS.indexOf(step);

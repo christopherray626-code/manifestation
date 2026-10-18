@@ -8,7 +8,7 @@ import { useStore } from '@/lib/store';
 
 const BENEFITS: { icon: IconName; text: string }[] = [
   { icon: 'mic-outline', text: 'Affirmations in your own voice' },
-  { icon: 'people-outline', text: 'All 8 natural voices' },
+  { icon: 'people-outline', text: 'All 10 natural voices' },
   { icon: 'sparkles-outline', text: 'Unlimited manifestations, written around you' },
   { icon: 'pulse-outline', text: 'Frequencies and binaural beats' },
 ];

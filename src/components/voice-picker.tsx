@@ -3,14 +3,17 @@ import { View } from 'react-native';
 import { Chip, ChipRow, Txt } from '@/components/ui';
 import type { Voice } from '@/lib/types';
 
+// Chris's favourites first: Brittney (Serene), Jessica (Silk), Matilda (Warm), George (Gentle).
 export const VOICE_LIST: { id: Voice; label: string; who: 'her' | 'him' | 'you' }[] = [
+  { id: 'serene-female', label: 'Serene', who: 'her' },
+  { id: 'silk-female', label: 'Silk', who: 'her' },
+  { id: 'warm-female', label: 'Warm', who: 'her' },
   { id: 'calm-female', label: 'Calm', who: 'her' },
   { id: 'soft-female', label: 'Soft', who: 'her' },
-  { id: 'warm-female', label: 'Warm', who: 'her' },
   { id: 'velvet-female', label: 'Velvet', who: 'her' },
+  { id: 'gentle-male', label: 'Gentle', who: 'him' },
   { id: 'deep-male', label: 'Deep', who: 'him' },
   { id: 'narrator-male', label: 'Narrator', who: 'him' },
-  { id: 'gentle-male', label: 'Gentle', who: 'him' },
   { id: 'steady-male', label: 'Steady', who: 'him' },
   { id: 'my-voice', label: 'My voice', who: 'you' },
 ];

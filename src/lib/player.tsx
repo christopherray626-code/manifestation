@@ -6,7 +6,7 @@ import { success, tap } from '@/lib/haptics';
 import { MILESTONES, streakOf, withToday } from '@/lib/streak';
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS, type Track } from '@/lib/tracks';
-import type { Affirmation, Goal, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
+import { DEFAULT_VOICE, type Affirmation, type Goal, type PlayerPrefs, type TapeMode, type Voice } from '@/lib/types';
 import { audioFor, MODES, useTape } from '@/lib/use-tape';
 import { naturalVoices, prepareVoice } from '@/lib/voices';
 
@@ -44,7 +44,7 @@ const PlayerContext = createContext<Player | null>(null);
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const { goals, settings, updateSettings, updateGoal } = useStore();
   const [chosen, setChosen] = useState<Source | undefined>();
-  const [trackVoice, setTrackVoice] = useState<Voice>('calm-female');
+  const [trackVoice, setTrackVoice] = useState<Voice>(DEFAULT_VOICE);
   const [prep, setPrep] = useState<{ done: number; total: number } | null>(null);
   const [voiceError, setVoiceError] = useState('');
 
@@ -59,7 +59,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const trackList = useMemo(() => (track ? trackAffirmations(track) : []), [track]);
   const favorites = goal?.affirmations.filter((a) => a.favorite) ?? [];
   const list = track ? trackList : prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
-  const voice: Voice = track ? trackVoice : (goal?.voice ?? 'calm-female');
+  const voice: Voice = track ? trackVoice : (goal?.voice ?? DEFAULT_VOICE);
   const tape = useTape({ affirmations: list, voice, prefs });
 
   const setPrefs = (patch: Partial<PlayerPrefs>) => updateSettings({ player: { ...prefs, ...patch } });

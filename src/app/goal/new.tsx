@@ -9,7 +9,7 @@ import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt } from '
 import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
-import { newId, type Category, type Goal, type Voice } from '@/lib/types';
+import { DEFAULT_VOICE, newId, type Category, type Goal, type Voice } from '@/lib/types';
 
 
 export default function NewGoalScreen() {
@@ -19,7 +19,7 @@ export default function NewGoalScreen() {
   const [details, setDetails] = useState('');
   const [feeling, setFeeling] = useState('');
   const [writeForMe, setWriteForMe] = useState(true);
-  const [voice, setVoice] = useState<Voice>('calm-female');
+  const [voice, setVoice] = useState<Voice>(DEFAULT_VOICE);
   const [error, setError] = useState('');
   const [writing, setWriting] = useState(false);
 

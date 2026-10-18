@@ -10,6 +10,9 @@
 const VOICES: Record<string, string> = {
   'calm-female': process.env.VOICE_ID_CALM || '21m00Tcm4TlvDq8ikWAM',
   'deep-male': process.env.VOICE_ID_DEEP || 'pNInz6obpgDQGcFmaJgB',
+  // Chris's picks from the ElevenLabs Voice Library (IDs from json2video's ElevenLabs list).
+  'serene-female': 'pjcYQlDFKMbcOUp6F5GD', // Brittney - meditation voice, soothing, calm and relaxing
+  'silk-female': 'LEnmbrrxYsUYS7vsRRwD', // Jessica - intimate and sensual
   // ElevenLabs' own premade voices, so they work on any plan.
   'soft-female': 'EXAVITQu4vr4xnSDxMaL', // Sarah
   'warm-female': 'XrExE9yKIg1WjnnlVkGX', // Matilda

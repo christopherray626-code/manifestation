@@ -1,6 +1,8 @@
 export type Category = 'car' | 'money' | 'love' | 'home' | 'health' | 'career' | 'other';
 
 export type Voice =
+  | 'serene-female'
+  | 'silk-female'
   | 'calm-female'
   | 'soft-female'
   | 'warm-female'
@@ -109,6 +111,9 @@ export type Settings = {
 export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
+
+/** The voice new manifestations and ready-made tracks start in (Brittney). */
+export const DEFAULT_VOICE: Voice = 'serene-female';
 
 export function makeAffirmation(text: string, mine: boolean): Affirmation {
   return { id: newId(), text, mine, favorite: false, createdAt: Date.now() };
