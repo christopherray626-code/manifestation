@@ -11,7 +11,8 @@ import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme,
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS } from '@/lib/tracks';
 import type { PlayerPrefs, TapeMode, Voice } from '@/lib/types';
-import { audioFor, MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
+import { FREQUENCY_LEVELS, FREQUENCY_LIST } from '@/lib/frequencies';
+import { audioFor, FREQUENCY_DEFAULT_VOLUME, MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
 import { naturalVoices, prepareVoice } from '@/lib/voices';
 
 
@@ -300,11 +301,56 @@ export default function ListenScreen() {
         <Levels label="Volume" levels={SOUND_LEVELS} value={prefs.soundVolume} onChange={(soundVolume) => setPrefs({ soundVolume })} />
       </PanelCard>
 
+      <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
+        <View style={{ gap: 6 }}>
+          <Txt variant="muted" style={{ fontSize: 12 }}>
+            Solfeggio tones
+          </Txt>
+          <ChipRow>
+            <Chip label="None" selected={!prefs.frequency || prefs.frequency === 'none'} onPress={() => setPrefs({ frequency: 'none' })} />
+            {FREQUENCY_LIST.filter((f) => f.kind === 'solfeggio').map((f) => (
+              <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
+            ))}
+          </ChipRow>
+        </View>
+        <View style={{ gap: 6 }}>
+          <Txt variant="muted" style={{ fontSize: 12 }}>
+            Binaural beats (headphones)
+          </Txt>
+          <ChipRow>
+            {FREQUENCY_LIST.filter((f) => f.kind === 'binaural').map((f) => (
+              <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
+            ))}
+          </ChipRow>
+        </View>
+        {(() => {
+          const f = FREQUENCY_LIST.find((x) => x.id === prefs.frequency);
+          return f ? (
+            <>
+              <Txt variant="muted">{`${f.tag}. ${f.about}`}</Txt>
+              <Levels
+                label="Volume"
+                levels={FREQUENCY_LEVELS}
+                value={prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME}
+                onChange={(frequencyVolume) => setPrefs({ frequencyVolume })}
+              />
+            </>
+          ) : null;
+        })()}
+      </PanelCard>
+
       <PanelCard label="About" tinted>
         <Txt variant="body" style={{ color: t.colors.text }}>
           {MODES[tape.mode].about}
-          {track ? ` ${track.lines.length} affirmations for ${track.about.toLowerCase()}.` : ''}
+          {track ? ` This track has ${track.lines.length} affirmations.` : ''}
         </Txt>
+        {track && (
+          <Pressable onPress={() => router.push({ pathname: '/track/[id]', params: { id: track.id } })} accessibilityRole="button">
+            <Txt variant="medium" style={{ color: t.colors.accent }}>
+              See every affirmation, or make it yours
+            </Txt>
+          </Pressable>
+        )}
       </PanelCard>
 
       {goals.length > 0 && (

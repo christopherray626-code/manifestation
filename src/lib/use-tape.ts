@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { recordingUri } from '@/lib/recordings';
 import { naturalVoices, voiceAudioUri } from '@/lib/voices';
-import type { Affirmation, BackgroundSound, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
+import type { Affirmation, BackgroundSound, Frequency, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
 
 export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
   pad: require('@/assets/sounds/pad.wav'),
@@ -16,6 +16,21 @@ export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
   rain: require('@/assets/sounds/rain.wav'),
   brown: require('@/assets/sounds/brown.wav'),
 };
+
+export const FREQUENCY_FILES: Record<Frequency, number> = {
+  'hz-396': require('@/assets/sounds/hz-396.wav'),
+  'hz-432': require('@/assets/sounds/hz-432.wav'),
+  'hz-528': require('@/assets/sounds/hz-528.wav'),
+  'hz-639': require('@/assets/sounds/hz-639.wav'),
+  'hz-741': require('@/assets/sounds/hz-741.wav'),
+  'hz-963': require('@/assets/sounds/hz-963.wav'),
+  'beat-delta': require('@/assets/sounds/beat-delta.wav'),
+  'beat-theta': require('@/assets/sounds/beat-theta.wav'),
+  'beat-alpha': require('@/assets/sounds/beat-alpha.wav'),
+};
+
+/** Frequencies sit quietly under the rest by default. */
+export const FREQUENCY_DEFAULT_VOLUME = 0.15;
 
 /** What each mode does by default. People can still change the levels and timer after. */
 export const MODES: Record<TapeMode, { label: string; about: string; voiceVolume: number; soundVolume: number; gapMs: number }> = {
@@ -89,6 +104,9 @@ export function useTape({
 }) {
   const mode = modeOf(prefs);
   const background = useAudioPlayer(SOUNDS.pad);
+  const tone = useAudioPlayer(null);
+  const frequency = prefs.frequency ?? 'none';
+  const frequencyVolume = prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME;
   const layer0 = useAudioPlayer(null);
   const layer1 = useAudioPlayer(null);
   const layer2 = useAudioPlayer(null);
@@ -151,6 +169,23 @@ export function useTape({
     // Only react to a new sound choice here; volume and play state have their own effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs.sound]);
+
+  // The frequency layer works like the background: swap it when changed, keep looping.
+  useEffect(() => {
+    if (frequency === 'none') {
+      tone.pause();
+      return;
+    }
+    tone.replace(FREQUENCY_FILES[frequency]);
+    tone.loop = true;
+    tone.volume = frequencyVolume;
+    if (playing) tone.play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frequency]);
+
+  useEffect(() => {
+    if (!fade.current) tone.volume = frequencyVolume;
+  }, [frequencyVolume, tone]);
 
   useEffect(() => {
     if (!fade.current) background.volume = prefs.soundVolume;
@@ -251,6 +286,11 @@ export function useTape({
       background.volume = prefs.soundVolume;
       background.play();
     }
+    if (frequency !== 'none') {
+      tone.loop = true;
+      tone.volume = frequencyVolume;
+      tone.play();
+    }
     setEndsAt(prefs.timer ? Date.now() + prefs.timer * 60000 : null);
     startVoices(mode === 'spoken' ? index : Math.max(files.indexOf(affirmations[index]), 0));
   }
@@ -258,6 +298,7 @@ export function useTape({
   function pause() {
     silence();
     background.pause();
+    tone.pause();
     setPlaying(false);
     setEndsAt(null);
   }
@@ -298,6 +339,7 @@ export function useTape({
       fade.current = setInterval(() => {
         step++;
         background.volume = start * (1 - step / steps);
+        tone.volume = frequencyVolume * (1 - step / steps);
         if (step >= steps) pause();
       }, FADE_MS / steps);
     }, Math.max(endsAt - Date.now() - FADE_MS, 0));

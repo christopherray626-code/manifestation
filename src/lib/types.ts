@@ -25,9 +25,23 @@ export type Affirmation = {
 export type TapeMode = 'spoken' | 'subliminal';
 export type BackgroundSound = 'pad' | 'bowls' | 'hum' | 'space' | 'chimes' | 'ocean' | 'rain' | 'brown' | 'none';
 
+export type Frequency =
+  | 'hz-396'
+  | 'hz-432'
+  | 'hz-528'
+  | 'hz-639'
+  | 'hz-741'
+  | 'hz-963'
+  | 'beat-delta'
+  | 'beat-theta'
+  | 'beat-alpha';
+
 export type PlayerPrefs = {
   mode: TapeMode;
   sound: BackgroundSound;
+  /** A steady tone or binaural beat under everything. Missing in older saves, which means none. */
+  frequency?: Frequency | 'none';
+  frequencyVolume?: number;
   /** 0-1 levels. */
   voiceVolume: number;
   soundVolume: number;

@@ -203,10 +203,59 @@ const sounds = {
   },
 };
 
+/** 16-bit WAV from one channel, or two (left, right) for binaural beats. */
+function wavChannels(channels) {
+  const n = channels[0].length;
+  const data = Buffer.alloc(n * 2 * channels.length);
+  for (let i = 0; i < n; i++) {
+    channels.forEach((ch, c) => {
+      data.writeInt16LE(Math.round(Math.max(-1, Math.min(1, ch[i])) * 32767), (i * channels.length + c) * 2);
+    });
+  }
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + data.length, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(channels.length, 22);
+  header.writeUInt32LE(RATE, 24);
+  header.writeUInt32LE(RATE * 2 * channels.length, 28);
+  header.writeUInt16LE(2 * channels.length, 32);
+  header.writeUInt16LE(16, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(data.length, 40);
+  return Buffer.concat([header, data]);
+}
+
+// Frequencies: pure, steady tones to layer under a tape. Five-second loops are enough for a steady tone,
+// and every frequency is a whole number of hertz, so each loop ends exactly where it began.
+const FREQ_SECONDS = 5;
+const FN = RATE * FREQ_SECONDS;
+const tone = (hz, gain = 0.5) => Float32Array.from({ length: FN }, (_, i) => gain * Math.sin((TAU * hz * i) / RATE));
+const frequencies = {
+  'hz-396': () => [tone(396)],
+  'hz-432': () => [tone(432)],
+  'hz-528': () => [tone(528)],
+  'hz-639': () => [tone(639)],
+  'hz-741': () => [tone(741)],
+  'hz-963': () => [tone(963)],
+  // Binaural beats: a slightly different tone in each ear; the brain hears the difference as a slow pulse.
+  // Only works on headphones.
+  'beat-delta': () => [tone(200), tone(203)],
+  'beat-theta': () => [tone(200), tone(206)],
+  'beat-alpha': () => [tone(200), tone(210)],
+};
+
 const dir = new URL('../assets/sounds/', import.meta.url);
 rmSync(dir, { recursive: true, force: true });
 mkdirSync(dir, { recursive: true });
 for (const [name, make] of Object.entries(sounds)) {
   writeFileSync(new URL(`${name}.wav`, dir), wav(normalize(make())));
+  console.log(`assets/sounds/${name}.wav`);
+}
+for (const [name, make] of Object.entries(frequencies)) {
+  writeFileSync(new URL(`${name}.wav`, dir), wavChannels(make()));
   console.log(`assets/sounds/${name}.wav`);
 }

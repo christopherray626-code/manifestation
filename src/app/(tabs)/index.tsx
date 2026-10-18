@@ -182,7 +182,7 @@ export default function HomeScreen() {
       </Section>
 
       <Section label="Ready-made tracks">
-        <TrackShelf onPick={(track) => router.push({ pathname: '/listen', params: { track: track.id } })} />
+        <TrackShelf onPick={(track) => router.push({ pathname: '/track/[id]', params: { id: track.id } })} />
       </Section>
     </Screen>
   );

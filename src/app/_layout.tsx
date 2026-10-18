@@ -96,6 +96,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="goal/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="goal/[id]" />
+        <Stack.Screen name="track/[id]" />
         <Stack.Screen name="record/[goalId]" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       </Stack>
