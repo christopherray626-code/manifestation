@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { GoalRow } from '@/components/goal-bits';
-import { Button, Card, Icon, Orb, QuoteBlock, Screen, Txt, useTheme } from '@/components/ui';
+import { TrackShelf } from '@/components/track-shelf';
+import { Button, Card, Icon, Orb, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { moonPhase } from '@/lib/moon';
 import { useStore } from '@/lib/store';
 import { dayOfGoal, todaysAffirmation } from '@/lib/today';
@@ -88,6 +89,10 @@ export default function HomeScreen() {
         kind={goals.length ? 'ghost' : 'primary'}
         onPress={() => router.push('/goal/new')}
       />
+
+      <Section label="Ready-made tracks">
+        <TrackShelf onPick={(track) => router.push({ pathname: '/listen', params: { track: track.id } })} />
+      </Section>
     </Screen>
   );
 }

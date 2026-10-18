@@ -1,9 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Pressable, View } from 'react-native';
 
+import { TrackShelf } from '@/components/track-shelf';
 import { Button, Card, Chip, ChipRow, Icon, Orb, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { useStore } from '@/lib/store';
+import { trackAffirmations, trackById, TRACKS } from '@/lib/tracks';
 import type { BackgroundSound, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
 import { audioFor, MODES, SUBLIMINAL_LEVELS, useTape } from '@/lib/use-tape';
 import { naturalVoices, prepareVoice } from '@/lib/voices';
@@ -71,29 +73,38 @@ function PulsingOrb({ playing }: { playing: boolean }) {
 export default function ListenScreen() {
   const t = useTheme();
   const { goals, settings, updateSettings, updateGoal } = useStore();
-  const params = useLocalSearchParams<{ goal?: string }>();
+  const params = useLocalSearchParams<{ goal?: string; track?: string }>();
   const [goalId, setGoalId] = useState(params.goal ?? goals[0]?.id);
-  const [seenParam, setSeenParam] = useState(params.goal);
+  // A ready-made track playing instead of a goal. With no goals yet, start on the first one.
+  const [trackId, setTrackId] = useState(params.track ?? (goals.length || params.goal ? undefined : TRACKS[0].id));
+  const [trackVoice, setTrackVoice] = useState<Voice>('calm-female');
+  const [seenParams, setSeenParams] = useState(`${params.goal}|${params.track}`);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Opening from a goal's "Make my tape" switches to that goal.
-  if (params.goal !== seenParam) {
-    setSeenParam(params.goal);
-    if (params.goal) setGoalId(params.goal);
+  // Opening from a goal's "Make my tape" or a track on Home switches to it.
+  if (`${params.goal}|${params.track}` !== seenParams) {
+    setSeenParams(`${params.goal}|${params.track}`);
+    if (params.track) setTrackId(params.track);
+    else if (params.goal) {
+      setGoalId(params.goal);
+      setTrackId(undefined);
+    }
   }
 
-  const goal = goals.find((g) => g.id === goalId) ?? goals[0];
+  const track = trackById(trackId);
+  const goal = track ? undefined : (goals.find((g) => g.id === goalId) ?? goals[0]);
   const prefs = settings.player;
+  const trackList = useMemo(() => (track ? trackAffirmations(track) : []), [track]);
   const favorites = goal?.affirmations.filter((a) => a.favorite) ?? [];
-  const list = prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
-  const tape = useTape({ affirmations: list, voice: goal?.voice ?? 'calm-female', prefs });
+  const list = track ? trackList : prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
+  const voice: Voice = track ? trackVoice : (goal?.voice ?? 'calm-female');
+  const tape = useTape({ affirmations: list, voice, prefs });
   const [prep, setPrep] = useState<{ done: number; total: number } | null>(null);
   const [voiceError, setVoiceError] = useState('');
 
   /** Makes any missing natural-voice audio first, then plays. */
   async function start() {
-    if (!goal || prep) return;
-    const voice = goal.voice;
+    if (!list.length || prep) return;
     const missing = voice === 'my-voice' || !naturalVoices ? [] : list.filter((a) => !audioFor(a, voice));
     if (missing.length) {
       setVoiceError('');
@@ -127,41 +138,38 @@ export default function ListenScreen() {
     tape.restart();
   }
 
-  if (!goal) {
-    return (
-      <Screen>
-        <Txt variant="display">Listen</Txt>
-        <Card>
-          <Txt variant="title">Make a goal first</Txt>
-          <Txt variant="muted">Your tapes are made from your affirmations.</Txt>
-        </Card>
-        <Button title="New goal" icon="add" onPress={() => router.push('/goal/new')} />
-      </Screen>
-    );
+  function pickGoal(id: string) {
+    tape.pause();
+    setTrackId(undefined);
+    setGoalId(id);
   }
 
-  const recorded = goal.affirmations.filter((a) => a.recording).length;
+  const recorded = goal?.affirmations.filter((a) => a.recording).length ?? 0;
   const current = list[tape.index];
   const showOrb = t.group === 'mystical';
   const voiceLevels = tape.mode === 'subliminal' ? SUBLIMINAL_LEVELS : SPOKEN_LEVELS;
 
   return (
     <Screen>
-      {goals.length > 1 && (
-        <ChipRow>
-          {goals.map((g) => (
-            <Chip
-              key={g.id}
-              label={g.title}
-              selected={g.id === goal.id}
-              onPress={() => {
-                tape.pause();
-                setGoalId(g.id);
-              }}
-            />
-          ))}
-        </ChipRow>
+      {goals.length > 0 && (
+        <Section label="Your goals">
+          <ChipRow>
+            {goals.map((g) => (
+              <Chip key={g.id} label={g.title} selected={g.id === goal?.id} onPress={() => pickGoal(g.id)} />
+            ))}
+          </ChipRow>
+        </Section>
       )}
+
+      <Section label="Ready-made tracks">
+        <TrackShelf
+          selectedId={track?.id}
+          onPick={(picked) => {
+            tape.pause();
+            setTrackId(picked.id);
+          }}
+        />
+      </Section>
 
       <ChipRow>
         {(Object.keys(MODES) as TapeMode[]).map((m) => (
@@ -170,7 +178,7 @@ export default function ListenScreen() {
       </ChipRow>
       <Txt variant="muted">{MODES[tape.mode].about}</Txt>
 
-      {!tape.ready && tape.mode === 'subliminal' && (
+      {goal && !tape.ready && tape.mode === 'subliminal' && (
         <Card highlight>
           <View style={{ gap: 10 }}>
             <Txt variant="title">Subliminals need a recorded voice</Txt>
@@ -195,13 +203,13 @@ export default function ListenScreen() {
         <PulsingOrb playing={tape.playing} />
       ) : (
         <Txt variant="display" style={{ marginTop: 8 }}>
-          {goal.title}
+          {track?.title ?? goal?.title}
         </Txt>
       )}
 
       <View style={{ minHeight: 90, justifyContent: 'center' }}>
         <Txt variant="quote" style={{ textAlign: 'center', fontSize: 22, lineHeight: 30 }}>
-          {current ? `"${current.text}"` : 'This goal has no affirmations yet.'}
+          {current ? `"${current.text}"` : goal ? 'This goal has no affirmations yet.' : ''}
         </Txt>
       </View>
 
@@ -242,16 +250,20 @@ export default function ListenScreen() {
 
       <Section label="Voice">
         <ChipRow>
-          {VOICES.map((v) => (
+          {VOICES.filter((v) => goal || v.id !== 'my-voice').map((v) => (
             <Chip
               key={v.id}
               label={v.label}
-              selected={goal.voice === v.id}
-              onPress={() => updateGoal(goal.id, (g) => ({ ...g, voice: v.id }))}
+              selected={voice === v.id}
+              onPress={() => {
+                tape.pause();
+                if (goal) updateGoal(goal.id, (g) => ({ ...g, voice: v.id }));
+                else setTrackVoice(v.id);
+              }}
             />
           ))}
         </ChipRow>
-        {goal.voice === 'my-voice' && (
+        {goal && goal.voice === 'my-voice' && (
           <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}>
             <Txt variant="muted" style={{ color: t.colors.accent }}>
               {recorded === goal.affirmations.length
@@ -310,12 +322,12 @@ export default function ListenScreen() {
                 ))}
               </ChipRow>
             </Section>
-            <Section label="Play">
+            {goal && <Section label="Play">
               <ChipRow>
                 <Chip label="All affirmations" selected={!prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: false })} />
                 <Chip label="Only favorites" selected={prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: true })} />
               </ChipRow>
-            </Section>
+            </Section>}
           </View>
         </Card>
       )}

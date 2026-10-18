@@ -90,6 +90,13 @@ export function useTape({
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
   const [endsAt, setEndsAt] = useState<number | null>(null);
+  // A different goal or track starts from its first line.
+  const firstId = affirmations[0]?.id;
+  const [seenFirst, setSeenFirst] = useState(firstId);
+  if (firstId !== seenFirst) {
+    setSeenFirst(firstId);
+    setIndex(0);
+  }
 
   // Each start/stop bumps the run number, so callbacks from an old run do nothing.
   const run = useRef(0);
