@@ -47,6 +47,7 @@ How to write them:
 - Frame identity, not just outcome: "I am the kind of person who…".
 - Rhythm matters: short, even, easy to say. A repeated structure or the odd rhyme helps. Keep each
   under 20 words, vary how they start.
+- No astrology, moon phases, tarot or crystals. Words like universe and energy are fine.
 - Nothing negative, no hedging ("I hope", "I try"), no quotes, emojis, hashtags or numbering.
 
 Reply with only the affirmations, one per line.`;
