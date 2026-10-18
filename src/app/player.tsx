@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, Share, View } from 'react-native';
 
 import { Creating, VOICING_MESSAGES } from '@/components/creating';
+import { Slider } from '@/components/slider';
 import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
@@ -15,22 +16,8 @@ import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
 import { TRACKS } from '@/lib/tracks';
 import type { TapeMode } from '@/lib/types';
-import { FREQUENCY_LEVELS, FREQUENCY_LIST } from '@/lib/frequencies';
-import { FREQUENCY_DEFAULT_VOLUME, MODES, SUBLIMINAL_LEVELS } from '@/lib/use-tape';
-
-
-const SPOKEN_LEVELS = [
-  { value: 0.3, label: 'Soft' },
-  { value: 0.65, label: 'Medium' },
-  { value: 1, label: 'Full' },
-];
-
-const SOUND_LEVELS = [
-  { value: 0.15, label: 'Low' },
-  { value: 0.4, label: 'Medium' },
-  { value: 0.7, label: 'High' },
-  { value: 1, label: 'Full' },
-];
+import { FREQUENCY_LIST } from '@/lib/frequencies';
+import { FREQUENCY_DEFAULT_VOLUME, MODES } from '@/lib/use-tape';
 
 const TIMERS = [
   { value: 0, label: 'Off' },
@@ -41,11 +28,6 @@ const TIMERS = [
   { value: 45, label: '45 min' },
   { value: 60, label: '1 hour' },
 ];
-
-
-function nearest(levels: { value: number }[], value: number) {
-  return levels.reduce((best, l) => (Math.abs(l.value - value) < Math.abs(best.value - value) ? l : best)).value;
-}
 
 function PulsingOrb({ playing }: { playing: boolean }) {
   const [scale] = useState(() => new Animated.Value(1));
@@ -91,7 +73,6 @@ export default function PlayerScreen() {
 
   const recorded = goal?.affirmations.filter((a) => a.recording).length ?? 0;
   const current = list[tape.index];
-  const voiceLevels = tape.mode === 'subliminal' ? SUBLIMINAL_LEVELS : SPOKEN_LEVELS;
   const title = track?.title ?? goal?.title ?? '';
   const icon = track ? track.icon : goal ? categoryIcon(goal.category) : 'sparkles-outline';
   const tintIndex = track ? TRACKS.indexOf(track) : Math.max(goals.findIndex((g) => g.id === goal?.id), 0);
@@ -238,6 +219,32 @@ export default function PlayerScreen() {
         </Card>
       )}
 
+      <PanelCard label="Your mix">
+        <MixRow
+          icon="mic-outline"
+          label={tape.mode === 'subliminal' ? 'Voice (hidden)' : 'Voice'}
+          value={prefs.voiceVolume / (tape.mode === 'subliminal' ? SUBLIMINAL_MAX : 1)}
+          onChange={(v) => setPrefs({ voiceVolume: v * (tape.mode === 'subliminal' ? SUBLIMINAL_MAX : 1) })}
+        />
+        <MixRow
+          icon="musical-notes-outline"
+          label="Background"
+          value={prefs.sound === 'none' ? 0 : prefs.soundVolume}
+          disabled={prefs.sound === 'none'}
+          onChange={(soundVolume) => setPrefs({ soundVolume })}
+        />
+        <MixRow
+          icon="pulse-outline"
+          label="Frequency"
+          value={(prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME) / FREQUENCY_MAX}
+          disabled={!prefs.frequency || prefs.frequency === 'none'}
+          onChange={(v) => setPrefs({ frequencyVolume: v * FREQUENCY_MAX })}
+        />
+        {tape.mode === 'subliminal' && (
+          <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>
+        )}
+      </PanelCard>
+
       <PanelCard label="Voice" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
         <VoicePicker value={voice} allowMine={!!goal} onChange={setVoice} />
         <Why text={WHY.voices} label="Why the voice matters" />
@@ -252,12 +259,6 @@ export default function PlayerScreen() {
             </Txt>
           </Pressable>
         )}
-        <Levels
-          label={tape.mode === 'subliminal' ? 'How faint' : 'Volume'}
-          levels={voiceLevels}
-          value={prefs.voiceVolume}
-          onChange={(voiceVolume) => setPrefs({ voiceVolume })}
-        />
         {goal && (
           <ChipRow>
             <Chip label="All affirmations" selected={!prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: false })} />
@@ -268,7 +269,6 @@ export default function PlayerScreen() {
 
       <PanelCard label="Background">
         <SoundList value={prefs.sound} onChange={(sound) => setPrefs({ sound })} allowNone={tape.mode === 'spoken'} />
-        <Levels label="Volume" levels={SOUND_LEVELS} value={prefs.soundVolume} onChange={(soundVolume) => setPrefs({ soundVolume })} />
       </PanelCard>
 
       <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
@@ -284,12 +284,6 @@ export default function PlayerScreen() {
           return f ? (
             <>
               <Txt variant="muted">{f.headphones ? `${f.about} Best with headphones.` : f.about}</Txt>
-              <Levels
-                label="Volume"
-                levels={FREQUENCY_LEVELS}
-                value={prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME}
-                onChange={(frequencyVolume) => setPrefs({ frequencyVolume })}
-              />
             </>
           ) : null;
         })()}
@@ -368,27 +362,36 @@ function PanelCard({ label, right, tinted, children }: { label: string; right?: 
   );
 }
 
-function Levels({
+// The loudest each layer goes at the top of its slider. A subliminal voice stays far under the music
+// even at full; frequencies are pure tones, which sound loud, so they top out low.
+const SUBLIMINAL_MAX = 0.06;
+const FREQUENCY_MAX = 0.4;
+
+/** One channel of the mix: icon, name, slider and its level. */
+function MixRow({
+  icon,
   label,
-  levels,
   value,
   onChange,
+  disabled,
 }: {
+  icon: IconName;
   label: string;
-  levels: { value: number; label: string }[];
   value: number;
   onChange: (v: number) => void;
+  disabled?: boolean;
 }) {
+  const t = useTheme();
   return (
-    <View style={{ gap: 6 }}>
-      <Txt variant="muted" style={{ fontSize: 12 }}>
-        {label}
-      </Txt>
-      <ChipRow>
-        {levels.map((l) => (
-          <Chip key={l.label} label={l.label} selected={nearest(levels, value) === l.value} onPress={() => onChange(l.value)} />
-        ))}
-      </ChipRow>
+    <View style={{ gap: 2, opacity: disabled ? 0.4 : 1 }} pointerEvents={disabled ? 'none' : 'auto'}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Icon name={icon} size={18} color={t.colors.accent} />
+        <Txt variant="medium" style={{ flex: 1 }}>
+          {label}
+        </Txt>
+        <Txt variant="muted">{disabled ? 'Off' : `${Math.round(Math.min(1, value) * 100)}`}</Txt>
+      </View>
+      <Slider value={Math.min(1, Math.max(0, value))} onChange={onChange} label={`${label} volume`} />
     </View>
   );
 }
