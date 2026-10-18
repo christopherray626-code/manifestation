@@ -17,6 +17,9 @@ export default function YouScreen() {
           onChangeText={(name) => updateSettings({ name })}
           placeholder="What should we call you?"
           autoCapitalize="words"
+          // Keeps Chrome from popping its name/email autofill bar over the tabs.
+          autoComplete="off"
+          importantForAutofill="no"
         />
       </Section>
 
