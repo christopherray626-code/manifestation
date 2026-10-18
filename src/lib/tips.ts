@@ -67,8 +67,8 @@ export const TIPS: Tip[] = [
     body: 'Recording your affirmations in your own voice means your mind hears them the way it hears your own thoughts.',
   },
   {
-    title: 'Use headphones for beats',
-    body: 'Binaural beats only work with headphones: each ear gets a slightly different tone, and your brain hears the difference as a slow pulse.',
+    title: 'Headphones for the deep ones',
+    body: 'Dream state, Deep rest and Flow play a slightly different tone in each ear, so they only work with headphones.',
   },
   {
     title: 'Revise the day',
@@ -108,7 +108,7 @@ export const WHY = {
   subliminal:
     'The words sit far below the music, so the part of you that argues never gets a chance. It’s most powerful as you drift off to sleep, when the mind is most open.',
   frequencies:
-    'Solfeggio tones are a sound-healing tradition, each linked with a different intention. Binaural beats play a slightly different tone in each ear, which many people find relaxes the mind into a dreamier state. Use headphones.',
+    'Each frequency is a quiet tone set to an intention. Let it sit under the voice and the music, and let your body settle into it. Dream state, Deep rest and Flow work best with headphones.',
   voices:
     'A calm, warm voice helps you relax, and a relaxed mind takes words in more easily. Your own voice is the most familiar of all: it sounds like your own thoughts.',
   presentTense:

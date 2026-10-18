@@ -272,32 +272,17 @@ export default function PlayerScreen() {
 
       <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
         <Why text={WHY.frequencies} label="What these do" />
-        <View style={{ gap: 6 }}>
-          <Txt variant="muted" style={{ fontSize: 12 }}>
-            Solfeggio tones
-          </Txt>
-          <ChipRow>
-            <Chip label="None" selected={!prefs.frequency || prefs.frequency === 'none'} onPress={() => setPrefs({ frequency: 'none' })} />
-            {FREQUENCY_LIST.filter((f) => f.kind === 'solfeggio').map((f) => (
-              <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
-            ))}
-          </ChipRow>
-        </View>
-        <View style={{ gap: 6 }}>
-          <Txt variant="muted" style={{ fontSize: 12 }}>
-            Binaural beats (headphones)
-          </Txt>
-          <ChipRow>
-            {FREQUENCY_LIST.filter((f) => f.kind === 'binaural').map((f) => (
-              <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
-            ))}
-          </ChipRow>
-        </View>
+        <ChipRow>
+          <Chip label="None" selected={!prefs.frequency || prefs.frequency === 'none'} onPress={() => setPrefs({ frequency: 'none' })} />
+          {FREQUENCY_LIST.map((f) => (
+            <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
+          ))}
+        </ChipRow>
         {(() => {
           const f = FREQUENCY_LIST.find((x) => x.id === prefs.frequency);
           return f ? (
             <>
-              <Txt variant="muted">{`${f.tag}. ${f.about}`}</Txt>
+              <Txt variant="muted">{f.headphones ? `${f.about} Best with headphones.` : f.about}</Txt>
               <Levels
                 label="Volume"
                 levels={FREQUENCY_LEVELS}
