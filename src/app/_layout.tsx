@@ -115,6 +115,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="goal/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="goal/[id]" />
         <Stack.Screen name="track/[id]" />
+        <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="player" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="record/[goalId]" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />

@@ -5,6 +5,7 @@ import { RotationPicker } from '@/components/goal-bits';
 import { ReminderList } from '@/components/reminder-list';
 import { ThemePicker } from '@/components/theme-picker';
 import { Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
+import { BILLING_LIVE } from '@/lib/premium';
 import { useStore } from '@/lib/store';
 
 export default function YouScreen() {
@@ -50,6 +51,17 @@ export default function YouScreen() {
           <Chip label="Off" selected={settings.haptics === false} onPress={() => updateSettings({ haptics: false })} />
         </ChipRow>
       </Section>
+
+      <Card onPress={() => router.push('/paywall')}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Icon name="star-outline" size={22} color={t.colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Txt variant="medium">Premium</Txt>
+            <Txt variant="muted">{BILLING_LIVE ? 'Every voice, your own voice, unlimited goals' : 'Everything is free for now'}</Txt>
+          </View>
+          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
+        </View>
+      </Card>
 
       <Card onPress={() => router.push('/board')}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

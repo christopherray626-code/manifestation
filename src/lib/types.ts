@@ -92,6 +92,8 @@ export type Settings = {
   defaultRotation: Pick<Rotation, 'every' | 'order' | 'favoritesOnly'>;
   player: PlayerPrefs;
   reminders: Reminder[];
+  /** What they picked in onboarding (track ids), for "Picked for you". */
+  intentions?: string[];
   /** Small vibrations on taps and milestones. Missing means on. */
   haptics?: boolean;
   /** How many times the app has been opened, for affirmations that change on every open. */

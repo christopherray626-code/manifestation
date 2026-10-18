@@ -156,8 +156,9 @@ export default function HomeScreen() {
         )}
       </Section>
 
-      <Section label="Ready-made tracks">
-        <TrackShelf onPick={(track) => router.push({ pathname: '/track/[id]', params: { id: track.id } })} />
+      <Section label={settings.intentions?.length ? 'Picked for you' : 'Ready-made tracks'}>
+        <TrackShelf
+          first={settings.intentions} onPick={(track) => router.push({ pathname: '/track/[id]', params: { id: track.id } })} />
       </Section>
     </Screen>
   );
