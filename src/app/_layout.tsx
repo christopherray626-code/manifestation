@@ -22,8 +22,11 @@ import { Platform } from 'react-native';
 import { useTheme } from '@/components/ui';
 import { useReminders } from '@/lib/reminders';
 import { StoreProvider, useStore } from '@/lib/store';
+import { setAppOpens } from '@/lib/today';
 
 SplashScreen.preventAutoHideAsync();
+
+let countedOpen = false;
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -48,7 +51,7 @@ export default function RootLayout() {
 }
 
 function Root({ fontsReady }: { fontsReady: boolean }) {
-  const { loaded, settings, goals } = useStore();
+  const { loaded, settings, goals, updateSettings } = useStore();
   const t = useTheme();
   const ready = fontsReady && loaded;
   useReminders(settings.reminders, goals, ready && settings.onboarded);
@@ -56,6 +59,15 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  // Count this launch once the saved state is in, for affirmations that change each time the app opens.
+  useEffect(() => {
+    if (!loaded || countedOpen) return;
+    countedOpen = true;
+    const opens = (settings.opens ?? 0) + 1;
+    setAppOpens(opens);
+    updateSettings({ opens });
+  }, [loaded, settings.opens, updateSettings]);
 
   // On the web, paint the page itself in the theme colour too, so the strip the phone keeps for its
   // gesture bar (and any overscroll) matches the app instead of showing white.

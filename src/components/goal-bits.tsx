@@ -81,6 +81,7 @@ export function GoalRow({ goal, index, onPress }: { goal: Goal; index: number; o
 }
 
 const EVERY: { value: number; label: string }[] = [
+  { value: -1, label: 'Each time I open the app' },
   { value: 1, label: 'Every day' },
   { value: 3, label: 'Every 3 days' },
   { value: 7, label: 'Every week' },

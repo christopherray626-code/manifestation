@@ -20,6 +20,15 @@ function shuffledIndex(goalId: string, step: number, size: number) {
   return hash(`${goalId}:${step}`) % size;
 }
 
+/** Rotation `every` value meaning "a new one each time the app opens". */
+export const EACH_OPEN = -1;
+
+// Which time the app has been opened, counted in the store and set once at launch (see _layout).
+let appOpens = 0;
+export function setAppOpens(n: number) {
+  appOpens = n;
+}
+
 /** Picks today's affirmation for a goal according to the goal's rotation settings. */
 export function todaysAffirmation(goal: Goal, now = Date.now()): Affirmation | undefined {
   const { rotation } = goal;
@@ -31,7 +40,8 @@ export function todaysAffirmation(goal: Goal, now = Date.now()): Affirmation | u
   const start = Math.max(pinned, 0);
   if (rotation.every === 0 || pool.length === 1) return pool[start];
 
-  const step = Math.floor((localDay(now) - localDay(rotation.anchor)) / rotation.every);
+  const step =
+    rotation.every === EACH_OPEN ? appOpens : Math.floor((localDay(now) - localDay(rotation.anchor)) / rotation.every);
   if (step <= 0) return pool[start];
 
   if (rotation.order === 'shuffle') {
