@@ -397,15 +397,16 @@ function MixRow({
 }) {
   const t = useTheme();
   return (
-    <View style={{ gap: 2, opacity: disabled ? 0.4 : 1 }} pointerEvents={disabled ? 'none' : 'auto'}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <View style={{ gap: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: disabled ? 0.45 : 1 }}>
         <Icon name={icon} size={18} color={t.colors.accent} />
         <Txt variant="medium" style={{ flex: 1 }}>
           {label}
         </Txt>
         <Txt variant="muted">{disabled ? 'Off' : `${Math.round(Math.min(1, value) * 100)}`}</Txt>
       </View>
-      <Slider value={Math.min(1, Math.max(0, value))} onChange={onChange} label={`${label} volume`} />
+      {/* A layer that's off has nothing to turn up; pick one in its panel below first. */}
+      {!disabled && <Slider value={Math.min(1, Math.max(0, value))} onChange={onChange} label={`${label} volume`} />}
     </View>
   );
 }
