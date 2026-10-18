@@ -24,7 +24,7 @@ export default function NewGoalScreen() {
   async function create() {
     if (writing) return;
     if (!title.trim()) {
-      setError('Give your goal a name first.');
+      setError('Give it a name first.');
       return;
     }
     let affirmations: Goal['affirmations'] = [];
@@ -56,10 +56,10 @@ export default function NewGoalScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <BackHeader title="" onBack={() => router.back()} />
-        <Txt variant="display">What do you want?</Txt>
+        <Txt variant="display">What are you calling in?</Txt>
         <Txt variant="muted">Be specific. The more detail, the more personal your affirmations.</Txt>
 
-        <Section label="Name your goal">
+        <Section label="Name it">
           <Field
             value={title}
             onChangeText={(v) => {

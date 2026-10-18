@@ -9,7 +9,7 @@ import { useStore } from '@/lib/store';
 const BENEFITS: { icon: IconName; text: string }[] = [
   { icon: 'mic-outline', text: 'Affirmations in your own voice' },
   { icon: 'people-outline', text: 'All 8 natural voices' },
-  { icon: 'sparkles-outline', text: 'Unlimited goals, written around you' },
+  { icon: 'sparkles-outline', text: 'Unlimited manifestations, written around you' },
   { icon: 'pulse-outline', text: 'Frequencies and binaural beats' },
 ];
 
@@ -52,7 +52,7 @@ export default function Paywall() {
 
       <View style={{ gap: 8 }}>
         <Txt variant="display">Speak it into your life, every day</Txt>
-        <Txt variant="muted">Everything you need to hear your goals as already done.</Txt>
+        <Txt variant="muted">Everything you need to hear it as already yours.</Txt>
       </View>
 
       <View style={{ gap: 14 }}>

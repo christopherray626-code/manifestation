@@ -135,7 +135,7 @@ export default function PlayerScreen() {
             <Txt variant="title" style={{ textAlign: 'center' }} numberOfLines={1}>
               {title}
             </Txt>
-            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{track ? 'Ready-made track' : `Your goal · ${list.length} affirmations`}</Txt>
+            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{track ? 'Ready-made track' : `Your manifestation · ${list.length} affirmations`}</Txt>
           </View>
           <Pressable onPress={share} hitSlop={12} accessibilityRole="button" accessibilityLabel="Share">
             <Icon name="share-social-outline" size={22} color={t.colors.text} />
@@ -169,7 +169,7 @@ export default function PlayerScreen() {
 
         <View style={{ minHeight: 64, justifyContent: 'center' }}>
           <Txt variant="quote" style={{ textAlign: 'center', fontSize: 21, lineHeight: 29 }}>
-            {tape.mode === 'subliminal' ? (tape.playing ? 'Playing below the sound…' : '') : current ? `"${current.text}"` : goal ? 'This goal has no affirmations yet.' : ''}
+            {tape.mode === 'subliminal' ? (tape.playing ? 'Playing below the sound…' : '') : current ? `"${current.text}"` : goal ? 'No affirmations here yet.' : ''}
           </Txt>
         </View>
 
@@ -320,7 +320,7 @@ export default function PlayerScreen() {
       </PanelCard>
 
       {goals.length > 0 && (
-        <Section label="Your goals">
+        <Section label="Your manifestations">
           <ChipRow>
             {goals.map((g) => (
               <Chip key={g.id} label={g.title} selected={g.id === goal?.id} onPress={() => pickGoal(g.id)} />

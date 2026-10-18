@@ -111,7 +111,7 @@ export default function Onboarding() {
       {step === 'welcome' && (
         <View style={{ gap: 18, marginTop: 40 }}>
           <Icon name="sparkles" size={36} color={t.colors.accent} />
-          <Txt variant="display">Hear your goals as already done</Txt>
+          <Txt variant="display">Hear it as already yours</Txt>
           <Txt variant="body" style={{ color: t.colors.muted }}>
             Affirmations written around what you want, read to you by calm natural voices, spoken or as
             subliminals. Let&apos;s make your first one. It takes a minute.

@@ -149,18 +149,18 @@ export default function HomeScreen() {
       <TodayCard />
       <PlayToday />
 
-      <Section label="Your goals">
+      <Section label="Your manifestations">
         {goals.length === 0 ? (
           <View style={{ gap: 14 }}>
             <Card>
               <View style={{ gap: 6 }}>
-                <Txt variant="title">Start your first goal</Txt>
+                <Txt variant="title">Start your first manifestation</Txt>
                 <Txt variant="muted">
-                  {"Describe exactly what you want, and you'll get affirmations written around it. Or write your own."}
+                  {"Describe what you're calling in, and you'll get affirmations written around it. Or write your own."}
                 </Txt>
               </View>
             </Card>
-            <Button title="New goal" icon="add" onPress={() => router.push('/goal/new')} />
+            <Button title="New manifestation" icon="add" onPress={() => router.push('/goal/new')} />
           </View>
         ) : (
           <Shelf>
@@ -195,7 +195,7 @@ function NewGoalCard() {
     <Pressable
       onPress={() => router.push('/goal/new')}
       accessibilityRole="button"
-      accessibilityLabel="New goal"
+      accessibilityLabel="New manifestation"
       style={({ pressed }) => ({ width: 128, gap: 8, opacity: pressed ? 0.75 : 1 })}>
       <View
         style={{
@@ -210,7 +210,7 @@ function NewGoalCard() {
         }}>
         <Icon name="add" size={34} color={t.colors.accent} />
       </View>
-      <Txt variant="medium">New goal</Txt>
+      <Txt variant="medium">New</Txt>
     </Pressable>
   );
 }

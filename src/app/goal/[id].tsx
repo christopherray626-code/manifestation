@@ -83,7 +83,7 @@ export default function GoalScreen() {
   }
 
   function confirmDelete() {
-    Alert.alert('Delete this goal?', 'Its affirmations will be deleted too.', [
+    Alert.alert('Delete this manifestation?', 'Its affirmations will be deleted too.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -235,7 +235,7 @@ export default function GoalScreen() {
         )}
         <Button title="Play my tape" icon="play" onPress={() => open({ kind: 'goal', id: goal.id })} />
         <Pressable onPress={confirmDelete} style={{ alignSelf: 'center', padding: 8 }} accessibilityRole="button">
-          <Txt variant="muted">Delete goal</Txt>
+          <Txt variant="muted">Delete</Txt>
         </Pressable>
       </Screen>
     </KeyboardAvoidingView>

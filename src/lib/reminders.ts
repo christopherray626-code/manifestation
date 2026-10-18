@@ -73,7 +73,7 @@ function contentFor(reminder: Reminder, goals: Goal[], at: Date, dayIndex: numbe
   }
   return {
     title: "Today's affirmation",
-    body: affirmation?.text ?? 'Take a moment for your goals today.',
+    body: affirmation?.text ?? 'Take a moment to feel it as already yours.',
     data: { url: '/' },
   };
 }

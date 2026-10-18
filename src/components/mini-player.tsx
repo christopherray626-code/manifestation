@@ -17,7 +17,7 @@ export function MiniPlayer() {
   if (!settings.lastPlayed || (!goal && !track)) return null;
   const title = track?.title ?? goal!.title;
   const index = track ? TRACKS.indexOf(track) : goals.findIndex((g) => g.id === goal!.id);
-  const current = tape.playing && tape.mode === 'spoken' ? undefined : track ? 'Ready-made track' : 'Your goal';
+  const current = tape.playing && tape.mode === 'spoken' ? undefined : track ? 'Ready-made track' : 'Your manifestation';
 
   return (
     <Pressable

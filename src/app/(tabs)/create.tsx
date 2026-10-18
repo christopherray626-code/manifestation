@@ -11,16 +11,16 @@ export default function CreateScreen() {
   return (
     <Screen>
       <View style={{ gap: 6 }}>
-        <Txt variant="display">Your goals</Txt>
-        <Txt variant="muted">Each goal gets its own affirmations and its own tape.</Txt>
+        <Txt variant="display">Your manifestations</Txt>
+        <Txt variant="muted">Each one gets its own affirmations and its own tape.</Txt>
       </View>
 
       {goals.length === 0 ? (
         <Card>
           <View style={{ gap: 6 }}>
-            <Txt variant="title">Start your first goal</Txt>
+            <Txt variant="title">Start your first manifestation</Txt>
             <Txt variant="muted">
-              {"Describe exactly what you want, and you'll get affirmations written around it. Or write your own."}
+              {"Describe what you're calling in, and you'll get affirmations written around it. Or write your own."}
             </Txt>
           </View>
         </Card>
@@ -30,7 +30,7 @@ export default function CreateScreen() {
         ))
       )}
 
-      <Button title="New goal" icon="add" onPress={() => router.push('/goal/new')} />
+      <Button title="New manifestation" icon="add" onPress={() => router.push('/goal/new')} />
     </Screen>
   );
 }

@@ -38,7 +38,7 @@ export default function RecordScreen() {
     return (
       <Screen>
         <BackHeader title="Nothing to record" onBack={() => router.back()} />
-        <Txt variant="muted">Add some affirmations to this goal first.</Txt>
+        <Txt variant="muted">Add some affirmations here first.</Txt>
       </Screen>
     );
   }
