@@ -46,20 +46,19 @@ function Tagline() {
   return null;
 }
 
-/** A quote from a manifestation teacher, new each time the app opens. */
-function QuoteCard() {
+/** A quote from a manifestation or spiritual teacher, new each time the app opens. Quiet, not a card. */
+function QuoteLine() {
   const t = useTheme();
   const q = quoteOfThisVisit;
   return (
-    <Card>
-      <View style={{ gap: 10 }}>
-        <Icon name="chatbubble-ellipses-outline" size={16} color={t.colors.accent} />
-        <Txt variant="quote" style={{ fontSize: 18, lineHeight: 26 }}>
-          {`“${q.text}”`}
-        </Txt>
-        <Txt variant="label">{q.who}</Txt>
-      </View>
-    </Card>
+    <View style={{ gap: 4 }}>
+      <Txt variant="quote" style={{ fontSize: 17, lineHeight: 24, color: t.colors.muted }}>
+        {`“${q.text}”`}
+      </Txt>
+      <Txt variant="muted" style={{ fontSize: 12 }}>
+        {`— ${q.who}`}
+      </Txt>
+    </View>
   );
 }
 
@@ -81,10 +80,7 @@ function TodayCard() {
       label="Today's affirmation"
       text={today.text}
       footer={
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22, marginTop: 4 }}>
-          <Txt variant="muted" style={{ flexShrink: 1 }} numberOfLines={1}>
-            {goal.title}
-          </Txt>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 28, marginTop: 4 }}>
           <Pressable onPress={share} hitSlop={10} accessibilityRole="button" accessibilityLabel="Share">
             <Icon name="share-social-outline" size={20} color={t.colors.muted} />
           </Pressable>
@@ -109,22 +105,24 @@ function ContinueListening() {
   if (!goal && !track) return null;
   const open = () => router.push({ pathname: '/listen', params: goal ? { goal: goal.id } : { track: track!.id } });
   return (
-    <Section label="Continue listening">
-      <Card onPress={open}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Art icon={goal ? categoryIcon(goal.category) : track!.icon} index={goal ? goalIndex : TRACKS.indexOf(track!)} size={64} />
-          <View style={{ flex: 1 }}>
-            <Txt variant="medium" numberOfLines={1}>
-              {goal ? goal.title : track!.title}
-            </Txt>
-            <Txt variant="muted">{goal ? 'Your goal' : 'Ready-made track'}</Txt>
-          </View>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="play" size={20} color={t.colors.onAccent} />
-          </View>
-        </View>
-      </Card>
-    </Section>
+    <Pressable
+      onPress={open}
+      accessibilityRole="button"
+      accessibilityLabel={`Continue listening to ${goal ? goal.title : track!.title}`}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.7 : 1 })}>
+      <Art icon={goal ? categoryIcon(goal.category) : track!.icon} index={goal ? goalIndex : TRACKS.indexOf(track!)} size={44} />
+      <View style={{ flex: 1 }}>
+        <Txt variant="muted" style={{ fontSize: 12 }}>
+          Continue listening
+        </Txt>
+        <Txt variant="medium" numberOfLines={1}>
+          {goal ? goal.title : track!.title}
+        </Txt>
+      </View>
+      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="play" size={17} color={t.colors.onAccent} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -140,14 +138,13 @@ export default function HomeScreen() {
           <Tagline />
         </View>
         <Txt variant="display">{greeting(settings.name)}</Txt>
+        <QuoteLine />
         {moon && (
           <Txt variant="quote" style={{ fontSize: 15, lineHeight: 20, color: t.colors.muted }}>
             {moon.hint}
           </Txt>
         )}
       </View>
-
-      <QuoteCard />
 
       <TodayCard />
 
@@ -175,7 +172,7 @@ export default function HomeScreen() {
                 index={i}
                 title={g.title}
                 subtitle={dayLabel(g, t.romanDays)}
-                size={150}
+                size={128}
                 onPress={() => router.push({ pathname: '/goal/[id]', params: { id: g.id } })}
               />
             ))}
@@ -199,11 +196,11 @@ function NewGoalCard() {
       onPress={() => router.push('/goal/new')}
       accessibilityRole="button"
       accessibilityLabel="New goal"
-      style={({ pressed }) => ({ width: 150, gap: 8, opacity: pressed ? 0.75 : 1 })}>
+      style={({ pressed }) => ({ width: 128, gap: 8, opacity: pressed ? 0.75 : 1 })}>
       <View
         style={{
-          width: 150,
-          height: 150,
+          width: 128,
+          height: 128,
           borderRadius: Math.max(t.radius, 14),
           borderWidth: 1,
           borderStyle: 'dashed',
