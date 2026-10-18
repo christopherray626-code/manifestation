@@ -120,9 +120,9 @@ export function Txt({
       textTransform: t.displayCaps ? 'uppercase' : 'none',
     },
     title: { fontFamily: t.fonts.display, fontSize: 20, lineHeight: 26 },
-    body: { fontFamily: t.fonts.body, fontSize: 15, lineHeight: 22 },
-    medium: { fontFamily: t.fonts.bodyMedium, fontSize: 15, lineHeight: 22 },
-    muted: { fontFamily: t.fonts.body, fontSize: 13, lineHeight: 19, color: t.colors.muted },
+    body: { fontFamily: t.fonts.body, fontSize: 16, lineHeight: 24 },
+    medium: { fontFamily: t.fonts.bodyMedium, fontSize: 16, lineHeight: 23 },
+    muted: { fontFamily: t.fonts.body, fontSize: 14, lineHeight: 20, color: t.colors.muted },
     label: {
       fontFamily: t.fonts.label,
       fontSize: 11,
@@ -207,12 +207,12 @@ export function Button({
           : { borderWidth: 1, borderColor: t.colors.border, borderStyle: 'dashed' },
         pressed && { opacity: 0.75 },
       ]}>
-      {icon && <Ionicons name={icon} size={16} color={color} />}
+      {icon && <Ionicons name={icon} size={18} color={color} />}
       <Text
         style={{
           color,
           fontFamily: primary ? t.fonts.button : t.fonts.body,
-          fontSize: primary && t.buttonCaps ? 13 : 15,
+          fontSize: primary && t.buttonCaps ? 14 : 16,
           letterSpacing: primary && t.buttonCaps ? 1.5 : 0,
           textTransform: primary && t.buttonCaps ? 'uppercase' : 'none',
         }}>
@@ -229,6 +229,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      hitSlop={2}
       style={[
         styles.chip,
         { borderColor: selected ? t.colors.accent : t.colors.border },
@@ -237,7 +238,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
       <Text
         style={{
           fontFamily: t.fonts.body,
-          fontSize: 13,
+          fontSize: 14,
           color: selected ? (t.dark ? t.colors.accent : t.colors.text) : t.colors.muted,
         }}>
         {label}
@@ -354,16 +355,19 @@ export function BackHeader({ title, onBack }: { title: string; onBack: () => voi
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 64, gap: 22 },
+  // 20pt sides like iOS, 24 between sections, and no wider than a comfortable reading column on big screens.
+  content: { padding: 20, paddingBottom: 64, gap: 24, width: '100%', maxWidth: 680, alignSelf: 'center' },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    minHeight: 52,
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  // 44 tall, 48 with the hit slop: big enough for a thumb on both platforms.
+  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   frameOuter: { borderWidth: 1, borderRadius: 8, padding: 4 },
   frame: { borderWidth: 1, borderRadius: 6, padding: 16, gap: 8, alignItems: 'center' },

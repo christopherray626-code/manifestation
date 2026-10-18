@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Animated, Easing, Pressable, Share, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Pressable, Share, View } from 'react-native';
 
 import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
@@ -31,8 +31,11 @@ const SOUND_LEVELS = [
 
 const TIMERS = [
   { value: 0, label: 'Off' },
+  { value: 5, label: '5 min' },
+  { value: 10, label: '10 min' },
   { value: 15, label: '15 min' },
   { value: 30, label: '30 min' },
+  { value: 45, label: '45 min' },
   { value: 60, label: '1 hour' },
 ];
 
@@ -43,8 +46,15 @@ function nearest(levels: { value: number }[], value: number) {
 
 function PulsingOrb({ playing }: { playing: boolean }) {
   const [scale] = useState(() => new Animated.Value(1));
+  const [still, setStill] = useState(false);
+  // People who turn on Reduce motion get a still orb.
   useEffect(() => {
-    if (!playing) {
+    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setStill);
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (!playing || still) {
       Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }).start();
       return;
     }
@@ -56,7 +66,7 @@ function PulsingOrb({ playing }: { playing: boolean }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [playing, scale]);
+  }, [playing, still, scale]);
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <Orb size={190} />
@@ -69,6 +79,8 @@ export default function PlayerScreen() {
   const { goals, updateGoal } = useStore();
   const { goal, track, list, voice, setVoice, tape, prep, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
+
+  const [timerOpen, setTimerOpen] = useState(false);
 
   function pickGoal(id: string) {
     choose({ kind: 'goal', id });
@@ -83,10 +95,10 @@ export default function PlayerScreen() {
   const tint = t.colors.tints[tintIndex % t.colors.tints.length];
   const timerAt = TIMERS.findIndex((l) => l.value === prefs.timer);
 
-  function nextTimer() {
-    const next = TIMERS[(timerAt + 1) % TIMERS.length].value;
-    setPrefs({ timer: next });
-    tape.retime(next);
+  function setTimer(minutes: number) {
+    setPrefs({ timer: minutes });
+    tape.retime(minutes);
+    setTimerOpen(false);
   }
 
   function favoriteCurrent() {
@@ -176,8 +188,26 @@ export default function PlayerScreen() {
             style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name={tape.playing ? 'pause' : 'play'} size={32} color={t.colors.onAccent} />
           </Pressable>
-          <HeroButton icon="hourglass-outline" label={prefs.timer ? TIMERS[timerAt]?.label ?? 'Timer' : 'Add timer'} onPress={nextTimer} active={!!prefs.timer} />
+          <HeroButton
+            icon="hourglass-outline"
+            label={prefs.timer ? (TIMERS[timerAt]?.label ?? 'Timer') : 'Add timer'}
+            onPress={() => setTimerOpen((o) => !o)}
+            active={!!prefs.timer}
+          />
         </View>
+
+        {timerOpen && (
+          <View style={{ gap: 8, alignItems: 'center' }}>
+            <Txt variant="muted" style={{ color: t.colors.text }}>
+              Fades out gently, then stops
+            </Txt>
+            <ChipRow>
+              {TIMERS.map((l) => (
+                <Chip key={l.label} label={l.label} selected={prefs.timer === l.value} onPress={() => setTimer(l.value)} />
+              ))}
+            </ChipRow>
+          </View>
+        )}
 
         <Txt variant="muted" style={{ textAlign: 'center' }}>
           {tape.mode === 'spoken' && list.length ? `${tape.index + 1} of ${list.length}` : ''}
