@@ -210,6 +210,8 @@ export function useTape({
     onDone.current[k] = then;
     player.replace({ uri });
     player.volume = volume;
+    // Faster without going squeaky: the pitch stays the same.
+    player.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
     player.play();
   }
 
@@ -223,7 +225,7 @@ export function useTape({
     setIndex(at);
     const next = () => {
       if (thisRun !== run.current) return;
-      gapTimers.current[0] = setTimeout(() => speakAt(at + 1, thisRun), MODES.spoken.gapMs);
+      gapTimers.current[0] = setTimeout(() => speakAt(at + 1, thisRun), MODES.spoken.gapMs / (latest.current.prefs.speed ?? 1));
     };
 
     const uri = audioFor(item, v);
@@ -236,7 +238,7 @@ export function useTape({
     const id = voiceIds.current[kind];
     Speech.speak(item.text, {
       voice: id,
-      rate: 0.9,
+      rate: 0.9 * (p.speed ?? 1),
       // Only nudge the pitch when the phone has no male voice to use.
       pitch: kind === 'deep-male' && !id ? 0.9 : 1,
       volume: p.voiceVolume,

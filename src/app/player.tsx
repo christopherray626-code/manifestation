@@ -243,6 +243,18 @@ export default function PlayerScreen() {
         {tape.mode === 'subliminal' && (
           <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>
         )}
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Icon name="speedometer-outline" size={18} color={t.colors.accent} />
+            <Txt variant="medium">Speed</Txt>
+          </View>
+          <ChipRow>
+            {SPEEDS.map((v) => (
+              <Chip key={v} label={`${v}×`} selected={(prefs.speed ?? 1) === v} onPress={() => setPrefs({ speed: v })} />
+            ))}
+          </ChipRow>
+          <Txt variant="muted">Takes effect from the next line. Faster tapes fit more repetitions in, without changing the pitch.</Txt>
+        </View>
       </PanelCard>
 
       <PanelCard label="Voice" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
@@ -365,6 +377,8 @@ function PanelCard({ label, right, tinted, children }: { label: string; right?: 
 // The loudest each layer goes at the top of its slider. A subliminal voice stays far under the music
 // even at full; frequencies are pure tones, which sound loud, so they top out low.
 const SUBLIMINAL_MAX = 0.06;
+// How fast the voice can read. Phones top out at double speed.
+const SPEEDS = [1, 1.25, 1.5, 1.75, 2];
 const FREQUENCY_MAX = 0.4;
 
 /** One channel of the mix: icon, name, slider and its level. */
