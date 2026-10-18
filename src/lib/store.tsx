@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import type { Goal, Settings } from '@/lib/types';
+import type { Goal, JournalEntry, Settings } from '@/lib/types';
 
 const KEY = 'manifest-state-v1';
 
-type State = { settings: Settings; goals: Goal[] };
+type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[] };
 
 const defaultState: State = {
   settings: {
@@ -17,6 +17,7 @@ const defaultState: State = {
     reminders: [],
   },
   goals: [],
+  journal: [],
 };
 
 type Store = State & {
@@ -25,6 +26,8 @@ type Store = State & {
   addGoal: (goal: Goal) => void;
   updateGoal: (id: string, change: (goal: Goal) => Goal) => void;
   deleteGoal: (id: string) => void;
+  addEntry: (entry: JournalEntry) => void;
+  deleteEntry: (id: string) => void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -42,6 +45,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setState({
           settings: { ...defaultState.settings, ...saved.settings },
           goals: saved.goals ?? [],
+          journal: saved.journal ?? [],
         });
       })
       .catch(() => {})
@@ -61,6 +65,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updateGoal: (id, change) =>
       setState((s) => ({ ...s, goals: s.goals.map((g) => (g.id === id ? change(g) : g)) })),
     deleteGoal: (id) => setState((s) => ({ ...s, goals: s.goals.filter((g) => g.id !== id) })),
+    addEntry: (entry) => setState((s) => ({ ...s, journal: [entry, ...s.journal] })),
+    deleteEntry: (id) => setState((s) => ({ ...s, journal: s.journal.filter((e) => e.id !== id) })),
   };
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;

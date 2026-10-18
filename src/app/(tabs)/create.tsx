@@ -31,6 +31,13 @@ export default function CreateScreen() {
       )}
 
       <Button title="Claim something new" icon="add" onPress={() => router.push('/goal/new')} />
+
+      <Card onPress={() => router.push('/journal')}>
+        <View style={{ gap: 4 }}>
+          <Txt variant="medium">Journal</Txt>
+          <Txt variant="muted">Script your days as if they already happened, and log the signs as they show up.</Txt>
+        </View>
+      </Card>
     </Screen>
   );
 }

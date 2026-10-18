@@ -115,14 +115,14 @@ export function Txt({
   const v: Record<TxtVariant, TextStyle> = {
     display: {
       fontFamily: t.fonts.display,
-      fontSize: t.displayCaps ? 28 : 34,
-      lineHeight: t.displayCaps ? 34 : 41,
+      fontSize: t.displayCaps ? 22 : 27,
+      lineHeight: t.displayCaps ? 28 : 33,
       textTransform: t.displayCaps ? 'uppercase' : 'none',
     },
-    title: { fontFamily: t.fonts.display, fontSize: 20, lineHeight: 26 },
-    body: { fontFamily: t.fonts.body, fontSize: 16, lineHeight: 24 },
-    medium: { fontFamily: t.fonts.bodyMedium, fontSize: 16, lineHeight: 23 },
-    muted: { fontFamily: t.fonts.body, fontSize: 14, lineHeight: 20, color: t.colors.muted },
+    title: { fontFamily: t.fonts.display, fontSize: 18, lineHeight: 24 },
+    body: { fontFamily: t.fonts.body, fontSize: 15, lineHeight: 22 },
+    medium: { fontFamily: t.fonts.bodyMedium, fontSize: 15, lineHeight: 21 },
+    muted: { fontFamily: t.fonts.body, fontSize: 13, lineHeight: 19, color: t.colors.muted },
     label: {
       fontFamily: t.fonts.label,
       fontSize: 11,
@@ -130,7 +130,7 @@ export function Txt({
       textTransform: t.labelCaps ? 'uppercase' : 'none',
       color: t.colors.label,
     },
-    quote: { fontFamily: t.fonts.quote, fontSize: 20, lineHeight: 28 },
+    quote: { fontFamily: t.fonts.quote, fontSize: 18, lineHeight: 26 },
   };
   return (
     <Text numberOfLines={numberOfLines} style={[{ color: t.colors.text }, v[variant], style]}>
@@ -212,7 +212,7 @@ export function Button({
         style={{
           color,
           fontFamily: primary ? t.fonts.button : t.fonts.body,
-          fontSize: primary && t.buttonCaps ? 14 : 16,
+          fontSize: primary && t.buttonCaps ? 13 : 15,
           letterSpacing: primary && t.buttonCaps ? 1.5 : 0,
           textTransform: primary && t.buttonCaps ? 'uppercase' : 'none',
         }}>

@@ -152,7 +152,7 @@ export default function PlayerScreen() {
         </View>
 
         <View style={{ minHeight: 64, justifyContent: 'center' }}>
-          <Txt variant="quote" style={{ textAlign: 'center', fontSize: 21, lineHeight: 29 }}>
+          <Txt variant="quote" style={{ textAlign: 'center', fontSize: 19, lineHeight: 27 }}>
             {tape.mode === 'subliminal' ? (tape.playing ? 'Playing below the sound…' : '') : current ? `"${current.text}"` : goal ? 'No affirmations here yet.' : ''}
           </Txt>
         </View>

@@ -114,6 +114,14 @@ export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+/** A journal entry: a script (the day written as if it's already here) or a sign that it's arriving. */
+export type JournalEntry = {
+  id: string;
+  kind: 'script' | 'sign';
+  text: string;
+  createdAt: number;
+};
+
 /** The voice new manifestations and ready-made tracks start in (Brittney). */
 export const DEFAULT_VOICE: Voice = 'serene-female';
 

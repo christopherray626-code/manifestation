@@ -78,13 +78,31 @@ function QuoteLine() {
   const q = quoteOfThisVisit;
   return (
     <View style={{ gap: 4 }}>
-      <Txt variant="quote" style={{ fontSize: 17, lineHeight: 24, color: t.colors.muted }}>
+      <Txt variant="quote" style={{ fontSize: 15, lineHeight: 22, color: t.colors.muted }}>
         {`“${q.text}”`}
       </Txt>
       <Txt variant="muted" style={{ fontSize: 12 }}>
         {`— ${q.who}`}
       </Txt>
     </View>
+  );
+}
+
+/** A way into the scripting journal, with a count of what's been written. */
+function JournalCard() {
+  const t = useTheme();
+  const { journal } = useStore();
+  return (
+    <Card onPress={() => router.push('/journal')}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Icon name="create-outline" size={20} color={t.colors.accent} />
+        <View style={{ flex: 1 }}>
+          <Txt variant="medium">Script your day</Txt>
+          <Txt variant="muted">{journal.length ? `${journal.length} ${journal.length === 1 ? 'entry' : 'entries'} so far` : 'Write it as if it already happened'}</Txt>
+        </View>
+        <Icon name="chevron-forward" size={18} color={t.colors.muted} />
+      </View>
+    </Card>
   );
 }
 
@@ -174,6 +192,8 @@ export default function HomeScreen() {
       <PlayToday />
 
       <TipCard />
+
+      <JournalCard />
 
       <Section label="Already yours">
         {goals.length === 0 ? (
