@@ -70,7 +70,7 @@ const general = [
 
 /*
  * Goals written as something to be or do ("to be the most confident person", "run a marathon")
- * don't fit the templates above, which expect a thing ("a black Tesla"). Those get their own.
+ * don't fit the templates above, which expect a thing ("a beach house"). Those get their own.
  * {state} is who they're becoming, {act} is what they'll do.
  */
 const beTemplates = [
@@ -115,7 +115,7 @@ function goalKind(title: string): { kind: 'thing' | 'be' | 'do'; phrase: string 
 
 function goalPhrase(title: string, category: Category) {
   const t = title.trim().replace(/[.!]+$/, '');
-  // "Black Tesla" -> "black Tesla", but leave acronyms like "BMW" alone.
+  // "Beach house" -> "beach house", but leave acronyms like "BMW" alone.
   const soft = /^[A-Z][a-z]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
   if (category === 'car' || category === 'home') {
     return /^(my|a|an|the)\s/i.test(soft) ? soft.replace(/^(a|an|the)\s/i, 'my ') : `my ${soft}`;

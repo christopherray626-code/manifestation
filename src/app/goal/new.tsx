@@ -66,7 +66,7 @@ export default function NewGoalScreen() {
               setTitle(v);
               setError('');
             }}
-            placeholder="Black Tesla Model 3"
+            placeholder="Walk into every room confident"
             error={error}
             returnKeyType="next"
           />
@@ -84,7 +84,7 @@ export default function NewGoalScreen() {
           <Field
             value={details}
             onChangeText={setDetails}
-            placeholder="White seats. Paid off. Parked in my own driveway by next summer."
+            placeholder="I speak up without overthinking. People notice how calm and sure I am."
             multiline
           />
         </Section>

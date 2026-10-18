@@ -62,6 +62,9 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     document.documentElement.style.backgroundColor = t.colors.bg;
+    // Light or dark decides the colour of Android's gesture bar in the installed app.
+    document.documentElement.style.colorScheme = t.dark ? 'dark' : 'light';
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', t.dark ? 'dark' : 'light');
     document.body.style.backgroundColor = t.colors.bg;
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!meta) {
@@ -70,7 +73,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
       document.head.appendChild(meta);
     }
     meta.content = t.colors.bg;
-  }, [t.colors.bg]);
+  }, [t.colors.bg, t.dark]);
 
   if (!ready) return null;
 
