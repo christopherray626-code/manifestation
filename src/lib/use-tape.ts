@@ -42,7 +42,7 @@ export const MODES: Record<TapeMode, { label: string; about: string; voiceVolume
     about: 'Your affirmations read out clearly over a soft background.',
     voiceVolume: 1,
     soundVolume: 0.35,
-    gapMs: 1500,
+    gapMs: 650,
   },
   subliminal: {
     label: 'Subliminal',
@@ -128,6 +128,8 @@ export function useTape({
   const run = useRef(0);
   const gapTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null]);
   const onDone = useRef<((() => void) | null)[]>([null, null, null]);
+  // What each voice player has loaded but not yet played.
+  const loaded = useRef<(string | undefined)[]>([undefined, undefined, undefined]);
   const fade = useRef<ReturnType<typeof setInterval> | null>(null);
   const voiceIds = useRef<{ 'calm-female'?: string; 'deep-male'?: string }>({});
   const latest = useRef({ affirmations, voice, prefs, mode });
@@ -209,14 +211,26 @@ export function useTape({
 
   function playFile(k: number, player: AudioPlayer, uri: string, volume: number, then: () => void) {
     onDone.current[k] = then;
-    player.replace({ uri });
+    // Already loaded ahead of time (see preload), so it can start the instant the last line ends.
+    if (loaded.current[k] !== uri) player.replace({ uri });
+    loaded.current[k] = undefined;
     player.volume = volume;
     // Faster without going squeaky: the pitch stays the same.
     player.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
     player.play();
   }
 
-  /** Spoken: one affirmation at a time, a recording when there is one, else the phone's voice. */
+  /** Loads a file into a player without playing it, so it's ready when its turn comes. */
+  function preload(k: number, player: AudioPlayer, uri: string | undefined) {
+    if (!uri || loaded.current[k] === uri) return;
+    player.replace({ uri });
+    loaded.current[k] = uri;
+  }
+
+  /**
+   * Spoken: one affirmation at a time, a recording when there is one, else the phone's voice. Two
+   * players take turns: while one speaks, the next line loads on the other, so there's no gap to load.
+   */
   function speakAt(i: number, thisRun: number) {
     if (thisRun !== run.current) return;
     const { affirmations: list, voice: v, prefs: p } = latest.current;
@@ -231,7 +245,11 @@ export function useTape({
 
     const uri = audioFor(item, v);
     if (uri) {
-      playFile(0, layer0, uri, p.voiceVolume, next);
+      const k = at % 2;
+      const players = [layer0, layer1];
+      playFile(k, players[k], uri, p.voiceVolume, next);
+      const after = list[wrap(at + 1, list.length)];
+      if (list.length > 1) preload(1 - k, players[1 - k], audioFor(after, v));
       return;
     }
     // The phone's own voices only come in two kinds; pick the closer one.
