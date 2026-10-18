@@ -64,11 +64,12 @@ export function voiceAudioUri(text: string, voice: Voice): string | undefined {
   return file.exists ? file.uri : undefined;
 }
 
-async function makeOne(text: string, voice: Voice) {
+async function makeOne(text: string, voice: Voice, previous?: string, next?: string) {
   const res = await fetch(`${SERVER}/api/voice`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: text.trim(), voice }),
+    // The lines either side help the voice read it as part of one flowing script.
+    body: JSON.stringify({ text: text.trim(), voice, previous, next }),
   });
   if (!res.ok) {
     let message = `The voice server answered ${res.status}.`;
@@ -105,7 +106,8 @@ export async function prepareVoice(texts: string[], voice: Voice, onProgress: (d
   for (let i = 0; i < missing.length; i += 3) {
     await Promise.all(
       missing.slice(i, i + 3).map(async (t) => {
-        await makeOne(t, voice);
+        const at = texts.indexOf(t);
+        await makeOne(t, voice, texts[at - 1], texts[at + 1]);
         done++;
         onProgress(done, missing.length);
       }),

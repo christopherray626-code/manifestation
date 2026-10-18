@@ -8,6 +8,9 @@ export const config = { runtime: 'edge' };
 //   APP_TOKEN           optional shared secret the app sends as x-app-token
 //   VOICE_ID_CALM / VOICE_ID_DEEP  optional, swap in any voice from your ElevenLabs library
 //   ELEVENLABS_MODEL    optional, defaults to eleven_multilingual_v2
+//   BLOB_READ_WRITE_TOKEN  added by Vercel when a Blob store is connected. With it, every clip is
+//                       saved once and shared: the same line in the same voice is never paid for twice,
+//                       for anyone. Without it, each clip is made fresh every time it's asked for.
 
 const VOICES: Record<string, string> = {
   'calm-female': process.env.VOICE_ID_CALM || '21m00Tcm4TlvDq8ikWAM',
@@ -26,13 +29,61 @@ const VOICES: Record<string, string> = {
 
 const MAX_CHARS = 300;
 
+// Same naming as the app's own saved clips (src/lib/voices.ts): voice, then a hash and length of the text.
+function hash(text: string) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+const clipPath = (text: string, voice: string) => `voices/${voice}-${hash(text).toString(36)}-${text.length}.mp3`;
+const AUDIO_HEADERS = { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=31536000, immutable' };
+
+// Shared storage is a public Vercel Blob store, used through its plain web API (the SDK needs Node, and
+// this runs on the edge). The store's id is part of its token: vercel_blob_rw_<storeId>_<secret>.
+const blobToken = () => process.env.BLOB_READ_WRITE_TOKEN;
+const blobUrl = (token: string, path: string) => `https://${token.split('_')[3]}.public.blob.vercel-storage.com/${path}`;
+
+/** The shared copy of a clip, if one was saved before. */
+async function saved(path: string) {
+  const token = blobToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(blobUrl(token, path));
+    return res.ok ? res : null;
+  } catch {
+    return null;
+  }
+}
+
+async function save(path: string, audio: ArrayBuffer) {
+  const token = blobToken();
+  if (!token) return;
+  const res = await fetch(`https://vercel.com/api/blob/?${new URLSearchParams({ pathname: path })}`, {
+    method: 'PUT',
+    body: audio,
+    headers: {
+      authorization: `Bearer ${token}`,
+      'x-api-version': '13',
+      'x-vercel-blob-access': 'public',
+      'x-add-random-suffix': '0',
+      'x-allow-overwrite': '1',
+      'x-content-type': 'audio/mpeg',
+    },
+  });
+  if (!res.ok) console.error('Could not save the clip to Blob', res.status, await res.text());
+}
+
 function reply(status: number, message: string) {
   return Response.json({ error: message }, { status });
 }
 
 /** Lets us check the setup without spending any credits. */
 function GET() {
-  return Response.json({ ok: true, hasKey: Boolean(process.env.ELEVENLABS_API_KEY) });
+  return Response.json({
+    ok: true,
+    hasKey: Boolean(process.env.ELEVENLABS_API_KEY),
+    sharedStorage: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+  });
 }
 
 async function POST(request: Request) {
@@ -42,7 +93,7 @@ async function POST(request: Request) {
   const token = process.env.APP_TOKEN;
   if (token && request.headers.get('x-app-token') !== token) return reply(401, 'Not allowed.');
 
-  let body: { text?: unknown; voice?: unknown };
+  let body: { text?: unknown; voice?: unknown; previous?: unknown; next?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -53,6 +104,12 @@ async function POST(request: Request) {
   const voice = typeof body.voice === 'string' ? body.voice : '';
   if (!text || text.length > MAX_CHARS) return reply(400, `Text must be 1 to ${MAX_CHARS} characters.`);
   if (!VOICES[voice]) return reply(400, 'Unknown voice.');
+  // The lines around this one, so it's read as part of a flowing script rather than on its own.
+  const around = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_CHARS) : undefined);
+
+  const path = clipPath(text, voice);
+  const hit = await saved(path);
+  if (hit) return new Response(hit.body, { headers: { ...AUDIO_HEADERS, 'x-voice-cache': 'hit' } });
 
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${VOICES[voice]}?output_format=mp3_44100_128`,
@@ -64,6 +121,8 @@ async function POST(request: Request) {
         model_id: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2',
         // Steady and warm, a touch slower than normal speech.
         voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0, speed: 0.92, use_speaker_boost: true },
+        previous_text: around(body.previous),
+        next_text: around(body.next),
       }),
     },
   );
@@ -72,7 +131,13 @@ async function POST(request: Request) {
     console.error('ElevenLabs error', res.status, await res.text());
     return reply(502, `ElevenLabs couldn't make the audio (status ${res.status}).`);
   }
-  return new Response(res.body, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
+  const audio = await res.arrayBuffer();
+  try {
+    await save(path, audio);
+  } catch (e) {
+    console.error('Could not save the clip to Blob', e); // still hand it back
+  }
+  return new Response(audio, { headers: { ...AUDIO_HEADERS, 'x-voice-cache': 'miss' } });
 }
 
 export default function handler(request: Request) {
