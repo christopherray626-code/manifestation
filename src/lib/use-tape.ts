@@ -1,9 +1,11 @@
 import { setAudioModeAsync, useAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
 import { recordingUri } from '@/lib/recordings';
 import { success } from '@/lib/haptics';
+import { stitch, type Stitched } from '@/lib/stitch';
 import { useToneLayer } from '@/lib/tone';
 import { naturalVoices, voiceAudioUri } from '@/lib/voices';
 import type { Affirmation, BackgroundSound, Frequency, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
@@ -93,8 +95,6 @@ function pickVoice(voices: Speech.Voice[], kind: 'calm-female' | 'deep-male') {
   return best && names.test(`${best.name} ${best.identifier}`) ? best.identifier : undefined;
 }
 
-// How much of each voice clip's tail to skip into the next line (it's silence).
-const TAIL_SEC = 0.35;
 const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
 export function useTape({
@@ -116,6 +116,9 @@ export function useTape({
   const layer0 = useAudioPlayer(null, { updateInterval: 100 });
   const layer1 = useAudioPlayer(null, { updateInterval: 100 });
   const layer2 = useAudioPlayer(null, { updateInterval: 100 });
+  // On the web the whole tape plays as one stitched recording (see stitch.ts).
+  const track = useAudioPlayer(null, { updateInterval: 200 });
+  const stitched = useRef<Stitched | null>(null);
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
   const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -155,21 +158,24 @@ export function useTape({
     const subs = [layer0, layer1, layer2].map((player, k) =>
       player.addListener('playbackStatusUpdate', (status) => {
         const done = onDone.current[k];
-        // Spoken tapes move on just before the clip ends: the voice recordings trail off with a
-        // little silence, and waiting it out made the gaps between lines feel long.
-        const nearlyDone =
-          k < 2 &&
-          latest.current.mode === 'spoken' &&
-          status.duration > 1 &&
-          status.currentTime >= status.duration - TAIL_SEC * (latest.current.prefs.speed ?? 1);
-        if ((status.didJustFinish || nearlyDone) && done) {
+        if (status.didJustFinish && done) {
           onDone.current[k] = null;
           done();
         }
       }),
     );
+    // The stitched track: show whichever line it's on.
+    subs.push(
+      track.addListener('playbackStatusUpdate', (status) => {
+        const t = stitched.current;
+        if (!t || !status.playing) return;
+        let p = 0;
+        while (p + 1 < t.starts.length && t.starts[p + 1] <= status.currentTime) p++;
+        setIndex(t.order[p]);
+      }),
+    );
     return () => subs.forEach((s) => s.remove());
-  }, [layer0, layer1, layer2]);
+  }, [layer0, layer1, layer2, track]);
 
   // Background sound: swap it when changed, keep looping.
   useEffect(() => {
@@ -202,15 +208,20 @@ export function useTape({
 
   useEffect(() => {
     if (!fade.current) background.volume = prefs.soundVolume;
-    for (const player of [layer0, layer1, layer2]) player.volume = prefs.voiceVolume;
-  }, [prefs.soundVolume, prefs.voiceVolume, background, layer0, layer1, layer2]);
+    for (const player of [layer0, layer1, layer2, track]) player.volume = prefs.voiceVolume;
+  }, [prefs.soundVolume, prefs.voiceVolume, background, layer0, layer1, layer2, track]);
+
+  useEffect(() => {
+    if (stitched.current) track.setPlaybackRate(prefs.speed ?? 1, 'high');
+  }, [prefs.speed, track]);
 
   function stopVoices() {
     run.current++;
     gapTimers.current.forEach((t) => t && clearTimeout(t));
     onDone.current = [null, null, null];
     Speech.stop();
-    for (const player of [layer0, layer1, layer2]) player.pause();
+    for (const player of [layer0, layer1, layer2, track]) player.pause();
+    stitched.current = null;
   }
 
   function silence() {
@@ -290,18 +301,53 @@ export function useTape({
     });
   }
 
+  /**
+   * Web: join the lines into one recording and loop it from `from`. Returns false when it can't (some
+   * lines have no audio yet and need the phone's voice), so the line-by-line players take over.
+   */
+  function startTrack(from: number, thisRun: number) {
+    if (Platform.OS !== 'web') return false;
+    const { affirmations: list, voice: v, mode: m } = latest.current;
+    const uris = list.map((a) => audioFor(a, v));
+    const files = list.flatMap((a, i) => (uris[i] ? [i] : []));
+    if (!files.length || (m === 'spoken' && files.length < list.length)) return false;
+    const start = Math.max(files.indexOf(from), 0);
+    const layers = m === 'spoken' ? 1 : Math.min(SUBLIMINAL_LAYERS, files.length);
+    stitch(
+      files.map((i) => uris[i]!),
+      start,
+      MODES[m].gapMs,
+      layers,
+    ).then((t) => {
+      if (!t) return;
+      if (thisRun !== run.current) return URL.revokeObjectURL(t.uri);
+      const old = stitched.current;
+      stitched.current = { ...t, order: t.order.map((p) => files[p]) };
+      track.replace({ uri: t.uri });
+      track.loop = true;
+      track.volume = latest.current.prefs.voiceVolume;
+      track.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
+      track.play();
+      if (old) URL.revokeObjectURL(old.uri);
+    });
+    return true;
+  }
+
   function startVoices(from: number) {
     const thisRun = run.current;
+    if (startTrack(from, thisRun)) return;
     if (latest.current.mode === 'spoken') {
       speakAt(from, thisRun);
       return;
     }
     const { affirmations: list, voice: v } = latest.current;
-    const count = list.filter((a) => audioFor(a, v)).length;
+    const files = list.filter((a) => audioFor(a, v));
+    const first = Math.max(files.indexOf(list[from]), 0);
+    const count = files.length;
     const layers = Math.min(SUBLIMINAL_LAYERS, count);
     for (let k = 0; k < layers; k++) {
       // Spread the layers out so they say different affirmations at once, and stagger their starts.
-      const startAt = from + Math.floor((count * k) / layers);
+      const startAt = first + Math.floor((count * k) / layers);
       gapTimers.current[k] = setTimeout(() => layerAt(k, startAt, thisRun), k * 700);
     }
   }
@@ -323,7 +369,7 @@ export function useTape({
       tone.play();
     }
     setEndsAt(prefs.timer ? Date.now() + prefs.timer * 60000 : null);
-    startVoices(mode === 'spoken' ? index : Math.max(files.indexOf(affirmations[index]), 0));
+    startVoices(index);
   }
 
   function pause() {
@@ -339,6 +385,13 @@ export function useTape({
     if (!count) return;
     const target = wrap(index + by, count);
     if (!playing || mode === 'subliminal') {
+      setIndex(target);
+      return;
+    }
+    const t = stitched.current;
+    const p = t ? t.order.indexOf(target) : -1;
+    if (t && p >= 0) {
+      track.seekTo(t.starts[p]);
       setIndex(target);
       return;
     }
