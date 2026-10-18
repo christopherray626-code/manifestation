@@ -8,6 +8,7 @@ import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '
 import { moonPhase } from '@/lib/moon';
 import { useStore } from '@/lib/store';
 import { dayOfGoal, todaysAffirmation } from '@/lib/today';
+import { quoteOfThisVisit } from '@/lib/quotes';
 import { trackById, TRACKS } from '@/lib/tracks';
 
 function greeting(name: string) {
@@ -43,6 +44,23 @@ function Tagline() {
     );
   }
   return null;
+}
+
+/** A quote from a manifestation teacher, new each time the app opens. */
+function QuoteCard() {
+  const t = useTheme();
+  const q = quoteOfThisVisit;
+  return (
+    <Card>
+      <View style={{ gap: 10 }}>
+        <Icon name="chatbubble-ellipses-outline" size={16} color={t.colors.accent} />
+        <Txt variant="quote" style={{ fontSize: 18, lineHeight: 26 }}>
+          {`“${q.text}”`}
+        </Txt>
+        <Txt variant="label">{q.who}</Txt>
+      </View>
+    </Card>
+  );
 }
 
 /** Today's affirmation from the first goal, with a heart to favorite it and a share button. */
@@ -128,6 +146,8 @@ export default function HomeScreen() {
           </Txt>
         )}
       </View>
+
+      <QuoteCard />
 
       <TodayCard />
 
