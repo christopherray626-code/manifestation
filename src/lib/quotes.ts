@@ -71,6 +71,8 @@ export const QUOTES: Quote[] = [
   },
   { text: 'Nothing can bring you peace but yourself.', who: 'Ralph Waldo Emerson' },
   { text: 'Trust thyself: every heart vibrates to that iron string.', who: 'Ralph Waldo Emerson' },
+  // Chris's pick; nobody it can be traced to, so it says so.
+  { text: 'If it’s physically possible, it can be manifested.', who: 'Unknown' },
 ];
 
 /** Picked once when the app loads, so it changes each time you open it, not each time you go Home. */
