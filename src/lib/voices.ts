@@ -10,11 +10,13 @@ import type { Voice } from '@/lib/types';
  * edited affirmation gets fresh audio and an unchanged one is never paid for twice.
  */
 
-const SERVER = process.env.EXPO_PUBLIC_VOICE_SERVER?.replace(/\/$/, '');
 const isWeb = Platform.OS === 'web';
+// The phone app needs the server's address. The web app is served by the same Vercel project as the voice
+// server (see vercel.json), so on the web it can just ask its own site.
+const SERVER = process.env.EXPO_PUBLIC_VOICE_SERVER?.replace(/\/$/, '') ?? (isWeb ? '' : undefined);
 
 /** Whether natural voices are set up for this build. */
-export const naturalVoices = Boolean(SERVER);
+export const naturalVoices = SERVER !== undefined;
 
 // Web (used for testing) has no file system, so audio is kept for the session only.
 const webAudio = new Map<string, string>();
