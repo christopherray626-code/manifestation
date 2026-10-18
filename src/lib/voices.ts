@@ -18,8 +18,31 @@ const SERVER = process.env.EXPO_PUBLIC_VOICE_SERVER?.replace(/\/$/, '') ?? (isWe
 /** Whether natural voices are set up for this build. */
 export const naturalVoices = SERVER !== undefined;
 
-// Web (used for testing) has no file system, so audio is kept for the session only.
+// Web has no file system: each clip is kept in the browser's Cache Storage (it survives closing the app, so a
+// voice is only ever paid for once per browser), and turned into a playable URL here when it's needed.
 const webAudio = new Map<string, string>();
+const CACHE = 'manifest-voices-v1';
+const cacheKey = (name: string) => `/voices/${name}`;
+async function webCache() {
+  try {
+    return typeof caches !== 'undefined' ? await caches.open(CACHE) : null;
+  } catch {
+    return null; // private browsing and the like: fall back to this session only
+  }
+}
+/** Loads clips saved on an earlier visit, so they count as made. */
+async function loadSaved(texts: string[], voice: Voice) {
+  const cache = await webCache();
+  if (!cache) return;
+  await Promise.all(
+    texts.map(async (t) => {
+      const name = fileName(t, voice);
+      if (webAudio.has(name)) return;
+      const hit = await cache.match(cacheKey(name));
+      if (hit) webAudio.set(name, URL.createObjectURL(await hit.blob()));
+    }),
+  );
+}
 
 function folder() {
   const dir = new Directory(Paths.document, 'voices');
@@ -59,7 +82,13 @@ async function makeOne(text: string, voice: Voice) {
   const bytes = new Uint8Array(await res.arrayBuffer());
   const name = fileName(text, voice);
   if (isWeb) {
-    webAudio.set(name, URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' })));
+    const blob = new Blob([bytes], { type: 'audio/mpeg' });
+    webAudio.set(name, URL.createObjectURL(blob));
+    try {
+      await (await webCache())?.put(cacheKey(name), new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
+    } catch {
+      // Storage full or blocked: it still plays this session.
+    }
     return;
   }
   const file = new File(folder(), name);
@@ -69,6 +98,7 @@ async function makeOne(text: string, voice: Voice) {
 
 /** Makes any missing audio, a few at a time, reporting how many are done. */
 export async function prepareVoice(texts: string[], voice: Voice, onProgress: (done: number, total: number) => void) {
+  if (isWeb && voice !== 'my-voice' && naturalVoices) await loadSaved(texts, voice);
   const missing = texts.filter((t) => !voiceAudioUri(t, voice));
   let done = 0;
   onProgress(0, missing.length);
