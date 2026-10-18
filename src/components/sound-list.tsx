@@ -66,21 +66,36 @@ export function SoundList({
   const shown = SOUND_LIST.filter((s) => kind === 'all' || s.kind === kind);
 
   if (!open) {
+    // Closed: just what's on, and a way to change it.
+    const shown = current ?? { icon: 'volume-mute-outline' as IconName, label: 'No background', tags: 'Just the voice' };
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ flex: 1 }}>
-          {current ? (
-            <SoundRow icon={current.icon} label={current.label} tags={current.tags} selected onPress={() => setOpen(true)} />
-          ) : (
-            <SoundRow icon="volume-mute-outline" label="No background" tags="Just the voice" selected onPress={() => setOpen(true)} />
-          )}
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Background: ${shown.label}. Change`}
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.7 : 1 })}>
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: t.colors.bg,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Icon name={shown.icon} size={22} color={t.colors.accent} />
         </View>
-        <Pressable onPress={() => setOpen(true)} hitSlop={10} accessibilityRole="button">
+        <View style={{ flex: 1 }}>
+          <Txt variant="medium">{shown.label}</Txt>
+          <Txt variant="muted">{shown.tags}</Txt>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           <Txt variant="muted" style={{ color: t.colors.accent }}>
             Change
           </Txt>
-        </Pressable>
-      </View>
+          <Icon name="chevron-forward" size={16} color={t.colors.accent} />
+        </View>
+      </Pressable>
     );
   }
 

@@ -18,9 +18,19 @@ const WRITING_GUIDE = `You write affirmations for a manifestation app. They are 
 calm music, and played as subliminals, so they must sound natural spoken.
 
 How to write them:
-- Mix perspectives: about two thirds "I" lines (owning it: "I am…", "I have…") and one third "you" lines,
-  as if a trusted voice is speaking to them ("You are…", "You already know…"). If you know their name,
-  use it in one or two "you" lines, never more.
+- Mix perspectives: about two thirds "you" lines, as if a friend who's amazed at their life is speaking
+  to them ("You are…", "You've always been…"), and one third "I" lines where they own it ("I am…",
+  "I have…"). If you know their name, use it in one or two "you" lines, never more.
+- Write in this style:
+  - One or two "why" questions that assume it's already true, so the mind looks for the reason:
+    "Why does money keep finding you like this?"
+  - "You've always been…" lines that treat the goal as settled history.
+  - For big goals, abundance so large it's almost a problem: "you can't keep up with it", "you have to
+    figure out what to do with it all".
+  - Feeling and gratitude: "it feels amazing", "you're so grateful".
+  - Identity: "it's who you are", "you were born for this".
+  - An occasional dash for an afterthought that adds emotion: "…, it's like magic."
+  - End the set with one line of closure that starts "It's done."
 - Keep them believable. Mix fully present lines (as if it's already real) with bridge lines that move
   toward it: "I am becoming…", "more and more…", "every day it gets easier to…".
 - Put the goal in what the sentence assumes, not just what it claims. Use words that take it for

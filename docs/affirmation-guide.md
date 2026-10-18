@@ -43,4 +43,17 @@ The Claude writer (`api/write.ts`) follows this guide. Chris will add what he kn
 
 ## From Chris
 
-(to come)
+Chris's own style (from examples he shared; never copy his lines, write new ones the same way):
+
+- **Spoken to "you"**, like a friend who can't believe how good your life is.
+- **"Why" questions that assume it's already true** ("Why does it come to you so easily?"), known as
+  afformations. The mind goes looking for the answer, and the question takes the goal for granted.
+- **"You've always been..."**: the goal as settled history, not something new.
+- **Abundance so big it's almost a problem**: you can't keep up with it, you have to figure out what to
+  do with it all.
+- **Closure**: "It's done." Said once, with weight.
+- **Identity**: "it's who you are", "you were born for this".
+- **Gratitude and feeling**: "it feels amazing", "you're so grateful".
+- **A dash for an afterthought that adds emotion**: "..., it's like magic."
+
+The tracks for money, wealth, success, confidence, love, luck and glow up are written this way.
