@@ -3,6 +3,7 @@ import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 
 import { recordingUri } from '@/lib/recordings';
+import { useToneLayer } from '@/lib/tone';
 import { naturalVoices, voiceAudioUri } from '@/lib/voices';
 import type { Affirmation, BackgroundSound, Frequency, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
 
@@ -105,7 +106,7 @@ export function useTape({
 }) {
   const mode = modeOf(prefs);
   const background = useAudioPlayer(SOUNDS.pad);
-  const tone = useAudioPlayer(null);
+  const tone = useToneLayer(FREQUENCY_FILES);
   const frequency = prefs.frequency ?? 'none';
   const frequencyVolume = prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME;
   const layer0 = useAudioPlayer(null);
@@ -173,20 +174,18 @@ export function useTape({
 
   // The frequency layer works like the background: swap it when changed, keep looping.
   useEffect(() => {
-    if (frequency === 'none') {
-      tone.pause();
-      return;
-    }
-    tone.replace(FREQUENCY_FILES[frequency]);
-    tone.loop = true;
-    tone.volume = frequencyVolume;
+    tone.setFrequency(frequency);
+    if (frequency === 'none') return;
+    tone.setVolume(frequencyVolume);
     if (playing) tone.play();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frequency]);
 
   useEffect(() => {
-    if (!fade.current) tone.volume = frequencyVolume;
-  }, [frequencyVolume, tone]);
+    if (!fade.current) tone.setVolume(frequencyVolume);
+    // tone is a fresh object each render; only the level matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frequencyVolume]);
 
   useEffect(() => {
     if (!fade.current) background.volume = prefs.soundVolume;
@@ -288,8 +287,8 @@ export function useTape({
       background.play();
     }
     if (frequency !== 'none') {
-      tone.loop = true;
-      tone.volume = frequencyVolume;
+      tone.setFrequency(frequency);
+      tone.setVolume(frequencyVolume);
       tone.play();
     }
     setEndsAt(prefs.timer ? Date.now() + prefs.timer * 60000 : null);
@@ -340,7 +339,7 @@ export function useTape({
       fade.current = setInterval(() => {
         step++;
         background.volume = start * (1 - step / steps);
-        tone.volume = frequencyVolume * (1 - step / steps);
+        tone.setVolume(frequencyVolume * (1 - step / steps));
         if (step >= steps) pause();
       }, FADE_MS / steps);
     }, Math.max(endsAt - Date.now() - FADE_MS, 0));
