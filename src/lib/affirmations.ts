@@ -66,6 +66,51 @@ const general = [
   'I already live as if {it} is here.',
 ];
 
+/*
+ * Goals written as something to be or do ("to be the most confident person", "run a marathon")
+ * don't fit the templates above, which expect a thing ("a black Tesla"). Those get their own.
+ * {state} is who they're becoming, {act} is what they'll do.
+ */
+const beTemplates = [
+  'I am {state}.',
+  'I am becoming {state}, more every day.',
+  'Being {state} comes naturally to me.',
+  'I was always meant to be {state}.',
+  'I am so grateful to be {state}.',
+  'I feel {feel} being {state}.',
+  'I deserve to be {state}, and I accept it with ease.',
+  'Every day it gets easier to be {state}.',
+  'The universe is helping me be {state}.',
+  'Everything I need to be {state} is already inside me.',
+];
+
+const doTemplates = [
+  'I am ready to {act}.',
+  'I was always meant to {act}.',
+  'I trust myself to {act}.',
+  'I deserve to {act}, and I will.',
+  'I feel {feel} knowing I will {act}.',
+  'I have everything I need to {act}.',
+  'The universe is lining everything up for me to {act}.',
+  'Every day I move closer to the day I {act}.',
+];
+
+/** Whether a goal names a thing, a way to be, or something to do, with the wording to slot in. */
+function goalKind(title: string): { kind: 'thing' | 'be' | 'do'; phrase: string } {
+  let t = title.trim().replace(/[.!]+$/, '');
+  const wish = /^(i\s+(really\s+)?(want|would like|wanna|hope|am going|'m going|plan)\s+(to\s+)?|i\s+will\s+|i'll\s+)/i;
+  const hadTo = wish.test(t) || /^to\s/i.test(t);
+  t = t.replace(wish, '');
+  t = t.replace(/^to\s+/i, '');
+  const be = t.match(/^(be|become|being|becoming)\s+(.+)$/i);
+  if (be) return { kind: 'be', phrase: be[2] };
+  // "have / own / get / buy a house" is still a thing.
+  const have = t.match(/^(have|own|get|buy|drive|live in)\s+(.+)$/i);
+  if (have) return { kind: 'thing', phrase: have[2] };
+  if (hadTo) return { kind: 'do', phrase: t[0].toLowerCase() + t.slice(1) };
+  return { kind: 'thing', phrase: t };
+}
+
 function goalPhrase(title: string, category: Category) {
   const t = title.trim().replace(/[.!]+$/, '');
   // "Black Tesla" -> "black Tesla", but leave acronyms like "BMW" alone.
@@ -76,25 +121,58 @@ function goalPhrase(title: string, category: Category) {
   return soft;
 }
 
+// Words that describe the situation rather than the person: "I feel exciting" -> "I feel excited".
+const asFeeling: Record<string, string> = {
+  liberating: 'liberated',
+  exciting: 'excited',
+  relaxing: 'relaxed',
+  inspiring: 'inspired',
+  satisfying: 'satisfied',
+  fulfilling: 'fulfilled',
+  energizing: 'energized',
+  empowering: 'empowered',
+  freeing: 'free',
+  calming: 'calm',
+  thrilling: 'thrilled',
+  rewarding: 'proud',
+  comforting: 'comforted',
+  uplifting: 'uplifted',
+  reassuring: 'reassured',
+  refreshing: 'refreshed',
+  peaceful: 'at peace',
+};
+
 function feelPhrase(feeling: string) {
   const words = feeling
     .split(/,|\band\b/)
     .map((w) => w.trim().toLowerCase())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((w) => asFeeling[w] ?? w);
   if (!words.length) return 'grateful';
   if (words.length === 1) return words[0];
   return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
 }
 
 function fill(template: string, it: string, feel: string) {
-  const text = template.replaceAll('{It}', it).replaceAll('{it}', it).replaceAll('{feel}', feel);
+  const text = template
+    .replaceAll('{It}', it)
+    .replaceAll('{it}', it)
+    .replaceAll('{state}', it)
+    .replaceAll('{act}', it)
+    .replaceAll('{feel}', feel);
   return text[0].toUpperCase() + text.slice(1);
 }
 
 /** All the affirmations the templates can make for a goal, best first. */
 export function allTemplateAffirmations(title: string, category: Category, feeling: string) {
-  const it = goalPhrase(title, category);
   const feel = feelPhrase(feeling);
+  const { kind, phrase } = goalKind(title);
+  if (kind !== 'thing') {
+    // Keep the category lines that don't name the goal ("Love comes to me easily").
+    const own = byCategory[category].filter((t) => !/\{it\}/i.test(t));
+    return [...(kind === 'be' ? beTemplates : doTemplates), ...own].map((t) => fill(t, phrase, feel));
+  }
+  const it = goalPhrase(phrase, category);
   return [...byCategory[category], ...general].map((t) => fill(t, it, feel));
 }
 
