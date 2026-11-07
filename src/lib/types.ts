@@ -126,6 +126,16 @@ export type JournalEntry = {
   createdAt: number;
 };
 
+/** A photo on the vision board, optionally tied to one of their manifestations. */
+export type BoardPhoto = {
+  id: string;
+  /** The saved photo's name (see src/lib/photos.ts). */
+  file: string;
+  caption: string;
+  goalId?: string;
+  createdAt: number;
+};
+
 /** The voice new manifestations and ready-made tracks start in (Brittney). */
 export const DEFAULT_VOICE: Voice = 'serene-female';
 

@@ -119,6 +119,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="player" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="slideshow" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen name="record/[goalId]" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       </Stack>

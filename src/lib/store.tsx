@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import type { Goal, JournalEntry, Settings } from '@/lib/types';
+import type { BoardPhoto, Goal, JournalEntry, Settings } from '@/lib/types';
 
 const KEY = 'manifest-state-v1';
 
-type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[] };
+type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[]; board: BoardPhoto[] };
 
 const defaultState: State = {
   settings: {
@@ -18,6 +18,7 @@ const defaultState: State = {
   },
   goals: [],
   journal: [],
+  board: [],
 };
 
 type Store = State & {
@@ -28,6 +29,11 @@ type Store = State & {
   deleteGoal: (id: string) => void;
   addEntry: (entry: JournalEntry) => void;
   deleteEntry: (id: string) => void;
+  addPhotos: (photos: BoardPhoto[]) => void;
+  updatePhoto: (id: string, patch: Partial<BoardPhoto>) => void;
+  deletePhoto: (id: string) => void;
+  /** Moves a photo one place earlier (-1) or later (1) on the board. */
+  movePhoto: (id: string, by: -1 | 1) => void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -46,6 +52,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           settings: { ...defaultState.settings, ...saved.settings },
           goals: saved.goals ?? [],
           journal: saved.journal ?? [],
+          board: saved.board ?? [],
         });
       })
       .catch(() => {})
@@ -67,6 +74,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     deleteGoal: (id) => setState((s) => ({ ...s, goals: s.goals.filter((g) => g.id !== id) })),
     addEntry: (entry) => setState((s) => ({ ...s, journal: [entry, ...s.journal] })),
     deleteEntry: (id) => setState((s) => ({ ...s, journal: s.journal.filter((e) => e.id !== id) })),
+    addPhotos: (photos) => setState((s) => ({ ...s, board: [...s.board, ...photos] })),
+    updatePhoto: (id, patch) =>
+      setState((s) => ({ ...s, board: s.board.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
+    deletePhoto: (id) => setState((s) => ({ ...s, board: s.board.filter((p) => p.id !== id) })),
+    movePhoto: (id, by) =>
+      setState((s) => {
+        const at = s.board.findIndex((p) => p.id === id);
+        const to = at + by;
+        if (at < 0 || to < 0 || to >= s.board.length) return s;
+        const board = [...s.board];
+        [board[at], board[to]] = [board[to], board[at]];
+        return { ...s, board };
+      }),
   };
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;

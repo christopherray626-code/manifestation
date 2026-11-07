@@ -10,7 +10,7 @@ import { useStore } from '@/lib/store';
 
 export default function YouScreen() {
   const t = useTheme();
-  const { settings, updateSettings } = useStore();
+  const { settings, updateSettings, board } = useStore();
 
   return (
     <Screen>
@@ -68,7 +68,7 @@ export default function YouScreen() {
           <Icon name="images-outline" size={22} color={t.colors.accent} />
           <View style={{ flex: 1 }}>
             <Txt variant="medium">Vision board</Txt>
-            <Txt variant="muted">Coming soon</Txt>
+            <Txt variant="muted">{board.length ? `${board.length} photo${board.length === 1 ? '' : 's'} · slideshow` : 'Your own photos, as a slideshow'}</Txt>
           </View>
           <Icon name="chevron-forward" size={18} color={t.colors.muted} />
         </View>
