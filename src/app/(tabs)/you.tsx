@@ -10,7 +10,7 @@ import { useStore } from '@/lib/store';
 
 export default function YouScreen() {
   const t = useTheme();
-  const { settings, updateSettings, board } = useStore();
+  const { settings, updateSettings } = useStore();
 
   return (
     <Screen>
@@ -63,16 +63,6 @@ export default function YouScreen() {
         </View>
       </Card>
 
-      <Card onPress={() => router.push('/board')}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Icon name="images-outline" size={22} color={t.colors.accent} />
-          <View style={{ flex: 1 }}>
-            <Txt variant="medium">Vision board</Txt>
-            <Txt variant="muted">{board.length ? `${board.length} photo${board.length === 1 ? '' : 's'} · slideshow` : 'Your own photos, as a slideshow'}</Txt>
-          </View>
-          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
-        </View>
-      </Card>
 
       <Txt variant="muted" style={{ textAlign: 'center', marginTop: 8 }}>
         Everything you write stays on this phone.

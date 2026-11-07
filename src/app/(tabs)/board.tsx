@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
-import { BackHeader, Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme } from '@/components/ui';
+import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme } from '@/components/ui';
 import { tap } from '@/lib/haptics';
 import { deletePhoto as deleteFile, savePhoto, usePhotoUris } from '@/lib/photos';
 import { useStore } from '@/lib/store';
@@ -47,7 +47,7 @@ export default function BoardScreen() {
 
   return (
     <Screen>
-      <BackHeader title="Vision board" onBack={() => (router.canGoBack() ? router.back() : router.replace('/you'))} />
+      <Txt variant="display">Vision board</Txt>
 
       {board.length === 0 ? (
         <View style={{ alignItems: 'center', gap: 10, paddingVertical: 40 }}>
