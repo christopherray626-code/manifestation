@@ -1,0 +1,82 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Dixi logo options</title>
+<style>
+@font-face { font-family: Cormorant; src: url(../node_modules/@expo-google-fonts/cormorant-garamond/500Medium/CormorantGaramond_500Medium.ttf); }
+@font-face { font-family: DMSerif; src: url(../node_modules/@expo-google-fonts/dm-serif-display/400Regular/DMSerifDisplay_400Regular.ttf); }
+@font-face { font-family: DMSerifItalic; src: url(../node_modules/@expo-google-fonts/dm-serif-display/400Regular_Italic/DMSerifDisplay_400Regular_Italic.ttf); }
+@font-face { font-family: Inter; src: url(../node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf); }
+body { margin: 0; background: #070A1A; color: #E9E4D4; font-family: Inter, sans-serif; padding: 28px 22px; }
+h1 { font: 500 15px Inter; letter-spacing: .14em; text-transform: uppercase; color: #9A93B8; margin: 0 0 22px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 18px; }
+.opt { text-align: center; }
+.opt svg { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: 22%; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.label { margin-top: 10px; font-size: 22px; font-family: DMSerif; color: #F2E6C4; }
+.sub { font-size: 13px; color: #9A93B8; margin-top: 2px; }
+.marks { margin-top: 34px; display: grid; gap: 16px; }
+.mark { background: #0B1026; border-radius: 18px; padding: 22px; display: flex; align-items: center; justify-content: center; gap: 18px; }
+.mark svg { width: 64px; height: 64px; border-radius: 22%; }
+.word { font-family: Cormorant; font-size: 64px; letter-spacing: .02em; color: #E9D49A; line-height: 1; }
+.word .i { position: relative; display: inline-block; }
+.word .i svg { position: absolute; left: 50%; top: -2px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 0; }
+.tag { font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #9A93B8; margin-top: 6px; }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <path id="spark" d="M0,-1 C0.12,-0.12 0.12,-0.12 1,0 C0.12,0.12 0.12,0.12 0,1 C-0.12,0.12 -0.12,0.12 -1,0 C-0.12,-0.12 -0.12,-0.12 0,-1Z"/>
+    <radialGradient id="navy" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#1B2350"/><stop offset="1" stop-color="#070A1A"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6E3A1"/><stop offset="1" stop-color="#C79A3E"/></linearGradient>
+    <radialGradient id="orb" cx="42%" cy="38%" r="60%"><stop offset="0" stop-color="#FFF4D6"/><stop offset=".35" stop-color="#E7B8FF"/><stop offset=".75" stop-color="#7B4FD6"/><stop offset="1" stop-color="#2A1460"/></radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset=".55" stop-color="#E7B8FF" stop-opacity=".35"/><stop offset="1" stop-color="#E7B8FF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="violet" cx="30%" cy="20%" r="95%"><stop offset="0" stop-color="#8E5BE8"/><stop offset=".5" stop-color="#3B1D7A"/><stop offset="1" stop-color="#140A33"/></radialGradient>
+    <radialGradient id="aurablob" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFB7D9" stop-opacity=".75"/><stop offset="1" stop-color="#FFB7D9" stop-opacity="0"/></radialGradient>
+  </defs>
+</svg>
+<h1>Dixi · logo options</h1>
+<div class="grid">
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#navy)"/>
+      <text x="500" y="745" text-anchor="middle" font-family="Cormorant" font-size="640" fill="url(#gold)">D</text>
+      <use href="#spark" transform="translate(730 290) scale(70)" fill="#F6E3A1"/>
+      <use href="#spark" transform="translate(800 400) scale(26)" fill="#F6E3A1" opacity=".7"/>
+    </svg>
+    <div class="label">A · Monogram</div><div class="sub">Gold D with a spark</div>
+  </div>
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#navy)"/>
+      <circle cx="512" cy="512" r="360" fill="url(#halo)"/>
+      <circle cx="512" cy="512" r="230" fill="url(#orb)"/>
+      <circle cx="512" cy="512" r="300" fill="none" stroke="#E7B8FF" stroke-opacity=".25" stroke-width="4"/>
+      <use href="#spark" transform="translate(690 330) scale(48)" fill="#FFF4D6"/>
+    </svg>
+    <div class="label">B · Orb</div><div class="sub">The player's glowing orb</div>
+  </div>
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#navy)"/>
+      <g fill="url(#gold)">
+        <rect x="262" y="470" width="64" height="200" rx="32"/>
+        <rect x="362" y="400" width="64" height="340" rx="32"/>
+        <rect x="462" y="330" width="64" height="480" rx="32"/>
+        <rect x="562" y="420" width="64" height="300" rx="32"/>
+        <rect x="662" y="490" width="64" height="160" rx="32"/>
+      </g>
+      <use href="#spark" transform="translate(494 220) scale(62)" fill="#F6E3A1"/>
+    </svg>
+    <div class="label">C · Spoken</div><div class="sub">A voice wave that ends in a star</div>
+  </div>
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#violet)"/>
+      <circle cx="760" cy="780" r="380" fill="url(#aurablob)"/>
+      <text x="512" y="650" text-anchor="middle" font-family="DMSerifItalic" font-size="340" fill="#FFF4E6">Dıxı</text>
+      <use href="#spark" transform="translate(568 360) scale(30)" fill="#FFE7A8"/>
+      <use href="#spark" transform="translate(752 360) scale(30)" fill="#FFE7A8"/>
+    </svg>
+    <div class="label">D · Aura</div><div class="sub">Name on a violet aura</div>
+  </div>
+</div>
+<div class="marks">
+  <div class="mark">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#navy)"/><text x="500" y="745" text-anchor="middle" font-family="Cormorant" font-size="640" fill="url(#gold)">D</text><use href="#spark" transform="translate(730 290) scale(70)" fill="#F6E3A1"/></svg>
+    <div><div class="word">D<span class="i">ı<svg viewBox="-1 -1 2 2"><use href="#spark" fill="#F6E3A1"/></svg></span>x<span class="i">ı<svg viewBox="-1 -1 2 2"><use href="#spark" fill="#F6E3A1"/></svg></span></div><div class="tag">It is spoken</div></div>
+  </div>
+</div>
+</body></html>
