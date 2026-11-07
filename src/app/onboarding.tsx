@@ -139,7 +139,7 @@ export default function Onboarding() {
 
       {step === 'intentions' && (
         <View style={{ gap: 16 }}>
-          <Txt variant="display">What’s already yours?</Txt>
+          <Txt variant="display">What are you manifesting?</Txt>
           <Txt variant="muted">Pick as many as you like.</Txt>
           <ChipRow>
             {INTENTIONS.map((i) => (

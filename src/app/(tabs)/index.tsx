@@ -173,18 +173,18 @@ export default function HomeScreen() {
 
       <JournalCard />
 
-      <Section label="Already yours">
+      <Section label="My manifestations">
         {goals.length === 0 ? (
           <View style={{ gap: 14 }}>
             <Card>
               <View style={{ gap: 6 }}>
-                <Txt variant="title">Claim your first one</Txt>
+                <Txt variant="title">Start your first manifestation</Txt>
                 <Txt variant="muted">
-                  {"Describe what’s already yours, and you’ll get affirmations written around it. Or write your own."}
+                  {"Describe what you’re manifesting, and you’ll get affirmations written around it. Or write your own."}
                 </Txt>
               </View>
             </Card>
-            <Button title="Claim something new" icon="add" onPress={() => router.push('/goal/new')} />
+            <Button title="New manifestation" icon="add" onPress={() => router.push('/goal/new')} />
           </View>
         ) : (
           <Shelf>
@@ -212,14 +212,14 @@ export default function HomeScreen() {
   );
 }
 
-/** The last card on the shelf: claim something new. */
+/** The last card on the shelf: a new manifestation. */
 function NewGoalCard() {
   const t = useTheme();
   return (
     <Pressable
       onPress={() => router.push('/goal/new')}
       accessibilityRole="button"
-      accessibilityLabel="Claim something new"
+      accessibilityLabel="New manifestation"
       style={({ pressed }) => ({
         width: 128,
         height: Math.round(128 * 1.35),
@@ -233,7 +233,7 @@ function NewGoalCard() {
         opacity: pressed ? 0.75 : 1,
       })}>
       <Icon name="add" size={30} color={t.colors.accent} />
-      <Txt variant="medium">Claim</Txt>
+      <Txt variant="medium">New</Txt>
     </Pressable>
   );
 }

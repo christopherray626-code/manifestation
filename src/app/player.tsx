@@ -98,7 +98,7 @@ export default function PlayerScreen() {
             <Txt variant="title" style={{ textAlign: 'center' }} numberOfLines={1}>
               {title}
             </Txt>
-            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{track ? 'Ready-made track' : `Already yours · ${list.length} affirmations`}</Txt>
+            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{track ? 'Ready-made track' : `Manifestation · ${list.length} affirmations`}</Txt>
           </View>
           <Pressable onPress={share} hitSlop={12} accessibilityRole="button" accessibilityLabel="Share">
             <Icon name="share-social-outline" size={22} color={t.colors.text} />
@@ -278,7 +278,7 @@ export default function PlayerScreen() {
       </PanelCard>
 
       {goals.length > 0 && (
-        <Section label="Already yours">
+        <Section label="My manifestations">
           <ChipRow>
             {goals.map((g) => (
               <Chip key={g.id} label={g.title} selected={g.id === goal?.id} onPress={() => pickGoal(g.id)} />

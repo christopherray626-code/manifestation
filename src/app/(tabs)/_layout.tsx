@@ -12,7 +12,7 @@ import { useStore } from '@/lib/store';
 const TABS: { name: string; title: string; icon: IconName; iconOn: IconName }[] = [
   { name: 'index', title: 'Today', icon: 'sunny-outline', iconOn: 'sunny' },
   { name: 'explore', title: 'Explore', icon: 'compass-outline', iconOn: 'compass' },
-  { name: 'create', title: 'Claim', icon: 'sparkles-outline', iconOn: 'sparkles' },
+  { name: 'create', title: 'Manifest', icon: 'sparkles-outline', iconOn: 'sparkles' },
   { name: 'you', title: 'Me', icon: 'person-outline', iconOn: 'person' },
 ];
 
