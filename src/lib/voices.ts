@@ -73,10 +73,13 @@ async function makeOne(text: string, voice: Voice, previous?: string, next?: str
   });
   if (!res.ok) {
     let message = `The voice server answered ${res.status}.`;
+    const body = await res.text().catch(() => '');
     try {
-      message = ((await res.json()) as { error?: string }).error ?? message;
+      message = (JSON.parse(body) as { error?: string }).error ?? message;
     } catch {
-      // Not JSON; keep the status message.
+      // Not from our voice server: Vercel stopped the request before it got there.
+      if (res.status === 403 || res.status === 429)
+        message = `Vercel blocked the voice request (${res.status}). Its firewall or bot protection may be on, or too many lines were asked for at once. Try again in a minute.`;
     }
     throw new Error(message);
   }
@@ -103,9 +106,9 @@ export async function prepareVoice(texts: string[], voice: Voice, onProgress: (d
   const missing = texts.filter((t) => !voiceAudioUri(t, voice));
   let done = 0;
   onProgress(0, missing.length);
-  for (let i = 0; i < missing.length; i += 3) {
+  for (let i = 0; i < missing.length; i += 2) {
     await Promise.all(
-      missing.slice(i, i + 3).map(async (t) => {
+      missing.slice(i, i + 2).map(async (t) => {
         const at = texts.indexOf(t);
         await makeOne(t, voice, texts[at - 1], texts[at + 1]);
         done++;
