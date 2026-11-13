@@ -97,6 +97,29 @@ function pickVoice(voices: Speech.Voice[], kind: 'calm-female' | 'deep-male') {
 
 const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
+const glides = new WeakMap<AudioPlayer, ReturnType<typeof setInterval>>();
+/** Moves a player's volume to `to` in small steps over about a sixth of a second. */
+function glideVolume(player: AudioPlayer, to: number) {
+  const running = glides.get(player);
+  if (running) clearInterval(running);
+  const from = player.volume;
+  if (Math.abs(to - from) < 0.002) {
+    player.volume = to;
+    return;
+  }
+  const steps = 10;
+  let step = 0;
+  const timer = setInterval(() => {
+    step++;
+    player.volume = from + ((to - from) * step) / steps;
+    if (step >= steps) {
+      clearInterval(timer);
+      glides.delete(player);
+    }
+  }, 16);
+  glides.set(player, timer);
+}
+
 export function useTape({
   affirmations,
   voice,
@@ -206,9 +229,11 @@ export function useTape({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frequencyVolume]);
 
+  // Glide to a new level rather than jumping: a sudden volume step on a playing sound is heard as a
+  // crackle, and dragging a slider makes dozens of them.
   useEffect(() => {
-    if (!fade.current) background.volume = prefs.soundVolume;
-    for (const player of [layer0, layer1, layer2, track]) player.volume = prefs.voiceVolume;
+    if (!fade.current) glideVolume(background, prefs.soundVolume);
+    for (const player of [layer0, layer1, layer2, track]) glideVolume(player, prefs.voiceVolume);
   }, [prefs.soundVolume, prefs.voiceVolume, background, layer0, layer1, layer2, track]);
 
   useEffect(() => {
