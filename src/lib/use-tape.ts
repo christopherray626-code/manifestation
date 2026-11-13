@@ -340,12 +340,14 @@ export function useTape({
     const files = list.flatMap((a, i) => (uris[i] ? [i] : []));
     if (!files.length || (m === 'spoken' && files.length < list.length)) return false;
     const start = Math.max(files.indexOf(from), 0);
-    const layers = m === 'spoken' ? 1 : Math.min(SUBLIMINAL_LAYERS, files.length);
+    const spokenLayers = Math.min(Math.max(latest.current.prefs.layers ?? 1, 1), 3, files.length);
+    const layers = m === 'spoken' ? spokenLayers : Math.min(SUBLIMINAL_LAYERS, files.length);
     stitch(
       files.map((i) => uris[i]!),
       start,
       MODES[m].gapMs,
       layers,
+      m === 'spoken',
     ).then((t) => {
       if (!t) return;
       if (thisRun !== run.current) return URL.revokeObjectURL(t.uri);

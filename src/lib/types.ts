@@ -50,6 +50,8 @@ export type PlayerPrefs = {
   timerVibrate?: boolean;
   /** How fast the voice reads, 1 to 2. Missing in older saves, which means normal speed. */
   speed?: number;
+  /** Spoken tapes: how many voices read at once (1 to 3). Missing means 1. */
+  layers?: number;
   /** 0-1 levels. */
   voiceVolume: number;
   soundVolume: number;

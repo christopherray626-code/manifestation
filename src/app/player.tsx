@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Animated, Easing, Pressable, Share, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Platform, Pressable, Share, View } from 'react-native';
 
 import { Creating, VOICING_MESSAGES } from '@/components/creating';
 import { Slider } from '@/components/slider';
@@ -216,6 +216,28 @@ export default function PlayerScreen() {
           </ChipRow>
           <Txt variant="muted">Takes effect from the next line. Faster tapes fit more repetitions in, without changing the pitch.</Txt>
         </View>
+        {tape.mode === 'spoken' && Platform.OS === 'web' && (
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="layers-outline" size={18} color={t.colors.accent} />
+              <Txt variant="medium">Layers</Txt>
+            </View>
+            <ChipRow>
+              {[1, 2, 3].map((n) => (
+                <Chip
+                  key={n}
+                  label={n === 1 ? 'One voice' : `${n} at once`}
+                  selected={(prefs.layers ?? 1) === n}
+                  onPress={() => {
+                    setPrefs({ layers: n });
+                    tape.restart();
+                  }}
+                />
+              ))}
+            </ChipRow>
+            <Txt variant="muted">Extra voices read other lines at the same time, a little lower or higher, quieter and to each side.</Txt>
+          </View>
+        )}
       </PanelCard>
 
       <PanelCard label="Voice" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
