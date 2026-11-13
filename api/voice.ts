@@ -128,8 +128,23 @@ async function POST(request: Request) {
   );
 
   if (!res.ok) {
-    console.error('ElevenLabs error', res.status, await res.text());
-    return reply(502, `ElevenLabs couldn't make the audio (status ${res.status}).`);
+    const detail = await res.text();
+    console.error('ElevenLabs error', res.status, detail);
+    // ElevenLabs says why in detail.status; turn the common ones into plain words.
+    let why = '';
+    try {
+      why = (JSON.parse(detail) as { detail?: { status?: string } }).detail?.status ?? '';
+    } catch {
+      // Not JSON.
+    }
+    const plain: Record<string, string> = {
+      quota_exceeded: 'The ElevenLabs account is out of credits for this month.',
+      invalid_api_key: 'The ElevenLabs key saved in Vercel is wrong or was deleted.',
+      missing_permissions: 'The ElevenLabs key isn’t allowed to make speech. Turn on Text to Speech for the key.',
+      detected_unusual_activity: 'ElevenLabs paused free use on this account. A paid plan fixes it.',
+      voice_not_found: 'That voice isn’t available on this ElevenLabs account.',
+    };
+    return reply(502, plain[why] ?? `ElevenLabs couldn't make the audio (status ${res.status}${why ? `, ${why}` : ''}).`);
   }
   const audio = await res.arrayBuffer();
   try {
