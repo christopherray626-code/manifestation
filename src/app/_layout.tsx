@@ -22,6 +22,7 @@ import { Platform } from 'react-native';
 import { useTheme } from '@/components/ui';
 import { useReminders } from '@/lib/reminders';
 import { setHapticsEnabled } from '@/lib/haptics';
+import { StreakCelebration } from '@/components/streak';
 import { PlayerProvider } from '@/lib/player';
 import { StoreProvider, useStore } from '@/lib/store';
 import { setAppOpens } from '@/lib/today';
@@ -117,6 +118,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="track/[id]" />
         <Stack.Screen name="journal" />
         <Stack.Screen name="mix" />
+        <Stack.Screen name="streak" />
         <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="player" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
@@ -124,6 +126,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="record/[goalId]" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       </Stack>
+      <StreakCelebration />
     </ThemeProvider>
   );
 }

@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
 import { success, tap } from '@/lib/haptics';
 import { buildMix } from '@/lib/mix';
-import { MILESTONES, streakOf, withToday } from '@/lib/streak';
+import { DEFAULT_GOAL_MIN, streakOf, withToday } from '@/lib/streak';
+import { localDay } from '@/lib/today';
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS, type Track } from '@/lib/tracks';
 import { DEFAULT_VOICE, type Affirmation, type Goal, type PlayerPrefs, type TapeMode, type Voice } from '@/lib/types';
@@ -40,6 +41,9 @@ type Player = {
   choose: (source: Source) => void;
   /** Switches to it if given, then opens the full player. */
   open: (source?: Source) => void;
+  /** Set when today's goal was just reached: the streak to celebrate. */
+  celebrate: number | null;
+  dismissCelebration: () => void;
 };
 
 const PlayerContext = createContext<Player | null>(null);
@@ -78,6 +82,34 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const voice: Voice = track ? trackVoice : (goal?.voice ?? DEFAULT_VOICE);
   const tape = useTape({ affirmations: list, voice, prefs });
 
+  // The daily goal: listening time adds up while a tape plays; reaching the goal counts the day.
+  const [celebrate, setCelebrate] = useState<number | null>(null);
+  const latestSettings = useRef(settings);
+  useEffect(() => {
+    latestSettings.current = settings;
+  });
+  useEffect(() => {
+    if (!tape.playing) return;
+    const STEP = 5;
+    const timer = setInterval(() => {
+      const s = latestSettings.current;
+      const day = localDay(Date.now());
+      const before = s.listenToday?.day === day ? s.listenToday.seconds : 0;
+      const seconds = before + STEP;
+      const goal = (s.dailyGoalMin ?? DEFAULT_GOAL_MIN) * 60;
+      const listenDays = s.listenDays ?? [];
+      if (before < goal && seconds >= goal && !listenDays.includes(day)) {
+        const next = withToday(listenDays);
+        updateSettings({ listenToday: { day, seconds }, listenDays: next });
+        success();
+        setCelebrate(streakOf(next));
+      } else {
+        updateSettings({ listenToday: { day, seconds } });
+      }
+    }, STEP * 1000);
+    return () => clearInterval(timer);
+  }, [tape.playing, updateSettings]);
+
   const setPrefs = (patch: Partial<PlayerPrefs>) => updateSettings({ player: { ...prefs, ...patch } });
 
   async function start() {
@@ -101,12 +133,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     }
     tape.play();
-    const listenDays = withToday(settings.listenDays);
-    if (listenDays.length !== (settings.listenDays ?? []).length) {
-      const streak = streakOf(listenDays);
-      if (MILESTONES.includes(streak)) success();
-    }
-    updateSettings({ ...(source ? { lastPlayed: source } : {}), listenDays });
+    if (source) updateSettings({ lastPlayed: source });
   }
 
   function toggle() {
@@ -177,6 +204,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     toggle,
     choose,
     open,
+    celebrate,
+    dismissCelebration: () => setCelebrate(null),
   };
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

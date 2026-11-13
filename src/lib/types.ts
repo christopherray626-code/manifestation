@@ -102,8 +102,12 @@ export type Settings = {
   defaultRotation: Pick<Rotation, 'every' | 'order' | 'favoritesOnly'>;
   player: PlayerPrefs;
   reminders: Reminder[];
-  /** Local day numbers with at least one listen, for the streak. */
+  /** Local day numbers that counted for the streak (daily goal reached or a journal entry). */
   listenDays?: number[];
+  /** How long you've listened today, for the daily goal. */
+  listenToday?: { day: number; seconds: number };
+  /** Minutes of listening that complete a day. Missing means 3. */
+  dailyGoalMin?: number;
   /** The last streak milestone shown, so each is celebrated once. */
   celebrated?: number;
   /** What they picked in onboarding (track ids), for "Picked for you". */

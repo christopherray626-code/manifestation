@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { withToday } from '@/lib/streak';
 import type { BoardPhoto, Goal, JournalEntry, SavedMix, Settings } from '@/lib/types';
 
 const KEY = 'manifest-state-v1';
@@ -77,7 +78,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updateGoal: (id, change) =>
       setState((s) => ({ ...s, goals: s.goals.map((g) => (g.id === id ? change(g) : g)) })),
     deleteGoal: (id) => setState((s) => ({ ...s, goals: s.goals.filter((g) => g.id !== id) })),
-    addEntry: (entry) => setState((s) => ({ ...s, journal: [entry, ...s.journal] })),
+    // Writing in the journal counts as practising today.
+    addEntry: (entry) =>
+      setState((s) => ({
+        ...s,
+        journal: [entry, ...s.journal],
+        settings: { ...s.settings, listenDays: withToday(s.settings.listenDays) },
+      })),
     deleteEntry: (id) => setState((s) => ({ ...s, journal: s.journal.filter((e) => e.id !== id) })),
     addPhotos: (photos) => setState((s) => ({ ...s, board: [...s.board, ...photos] })),
     updatePhoto: (id, patch) =>

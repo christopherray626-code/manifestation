@@ -9,7 +9,8 @@ import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { tipOfTheDay } from '@/lib/tips';
-import { MILESTONES, streakOf } from '@/lib/streak';
+import { streakOf } from '@/lib/streak';
+import { StreakBadge, TodayProgress, WeekDots } from '@/components/streak';
 import { todaysAffirmation } from '@/lib/today';
 import { quoteOfThisVisit } from '@/lib/quotes';
 
@@ -20,37 +21,16 @@ function greeting(name: string) {
   return who ? `${part}, ${who}` : part;
 }
 
-/** The top line: your listening streak, once there is one. */
-function Tagline() {
-  const t = useTheme();
+/** Today's streak card: this week at a glance and how close today is to counting. */
+function StreakCard() {
   const { settings } = useStore();
   const streak = streakOf(settings.listenDays);
-  if (!streak) return null;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-      <Icon name="flame" size={15} color={t.colors.accent} />
-      <Txt variant="muted" style={{ color: t.colors.accent }}>
-        {`${streak}-day streak`}
-      </Txt>
-    </View>
-  );
-}
-
-/** A small celebration the first time you reach 3, 7, 30 or 100 days in a row. */
-function Milestone() {
-  const t = useTheme();
-  const { settings, updateSettings } = useStore();
-  const streak = streakOf(settings.listenDays);
-  if (!MILESTONES.includes(streak) || settings.celebrated === streak) return null;
-  return (
-    <Card highlight onPress={() => updateSettings({ celebrated: streak })}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <Icon name="sparkles" size={26} color={t.colors.accent} />
-        <View style={{ flex: 1 }}>
-          <Txt variant="title">{`${streak} days in a row`}</Txt>
-          <Txt variant="muted">You keep showing up for yourself. It’s working.</Txt>
-        </View>
-        <Icon name="close" size={18} color={t.colors.muted} />
+    <Card onPress={() => router.push('/streak')}>
+      <View style={{ gap: 14 }}>
+        <Txt variant="medium">{streak ? `${streak}-day streak` : 'Start a streak today'}</Txt>
+        <WeekDots />
+        <TodayProgress />
       </View>
     </Card>
   );
@@ -159,12 +139,12 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={{ gap: 6, marginTop: 8 }}>
-        <Tagline />
+        <StreakBadge />
         <Txt variant="display">{greeting(settings.name)}</Txt>
         <QuoteLine />
       </View>
 
-      <Milestone />
+      <StreakCard />
 
       <TodayCard />
       <PlayToday />
