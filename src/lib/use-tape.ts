@@ -131,7 +131,7 @@ export function useTape({
   prefs: PlayerPrefs;
 }) {
   const mode = modeOf(prefs);
-  const background = useMixLayer(SOUNDS.pad);
+  const background = useMixLayer(SOUNDS.pad, undefined, 'loop');
   const tone = useToneLayer(FREQUENCY_FILES);
   const ending = useAudioPlayer(null);
   const frequency = prefs.frequency ?? 'none';
