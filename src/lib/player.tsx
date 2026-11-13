@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { Platform } from 'react-native';
 
 import { success, tap } from '@/lib/haptics';
+import { buildMix } from '@/lib/mix';
 import { MILESTONES, streakOf, withToday } from '@/lib/streak';
 import { useStore } from '@/lib/store';
 import { trackAffirmations, trackById, TRACKS, type Track } from '@/lib/tracks';
@@ -15,12 +16,14 @@ import { naturalVoices, prepareVoice } from '@/lib/voices';
  * between tabs; the mini-player above the tab bar and the full player screen both read from it.
  */
 
-export type Source = { kind: 'goal' | 'track'; id: string };
+export type Source = { kind: 'goal' | 'track' | 'mix'; id: string };
 
 type Player = {
   source?: Source;
   goal?: Goal;
   track?: Track;
+  /** Set when a mix is loaded; `track` then describes the whole mix. */
+  mix?: boolean;
   list: Affirmation[];
   voice: Voice;
   setVoice: (v: Voice) => void;
@@ -51,12 +54,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // What's loaded: what you picked, else what you last played, else your first goal, else the first track.
   const fallback: Source = goals[0] ? { kind: 'goal', id: goals[0].id } : { kind: 'track', id: TRACKS[0].id };
   const wanted = chosen ?? settings.lastPlayed ?? fallback;
-  const track = wanted.kind === 'track' ? trackById(wanted.id) : undefined;
-  const goal = wanted.kind === 'goal' ? (goals.find((g) => g.id === wanted.id) ?? goals[0]) : undefined;
-  const source: Source | undefined = track ? { kind: 'track', id: track.id } : goal ? { kind: 'goal', id: goal.id } : undefined;
+  const mixed = useMemo(() => (wanted.kind === 'mix' ? buildMix(wanted.id, goals) : undefined), [wanted.kind, wanted.id, goals]);
+  const track = mixed?.track ?? (wanted.kind === 'track' ? trackById(wanted.id) : undefined);
+  const goal = wanted.kind === 'goal' || (wanted.kind === 'mix' && !mixed) ? (goals.find((g) => g.id === wanted.id) ?? goals[0]) : undefined;
+  const source: Source | undefined = mixed
+    ? { kind: 'mix', id: mixed.track.id }
+    : track
+      ? { kind: 'track', id: track.id }
+      : goal
+        ? { kind: 'goal', id: goal.id }
+        : undefined;
 
   const prefs = settings.player;
-  const trackList = useMemo(() => (track ? trackAffirmations(track) : []), [track]);
+  const trackList = useMemo(() => mixed?.affirmations ?? (track ? trackAffirmations(track) : []), [mixed, track]);
   const favorites = goal?.affirmations.filter((a) => a.favorite) ?? [];
   const list = track ? trackList : prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
   const voice: Voice = track ? trackVoice : (goal?.voice ?? DEFAULT_VOICE);
@@ -147,6 +157,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     source,
     goal,
     track,
+    mix: !!mixed,
     list,
     voice,
     setVoice,

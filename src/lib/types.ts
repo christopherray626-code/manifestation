@@ -111,7 +111,7 @@ export type Settings = {
   /** How many times the app has been opened, for affirmations that change on every open. */
   opens?: number;
   /** What the Listen tab last played, for "Continue listening" on Home. */
-  lastPlayed?: { kind: 'goal' | 'track'; id: string };
+  lastPlayed?: { kind: 'goal' | 'track' | 'mix'; id: string };
 };
 
 export function newId() {

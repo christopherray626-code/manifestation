@@ -46,6 +46,17 @@ export default function ExploreScreen() {
         </Section>
       ))}
 
+      <Card onPress={() => router.push('/mix')}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Icon name="layers-outline" size={24} color={t.colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Txt variant="medium">Make a mix</Txt>
+            <Txt variant="muted">Play a few tracks and your own manifestations in one loop.</Txt>
+          </View>
+          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
+        </View>
+      </Card>
+
       <Card onPress={() => router.push('/goal/new')}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <Icon name="sparkles-outline" size={24} color={t.colors.accent} />

@@ -297,7 +297,7 @@ export function trackById(id: string | undefined): Track | undefined {
   };
 }
 
-const isClosing = (text: string) => /^It[’']s done\b/.test(text);
+export const isClosing = (text: string) => /^It[’']s done\b/.test(text);
 
 /** A track's lines as affirmations the player understands. The ids stay the same between visits. */
 export function trackAffirmations(track: Track): Affirmation[] {

@@ -57,7 +57,7 @@ function PulsingOrb({ playing, line }: { playing: boolean; line: number }) {
 export default function PlayerScreen() {
   const t = useTheme();
   const { goals, updateGoal } = useStore();
-  const { goal, track, list, voice, setVoice, tape, prep, voiceError, prefs, setPrefs, setMode, toggle, choose } =
+  const { goal, track, mix, list, voice, setVoice, tape, prep, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
 
   function pickGoal(id: string) {
@@ -98,7 +98,7 @@ export default function PlayerScreen() {
             <Txt variant="title" style={{ textAlign: 'center' }} numberOfLines={1}>
               {title}
             </Txt>
-            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{track ? 'Ready-made track' : `Manifestation · ${list.length} affirmations`}</Txt>
+            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{mix ? `Your mix · ${list.length} affirmations` : track ? 'Ready-made track' : `Manifestation · ${list.length} affirmations`}</Txt>
           </View>
           <Pressable onPress={share} hitSlop={12} accessibilityRole="button" accessibilityLabel="Share">
             <Icon name="share-social-outline" size={22} color={t.colors.text} />
@@ -268,13 +268,18 @@ export default function PlayerScreen() {
           {track ? ` This track has ${track.lines.length} affirmations.` : ''}
         </Txt>
         <Why text={tape.mode === 'subliminal' ? WHY.subliminal : WHY.spoken} />
-        {track && (
+        {track && !mix && (
           <Pressable onPress={() => router.push({ pathname: '/track/[id]', params: { id: track.id } })} accessibilityRole="button">
             <Txt variant="medium" style={{ color: t.colors.accent }}>
               See every affirmation, or make it yours
             </Txt>
           </Pressable>
         )}
+        <Pressable onPress={() => router.push({ pathname: '/mix', params: { from: mix ? track?.id : track ? `track:${track.id}` : goal ? `goal:${goal.id}` : '' } })} accessibilityRole="button">
+          <Txt variant="medium" style={{ color: t.colors.accent }}>
+            {mix ? 'Change this mix' : 'Mix this with other tracks'}
+          </Txt>
+        </Pressable>
       </PanelCard>
 
       {goals.length > 0 && (

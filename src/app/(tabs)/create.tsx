@@ -31,6 +31,7 @@ export default function CreateScreen() {
       )}
 
       <Button title="New manifestation" icon="add" onPress={() => router.push('/goal/new')} />
+      {goals.length > 0 && <Button title="Make a mix" icon="layers-outline" kind="ghost" onPress={() => router.push('/mix')} />}
 
       <Card onPress={() => router.push('/journal')}>
         <View style={{ gap: 4 }}>

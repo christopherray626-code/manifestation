@@ -12,12 +12,12 @@ import { TRACKS } from '@/lib/tracks';
 export function MiniPlayer() {
   const t = useTheme();
   const { goals, settings } = useStore();
-  const { goal, track, tape, prep, toggle } = usePlayer();
+  const { goal, track, mix, tape, prep, toggle } = usePlayer();
   // Only once you've played something, so a new user isn't shown a player they never started.
   if (!settings.lastPlayed || (!goal && !track)) return null;
   const title = track?.title ?? goal!.title;
   const index = track ? TRACKS.indexOf(track) : goals.findIndex((g) => g.id === goal!.id);
-  const current = tape.playing && tape.mode === 'spoken' ? undefined : track ? 'Ready-made track' : 'Manifestation';
+  const current = tape.playing && tape.mode === 'spoken' ? undefined : mix ? 'Your mix' : track ? 'Ready-made track' : 'Manifestation';
 
   return (
     <Pressable
