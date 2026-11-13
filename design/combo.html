@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Gold and glass</title>
+<style>
+@font-face { font-family: InterSemi; src: url(../node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf); }
+@font-face { font-family: Inter; src: url(../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf); }
+body { margin: 0; background: #101014; color: #EEE; font-family: Inter, sans-serif; padding: 22px 18px 30px; }
+h1 { font: 13px InterSemi; letter-spacing: .16em; text-transform: uppercase; color: #8C8CA0; margin: 4px 4px 18px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
+.opt { text-align: center; }
+.opt svg { width: 100%; max-width: 190px; aspect-ratio: 1; border-radius: 23%; box-shadow: 0 12px 34px rgba(0,0,0,.5); }
+.t { font: 16px InterSemi; margin-top: 10px; }
+.s { font-size: 12.5px; color: #9A9AB0; margin-top: 3px; line-height: 1.35; }
+.small { display: flex; justify-content: center; gap: 22px; margin-top: 26px; align-items: end; }
+.small svg { border-radius: 23%; }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <path id="thin" d="M0,-1 C0.05,-0.05 0.05,-0.05 1,0 C0.05,0.05 0.05,0.05 0,1 C-0.05,0.05 -0.05,0.05 -1,0 C-0.05,-0.05 -0.05,-0.05 0,-1Z"/>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7E2A8"/><stop offset=".5" stop-color="#D4AF5A"/><stop offset="1" stop-color="#A9822E"/></linearGradient>
+  <radialGradient id="glass" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".25" stop-color="#FFD9F2"/><stop offset=".5" stop-color="#C7B8FF"/><stop offset=".75" stop-color="#8FE3FF"/><stop offset="1" stop-color="#6A5CFF"/></radialGradient>
+  <radialGradient id="glassDim" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#FFF6FB" stop-opacity=".95"/><stop offset=".3" stop-color="#F3C9E6" stop-opacity=".85"/><stop offset=".6" stop-color="#B9A8F5" stop-opacity=".7"/><stop offset="1" stop-color="#5D52C9" stop-opacity=".55"/></radialGradient>
+  <radialGradient id="shine" cx="35%" cy="30%" r="40%"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="black" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#17151F"/><stop offset="1" stop-color="#050506"/></radialGradient>
+  <g id="A">
+    <rect width="1024" height="1024" fill="url(#black)"/>
+    <circle cx="512" cy="512" r="300" fill="none" stroke="url(#gold)" stroke-width="10"/>
+    <circle cx="512" cy="512" r="232" fill="url(#glass)"/>
+    <circle cx="512" cy="512" r="232" fill="url(#shine)"/>
+    <ellipse cx="440" cy="410" rx="85" ry="45" fill="#fff" opacity=".5" transform="rotate(-35 440 410)"/>
+    <use href="#thin" transform="translate(735 290) scale(64)" fill="url(#gold)"/>
+    <circle cx="512" cy="212" r="11" fill="#D4AF5A"/>
+  </g>
+  <g id="B">
+    <rect width="1024" height="1024" fill="url(#black)"/>
+    <circle cx="512" cy="512" r="265" fill="url(#glassDim)"/>
+    <circle cx="512" cy="512" r="265" fill="url(#shine)"/>
+    <circle cx="512" cy="512" r="265" fill="none" stroke="url(#gold)" stroke-width="8"/>
+    <use href="#thin" transform="translate(512 512) scale(205)" fill="url(#gold)"/>
+    <use href="#thin" transform="translate(512 512) rotate(45) scale(80)" fill="url(#gold)" opacity=".8"/>
+  </g>
+</defs></svg>
+<h1>Gold + glass</h1>
+<div class="grid">
+  <div class="opt"><svg viewBox="0 0 1024 1024"><use href="#A"/></svg>
+    <div class="t">A · Orb in a gold ring</div><div class="s">The glass aura, held by a fine gold ring, with a gold spark.</div></div>
+  <div class="opt"><svg viewBox="0 0 1024 1024"><use href="#B"/></svg>
+    <div class="t">B · Gold star in glass</div><div class="s">The luxury gold star, inside a softer glass bubble.</div></div>
+</div>
+<div class="small">
+  <svg viewBox="0 0 1024 1024" width="60" height="60"><use href="#A"/></svg>
+  <svg viewBox="0 0 1024 1024" width="60" height="60"><use href="#B"/></svg>
+  <svg viewBox="0 0 1024 1024" width="40" height="40"><use href="#A"/></svg>
+  <svg viewBox="0 0 1024 1024" width="40" height="40"><use href="#B"/></svg>
+</div>
+<div class="s" style="text-align:center;margin-top:8px">Actual home-screen sizes</div>
+</body></html>
