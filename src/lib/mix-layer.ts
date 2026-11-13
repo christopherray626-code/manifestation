@@ -190,9 +190,10 @@ class WebLoop {
         const bytes = await (await fetch(uri)).arrayBuffer();
         const buffer = await audioContext().decodeAudioData(bytes);
         if (uri !== this.uri) return;
-        this.buffer = buffer;
-        [this.loopStart, this.loopEnd] = audibleSpan(buffer);
-        this.offset = this.loopStart;
+        this.buffer = seamless(buffer);
+        this.loopStart = 0;
+        this.loopEnd = this.buffer.duration;
+        this.offset = 0;
       } catch {
         // Couldn't load it; the layer stays quiet.
       }
@@ -273,6 +274,40 @@ function audibleSpan(buffer: AudioBuffer): [number, number] {
   if (first > max) first = 0;
   if (data.length - 1 - last > max) last = data.length - 1;
   return [first / buffer.sampleRate, (last + 1) / buffer.sampleRate];
+}
+
+const BLEND_SEC = 1.5;
+
+/**
+ * A copy of the sound that loops without a seam. Its quiet ends are cut, then its last moments are
+ * blended into its first (equal-power, so the level doesn't dip): wherever the end of the file and the
+ * start don't quite match, jumping from one to the other clicks, and on rain or the ocean that's heard
+ * as a burst of static.
+ */
+function seamless(buffer: AudioBuffer): AudioBuffer {
+  const [from, to] = audibleSpan(buffer);
+  const rate = buffer.sampleRate;
+  const a = Math.round(from * rate);
+  const n = Math.round(to * rate) - a;
+  const blend = Math.min(Math.round(BLEND_SEC * rate), Math.floor(n / 4));
+  if (blend < 2) return buffer;
+  const length = n - blend;
+  const out = audioContext().createBuffer(buffer.numberOfChannels, length, rate);
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const src = buffer.getChannelData(c).subarray(a, a + n);
+    const dst = out.getChannelData(c);
+    // The loop plays src[blend..n); its last `blend` samples fade into src[0..blend), which leads
+    // straight back into src[blend], where the loop starts again.
+    for (let j = 0; j < length; j++) {
+      const tail = length - blend;
+      if (j < tail) dst[j] = src[blend + j];
+      else {
+        const k = (j - tail) / blend;
+        dst[j] = src[blend + j] * Math.cos((k * Math.PI) / 2) + src[j - tail] * Math.sin((k * Math.PI) / 2);
+      }
+    }
+  }
+  return out;
 }
 
 function resolve(source: Source) {
