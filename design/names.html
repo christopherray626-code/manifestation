@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Name and logo options</title>
+<style>
+@font-face { font-family: Archivo; src: url(../node_modules/@expo-google-fonts/archivo-black/400Regular/ArchivoBlack_400Regular.ttf); }
+@font-face { font-family: PlayfairItalic; src: url(../node_modules/@expo-google-fonts/playfair-display/400Regular_Italic/PlayfairDisplay_400Regular_Italic.ttf); }
+@font-face { font-family: Cormorant; src: url(../node_modules/@expo-google-fonts/cormorant-garamond/500Medium/CormorantGaramond_500Medium.ttf); }
+@font-face { font-family: InterSemi; src: url(../node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf); }
+@font-face { font-family: Inter; src: url(../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf); }
+body { margin: 0; background: #0E0B16; font-family: Inter, sans-serif; padding: 22px 18px 30px; color: #EEE; }
+h1 { font: 13px InterSemi; letter-spacing: .16em; text-transform: uppercase; color: #8C86A6; margin: 4px 4px 18px; }
+.card { border-radius: 26px; padding: 22px; margin-bottom: 18px; display: flex; gap: 18px; align-items: center; }
+.card svg { width: 112px; height: 112px; border-radius: 26px; flex-shrink: 0; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.name { line-height: 1; }
+.what { font-size: 13px; margin-top: 8px; opacity: .75; }
+.style { font: 11px InterSemi; letter-spacing: .14em; text-transform: uppercase; opacity: .55; margin-bottom: 8px; }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <path id="spark" d="M0,-1 C0.12,-0.12 0.12,-0.12 1,0 C0.12,0.12 0.12,0.12 0,1 C-0.12,0.12 -0.12,0.12 -1,0 C-0.12,-0.12 -0.12,-0.12 0,-1Z"/>
+  <linearGradient id="k" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5E7E"/><stop offset=".55" stop-color="#B14CFF"/><stop offset="1" stop-color="#4D3BFF"/></linearGradient>
+  <linearGradient id="e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE3EE"/><stop offset="1" stop-color="#E9D7FF"/></linearGradient>
+  <linearGradient id="eh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8FB5"/><stop offset="1" stop-color="#B98BFF"/></linearGradient>
+  <radialGradient id="g" cx="35%" cy="30%" r="90%"><stop offset="0" stop-color="#FFE9D6"/><stop offset=".4" stop-color="#FFC2E2"/><stop offset=".75" stop-color="#C9B6FF"/><stop offset="1" stop-color="#9EC9FF"/></radialGradient>
+  <radialGradient id="gl" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs></svg>
+<h1>Name + logo options</h1>
+
+<div class="card" style="background:#160F2B">
+  <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#k)"/>
+    <g stroke="#fff" stroke-width="92" stroke-linecap="round" fill="none">
+      <path d="M352 250 V774"/><path d="M352 560 L640 270"/><path d="M470 445 L680 760"/>
+    </g>
+    <use href="#spark" transform="translate(735 285) scale(78)" fill="#fff"/>
+  </svg>
+  <div><div class="style">Bold · modern</div>
+    <div class="name" style="font-family:Archivo;font-size:44px;color:#fff;letter-spacing:-.02em">kismet</div>
+    <div class="what">“Meant to be.” Bright gradient, a K that throws off a spark.</div></div>
+</div>
+
+<div class="card" style="background:#FFF4F8;color:#4A2F55">
+  <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#e)"/>
+    <path d="M512 760 C300 620 250 500 300 410 C350 320 470 330 512 420 C554 330 674 320 724 410 C774 500 724 620 512 760Z" fill="none" stroke="url(#eh)" stroke-width="58" stroke-linejoin="round"/>
+    <circle cx="512" cy="300" r="26" fill="#FF8FB5"/>
+    <use href="#spark" transform="translate(705 270) scale(40)" fill="#B98BFF"/>
+  </svg>
+  <div><div class="style" style="color:#8A6A95">Soft · romantic</div>
+    <div class="name" style="font-family:PlayfairItalic;font-size:46px;color:#4A2F55">evermine</div>
+    <div class="what">“Mine, forever.” Pastel, a hand-drawn heart, a small spark.</div></div>
+</div>
+
+<div class="card" style="background:linear-gradient(135deg,#2A2140,#1B2440)">
+  <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#g)"/>
+    <circle cx="512" cy="512" r="300" fill="url(#gl)" opacity=".55"/>
+    <use href="#spark" transform="translate(512 500) scale(220)" fill="#fff"/>
+    <use href="#spark" transform="translate(735 285) scale(70)" fill="#fff" opacity=".9"/>
+    <use href="#spark" transform="translate(300 745) scale(50)" fill="#fff" opacity=".8"/>
+  </svg>
+  <div><div class="style">Dreamy · Gen Z</div>
+    <div class="name" style="font-family:Cormorant;font-size:50px;color:#FFE9F4">glimmer</div>
+    <div class="what">A spark of light on a pearly pink-to-blue glow.</div></div>
+</div>
+
+<div class="card" style="background:#F5F1EA;color:#141414">
+  <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#141414"/>
+    <path d="M250 300 Q250 220 330 220 H694 Q774 220 774 300 V600 Q774 680 694 680 H470 L340 800 V680 H330 Q250 680 250 600Z" fill="#F5F1EA"/>
+    <use href="#spark" transform="translate(512 450) scale(120)" fill="#141414"/>
+  </svg>
+  <div><div class="style" style="color:#777">Clean · minimal</div>
+    <div class="name" style="font-family:InterSemi;font-size:42px;letter-spacing:-.03em">selfsaid</div>
+    <div class="what" style="opacity:.6">“Said by you.” Black and cream, a speech bubble with a spark.</div></div>
+</div>
+</body></html>
