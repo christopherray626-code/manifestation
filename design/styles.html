@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Logo styles</title>
+<style>
+@font-face { font-family: InterSemi; src: url(../node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf); }
+@font-face { font-family: Inter; src: url(../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf); }
+body { margin: 0; background: #101014; color: #EEE; font-family: Inter, sans-serif; padding: 22px 18px 30px; }
+h1 { font: 13px InterSemi; letter-spacing: .16em; text-transform: uppercase; color: #8C8CA0; margin: 4px 4px 18px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
+.opt { text-align: center; }
+.opt svg { width: 100%; max-width: 190px; aspect-ratio: 1; border-radius: 23%; box-shadow: 0 12px 34px rgba(0,0,0,.45); }
+.t { font: 16px InterSemi; margin-top: 10px; }
+.s { font-size: 12.5px; color: #9A9AB0; margin-top: 3px; line-height: 1.35; }
+.wide { grid-column: 1 / -1; }
+.wide svg { max-width: 190px; }
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <path id="spark" d="M0,-1 C0.12,-0.12 0.12,-0.12 1,0 C0.12,0.12 0.12,0.12 0,1 C-0.12,0.12 -0.12,0.12 -1,0 C-0.12,-0.12 -0.12,-0.12 0,-1Z"/>
+  <path id="thin" d="M0,-1 C0.04,-0.04 0.04,-0.04 1,0 C0.04,0.04 0.04,0.04 0,1 C-0.04,0.04 -0.04,0.04 -1,0 C-0.04,-0.04 -0.04,-0.04 0,-1Z"/>
+  <linearGradient id="dream" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD6E8"/><stop offset=".5" stop-color="#E5D4FF"/><stop offset="1" stop-color="#CDE7FF"/></linearGradient>
+  <linearGradient id="heart" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9EC7"/><stop offset="1" stop-color="#FF6FA8"/></linearGradient>
+  <radialGradient id="shine" cx="35%" cy="30%" r="40%"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7E2A8"/><stop offset=".5" stop-color="#D4AF5A"/><stop offset="1" stop-color="#A9822E"/></linearGradient>
+  <radialGradient id="glass" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".25" stop-color="#FFD9F2"/><stop offset=".5" stop-color="#C7B8FF"/><stop offset=".75" stop-color="#8FE3FF"/><stop offset="1" stop-color="#6A5CFF"/></radialGradient>
+  <radialGradient id="night" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#2B2350"/><stop offset="1" stop-color="#0C0A1C"/></radialGradient>
+</defs></svg>
+<h1>Logo styles · pick a look</h1>
+<div class="grid">
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#6B4BFF"/>
+      <circle cx="512" cy="560" r="250" fill="#fff"/>
+      <circle cx="512" cy="560" r="250" fill="#6B4BFF" transform="translate(0 150)" opacity="0"/>
+      <rect x="200" y="640" width="624" height="200" fill="#6B4BFF"/>
+      <rect x="230" y="660" width="564" height="34" rx="17" fill="#fff" opacity=".9"/>
+      <rect x="320" y="730" width="384" height="34" rx="17" fill="#fff" opacity=".55"/>
+    </svg>
+    <div class="t">1 · Clean, modern</div><div class="s">One bright color, one simple shape: a sun rising. Like Calm or Headspace.</div>
+  </div>
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#dream)"/>
+      <path d="M512 790 C290 650 220 520 270 410 C320 300 460 300 512 400 C564 300 704 300 754 410 C804 520 734 650 512 790Z" fill="url(#heart)"/>
+      <ellipse cx="400" cy="430" rx="70" ry="45" fill="#fff" opacity=".5" transform="rotate(-30 400 430)"/>
+      <use href="#spark" transform="translate(770 260) scale(70)" fill="#fff"/>
+      <use href="#spark" transform="translate(250 270) scale(40)" fill="#fff" opacity=".9"/>
+      <use href="#spark" transform="translate(800 720) scale(32)" fill="#fff" opacity=".8"/>
+    </svg>
+    <div class="t">2 · Dreamy, Gen Z</div><div class="s">Pastel gradient, a puffy heart and sparkles. Pinterest-cute.</div>
+  </div>
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#0B0B0B"/>
+      <path d="M512 170 L572 400 L790 300 L640 480 L860 560 L630 600 L700 830 L512 680 L324 830 L394 600 L164 560 L384 480 L234 300 L452 400Z" fill="#C6FF3D" stroke="#C6FF3D" stroke-width="40" stroke-linejoin="round"/>
+      <circle cx="512" cy="515" r="70" fill="#0B0B0B"/>
+    </svg>
+    <div class="t">3 · Bold, loud</div><div class="s">Neon on black, a chunky starburst. Stands out on any home screen.</div>
+  </div>
+  <div class="opt">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#0A0A0A"/>
+      <circle cx="512" cy="512" r="290" fill="none" stroke="url(#gold)" stroke-width="10"/>
+      <circle cx="512" cy="512" r="250" fill="none" stroke="url(#gold)" stroke-width="3" opacity=".6"/>
+      <use href="#thin" transform="translate(512 512) scale(210)" fill="url(#gold)"/>
+      <use href="#thin" transform="translate(512 512) rotate(45) scale(90)" fill="url(#gold)" opacity=".8"/>
+      <circle cx="512" cy="222" r="12" fill="#D4AF5A"/>
+    </svg>
+    <div class="t">4 · Luxury</div><div class="s">Black and gold, thin fine lines. Like a jewelry brand.</div>
+  </div>
+  <div class="opt wide">
+    <svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="url(#night)"/>
+      <circle cx="512" cy="512" r="300" fill="url(#glass)"/>
+      <circle cx="512" cy="512" r="300" fill="url(#shine)"/>
+      <ellipse cx="420" cy="380" rx="110" ry="60" fill="#fff" opacity=".55" transform="rotate(-35 420 380)"/>
+      <circle cx="512" cy="512" r="300" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="6"/>
+      <use href="#spark" transform="translate(760 270) scale(46)" fill="#fff"/>
+    </svg>
+    <div class="t">5 · Something else: glass aura</div><div class="s">A shiny iridescent bubble, like an aura you could hold. Glossy, a little 3D.</div>
+  </div>
+</div>
+</body></html>
