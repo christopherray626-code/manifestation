@@ -2,6 +2,7 @@ import { useAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { useRef } from 'react';
 import { Platform } from 'react-native';
 
+import { audioContext } from '@/lib/mix-layer';
 import type { Frequency } from '@/lib/types';
 
 /*
@@ -64,8 +65,7 @@ export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
     stopOscs();
     if (w.freq === 'none' || !w.on) return;
     if (!w.ctx) {
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      w.ctx = new Ctx();
+      w.ctx = audioContext();
       w.gain = w.ctx.createGain();
       w.gain.connect(w.ctx.destination);
     }
@@ -103,6 +103,17 @@ export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
     },
     pause: () => {
       w.on = false;
+      // Ease out before stopping: cutting a tone off mid-wave clicks.
+      if (w.ctx && w.gain && w.oscs.length) {
+        const g = w.gain.gain;
+        g.cancelScheduledValues(w.ctx.currentTime);
+        g.setValueAtTime(g.value, w.ctx.currentTime);
+        g.linearRampToValueAtTime(0, w.ctx.currentTime + 0.15);
+        const stopping = w.oscs;
+        w.oscs = [];
+        setTimeout(() => stopping.forEach((o) => { try { o.stop(); } catch { /* already stopped */ } }), 180);
+        return;
+      }
       stopOscs();
     },
     setVolume: (v) => {

@@ -3,6 +3,7 @@ import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { useMixLayer } from '@/lib/mix-layer';
 import { recordingUri } from '@/lib/recordings';
 import { success } from '@/lib/haptics';
 import { stitch, type Stitched } from '@/lib/stitch';
@@ -130,7 +131,7 @@ export function useTape({
   prefs: PlayerPrefs;
 }) {
   const mode = modeOf(prefs);
-  const background = useAudioPlayer(SOUNDS.pad);
+  const background = useMixLayer(SOUNDS.pad);
   const tone = useToneLayer(FREQUENCY_FILES);
   const ending = useAudioPlayer(null);
   const frequency = prefs.frequency ?? 'none';
@@ -140,7 +141,7 @@ export function useTape({
   const layer1 = useAudioPlayer(null, { updateInterval: 100 });
   const layer2 = useAudioPlayer(null, { updateInterval: 100 });
   // On the web the whole tape plays as one stitched recording (see stitch.ts).
-  const track = useAudioPlayer(null, { updateInterval: 200 });
+  const track = useMixLayer(null, 200);
   const stitched = useRef<Stitched | null>(null);
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
@@ -232,8 +233,10 @@ export function useTape({
   // Glide to a new level rather than jumping: a sudden volume step on a playing sound is heard as a
   // crackle, and dragging a slider makes dozens of them.
   useEffect(() => {
-    if (!fade.current) glideVolume(background, prefs.soundVolume);
-    for (const player of [layer0, layer1, layer2, track]) glideVolume(player, prefs.voiceVolume);
+    // The mix layers (background, the stitched voice track) ease their own level.
+    if (!fade.current) background.volume = prefs.soundVolume;
+    track.volume = prefs.voiceVolume;
+    for (const player of [layer0, layer1, layer2]) glideVolume(player, prefs.voiceVolume);
   }, [prefs.soundVolume, prefs.voiceVolume, background, layer0, layer1, layer2, track]);
 
   useEffect(() => {
