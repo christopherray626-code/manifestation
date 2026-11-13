@@ -2,19 +2,23 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { BackHeader, Button, Card, Chip, ChipRow, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
+import { BackHeader, Button, Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { mixId, parseMix, type MixPart } from '@/lib/mix';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { TRACKS } from '@/lib/tracks';
+import { newId } from '@/lib/types';
 
 /** Pick ready-made tracks and your own manifestations, in order, to play one after another as one loop. */
 export default function MixScreen() {
   const t = useTheme();
-  const { goals } = useStore();
+  const { goals, mixes, saveMix, deleteMix } = useStore();
   const { open } = usePlayer();
-  const { from } = useLocalSearchParams<{ from?: string }>();
-  const [parts, setParts] = useState<MixPart[]>(() => (from ? parseMix(from) : []));
+  const { from, edit } = useLocalSearchParams<{ from?: string; edit?: string }>();
+  const editing = mixes.find((m) => m.id === edit);
+  const [parts, setParts] = useState<MixPart[]>(() => parseMix(editing?.parts ?? from ?? ''));
+  const [name, setName] = useState(editing?.name ?? '');
+  const [savedAs, setSavedAs] = useState(editing?.id);
 
   const has = (p: MixPart) => parts.some((q) => q.kind === p.kind && q.id === p.id);
   const toggle = (p: MixPart) => setParts((now) => (has(p) ? now.filter((q) => !(q.kind === p.kind && q.id === p.id)) : [...now, p]));
@@ -32,7 +36,7 @@ export default function MixScreen() {
 
   return (
     <Screen>
-      <BackHeader title="Make a mix" onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+      <BackHeader title={editing ? 'Edit mix' : 'Make a mix'} onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
       <Txt variant="muted">Pick as many as you like. They play one after another, then start over.</Txt>
 
       {live.length > 0 && (
@@ -80,6 +84,29 @@ export default function MixScreen() {
         </ChipRow>
       </Section>
 
+      {live.length > 1 && (
+        <View style={{ gap: 8 }}>
+          <Field value={name} onChangeText={setName} placeholder="Name this mix (Morning, Big week…)" />
+          <Button
+            title={savedAs ? 'Save changes' : 'Save mix'}
+            icon="bookmark-outline"
+            kind="ghost"
+            onPress={() => {
+              const id = savedAs ?? newId();
+              const fallback = live.map(titleOf).join(' + ');
+              saveMix({ id, name: name.trim() || fallback, parts: mixId(live), createdAt: editing?.createdAt ?? Date.now() });
+              setSavedAs(id);
+              if (!name.trim()) setName(fallback);
+            }}
+          />
+          {savedAs && mixes.some((m) => m.id === savedAs && m.parts === mixId(live) && m.name === (name.trim() || m.name)) && (
+            <Txt variant="muted" style={{ textAlign: 'center' }}>
+              Saved under My mixes on the Manifest tab.
+            </Txt>
+          )}
+        </View>
+      )}
+
       {live.length > 0 ? (
         <Button
           title={live.length === 1 ? 'Play' : `Play mix of ${live.length}`}
@@ -96,6 +123,18 @@ export default function MixScreen() {
         <Txt variant="muted" style={{ textAlign: 'center' }}>
           Pick at least one to start.
         </Txt>
+      )}
+
+      {editing && (
+        <Button
+          title="Delete this mix"
+          icon="trash-outline"
+          kind="ghost"
+          onPress={() => {
+            deleteMix(editing.id);
+            router.back();
+          }}
+        />
       )}
     </Screen>
   );

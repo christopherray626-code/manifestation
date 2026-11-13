@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import type { BoardPhoto, Goal, JournalEntry, Settings } from '@/lib/types';
+import type { BoardPhoto, Goal, JournalEntry, SavedMix, Settings } from '@/lib/types';
 
 const KEY = 'manifest-state-v1';
 
-type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[]; board: BoardPhoto[] };
+type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[]; board: BoardPhoto[]; mixes: SavedMix[] };
 
 const defaultState: State = {
   settings: {
@@ -19,6 +19,7 @@ const defaultState: State = {
   goals: [],
   journal: [],
   board: [],
+  mixes: [],
 };
 
 type Store = State & {
@@ -34,6 +35,9 @@ type Store = State & {
   deletePhoto: (id: string) => void;
   /** Moves a photo one place earlier (-1) or later (1) on the board. */
   movePhoto: (id: string, by: -1 | 1) => void;
+  /** Adds the mix, or replaces the saved one with the same id. */
+  saveMix: (mix: SavedMix) => void;
+  deleteMix: (id: string) => void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -53,6 +57,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           goals: saved.goals ?? [],
           journal: saved.journal ?? [],
           board: saved.board ?? [],
+          mixes: saved.mixes ?? [],
         });
       })
       .catch(() => {})
@@ -78,6 +83,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updatePhoto: (id, patch) =>
       setState((s) => ({ ...s, board: s.board.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
     deletePhoto: (id) => setState((s) => ({ ...s, board: s.board.filter((p) => p.id !== id) })),
+    saveMix: (mix) =>
+      setState((s) => ({
+        ...s,
+        mixes: s.mixes.some((m) => m.id === mix.id) ? s.mixes.map((m) => (m.id === mix.id ? mix : m)) : [mix, ...s.mixes],
+      })),
+    deleteMix: (id) => setState((s) => ({ ...s, mixes: s.mixes.filter((m) => m.id !== id) })),
     movePhoto: (id, by) =>
       setState((s) => {
         const at = s.board.findIndex((p) => p.id === id);

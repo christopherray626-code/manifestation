@@ -45,7 +45,7 @@ type Player = {
 const PlayerContext = createContext<Player | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const { goals, settings, updateSettings, updateGoal } = useStore();
+  const { goals, settings, updateSettings, updateGoal, mixes } = useStore();
   const [chosen, setChosen] = useState<Source | undefined>();
   const [trackVoice, setTrackVoice] = useState<Voice>(DEFAULT_VOICE);
   const [prep, setPrep] = useState<{ done: number; total: number } | null>(null);
@@ -54,7 +54,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // What's loaded: what you picked, else what you last played, else your first goal, else the first track.
   const fallback: Source = goals[0] ? { kind: 'goal', id: goals[0].id } : { kind: 'track', id: TRACKS[0].id };
   const wanted = chosen ?? settings.lastPlayed ?? fallback;
-  const mixed = useMemo(() => (wanted.kind === 'mix' ? buildMix(wanted.id, goals) : undefined), [wanted.kind, wanted.id, goals]);
+  const mixed = useMemo(() => {
+    if (wanted.kind !== 'mix') return undefined;
+    const built = buildMix(wanted.id, goals);
+    // A saved mix plays under its own name.
+    const name = mixes.find((m) => m.parts === wanted.id)?.name.trim();
+    return built && name ? { ...built, track: { ...built.track, title: name } } : built;
+  }, [wanted.kind, wanted.id, goals, mixes]);
   const track = mixed?.track ?? (wanted.kind === 'track' ? trackById(wanted.id) : undefined);
   const goal = wanted.kind === 'goal' || (wanted.kind === 'mix' && !mixed) ? (goals.find((g) => g.id === wanted.id) ?? goals[0]) : undefined;
   const source: Source | undefined = mixed

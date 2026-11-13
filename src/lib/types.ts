@@ -128,6 +128,14 @@ export type JournalEntry = {
   createdAt: number;
 };
 
+/** A saved mix: a name and its parts in order (see src/lib/mix.ts for the parts format). */
+export type SavedMix = {
+  id: string;
+  name: string;
+  parts: string;
+  createdAt: number;
+};
+
 /** A photo on the vision board, optionally tied to one of their manifestations. */
 export type BoardPhoto = {
   id: string;
