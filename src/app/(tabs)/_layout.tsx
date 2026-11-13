@@ -8,17 +8,16 @@ import { useTheme, type IconName } from '@/components/ui';
 import { tap } from '@/lib/haptics';
 import { useStore } from '@/lib/store';
 
-// Five tabs, each a one-word label with an outline icon that fills in when active.
+// Four tabs, each a one-word label with an outline icon that fills in when active.
 const TABS: { name: string; title: string; icon: IconName; iconOn: IconName }[] = [
   { name: 'index', title: 'Today', icon: 'sunny-outline', iconOn: 'sunny' },
-  { name: 'explore', title: 'Explore', icon: 'compass-outline', iconOn: 'compass' },
   { name: 'create', title: 'Manifest', icon: 'sparkles-outline', iconOn: 'sparkles' },
   { name: 'board', title: 'Board', icon: 'images-outline', iconOn: 'images' },
-  { name: 'you', title: 'Me', icon: 'person-outline', iconOn: 'person' },
+  { name: 'you', title: 'Settings', icon: 'settings-outline', iconOn: 'settings' },
 ];
 
 // Routes that live in the tab group but don't get a tab.
-const HIDDEN = ['listen'];
+const HIDDEN = ['listen', 'explore'];
 
 export default function TabLayout() {
   const { settings } = useStore();

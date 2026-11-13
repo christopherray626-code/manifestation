@@ -20,32 +20,22 @@ export function useToday() {
   return { done, progress: done ? 1 : Math.min(seconds / goal, 1), seconds, goal };
 }
 
-/** The flame and count in the corner of Today. Grey until today's goal is reached. Opens the streak page. */
+/** A small flame and count in the corner of Today: grey until today counts, then lit. Opens the streak page. */
 export function StreakBadge() {
   const t = useTheme();
   const { settings } = useStore();
   const streak = streakOf(settings.listenDays);
   const { done } = useToday();
-  const lit = done ? t.colors.accent : t.colors.muted;
+  const color = done ? t.colors.accent : t.colors.muted;
   return (
     <Pressable
       onPress={() => router.push('/streak')}
-      hitSlop={8}
+      hitSlop={12}
       accessibilityRole="button"
       accessibilityLabel={`${streak}-day streak${done ? ', today done' : ', not done today'}. Open streak`}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: done ? t.colors.accent : t.colors.border,
-        alignSelf: 'flex-start',
-      }}>
-      <Icon name={done ? 'flame' : 'flame-outline'} size={18} color={lit} />
-      <Txt variant="medium" style={{ color: lit }}>
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 3, paddingTop: 6, opacity: pressed ? 0.6 : done ? 1 : 0.7 })}>
+      <Icon name={done ? 'flame' : 'flame-outline'} size={16} color={color} />
+      <Txt variant="muted" style={{ color, fontSize: 13 }}>
         {streak}
       </Txt>
     </Pressable>

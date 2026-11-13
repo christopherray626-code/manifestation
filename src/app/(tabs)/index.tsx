@@ -9,8 +9,7 @@ import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { tipOfTheDay } from '@/lib/tips';
-import { streakOf } from '@/lib/streak';
-import { StreakBadge, TodayProgress, WeekDots } from '@/components/streak';
+import { StreakBadge } from '@/components/streak';
 import { todaysAffirmation } from '@/lib/today';
 import { quoteOfThisVisit } from '@/lib/quotes';
 
@@ -19,21 +18,6 @@ function greeting(name: string) {
   const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const who = name.trim();
   return who ? `${part}, ${who}` : part;
-}
-
-/** Today's streak card: this week at a glance and how close today is to counting. */
-function StreakCard() {
-  const { settings } = useStore();
-  const streak = streakOf(settings.listenDays);
-  return (
-    <Card onPress={() => router.push('/streak')}>
-      <View style={{ gap: 14 }}>
-        <Txt variant="medium">{streak ? `${streak}-day streak` : 'Start a streak today'}</Txt>
-        <WeekDots />
-        <TodayProgress />
-      </View>
-    </Card>
-  );
 }
 
 /** A quote from a manifestation or spiritual teacher, new each time the app opens. Quiet, not a card. */
@@ -139,12 +123,14 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={{ gap: 6, marginTop: 8 }}>
-        <StreakBadge />
-        <Txt variant="display">{greeting(settings.name)}</Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+          <Txt variant="display" style={{ flex: 1 }}>
+            {greeting(settings.name)}
+          </Txt>
+          <StreakBadge />
+        </View>
         <QuoteLine />
       </View>
-
-      <StreakCard />
 
       <TodayCard />
       <PlayToday />

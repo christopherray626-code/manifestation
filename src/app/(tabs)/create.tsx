@@ -2,12 +2,13 @@ import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { GoalRow } from '@/components/goal-bits';
+import { TrackGrid } from '@/components/track-grid';
 import { Button, Card, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { parseMix, partTitles } from '@/lib/mix';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 
-/** Your own goals: each one's affirmations, written for you or by you, and your recordings. */
+/** Everything to listen to: your own manifestations and mixes first, then every ready-made track. */
 export default function CreateScreen() {
   const t = useTheme();
   const { goals, mixes } = useStore();
@@ -64,7 +65,7 @@ export default function CreateScreen() {
         </Section>
       )}
 
-      {goals.length > 0 && <Button title="Make a mix" icon="layers-outline" kind="ghost" onPress={() => router.push('/mix')} />}
+      <Button title="Make a mix" icon="layers-outline" kind="ghost" onPress={() => router.push('/mix')} />
 
       <Card onPress={() => router.push('/journal')}>
         <View style={{ gap: 4 }}>
@@ -72,6 +73,14 @@ export default function CreateScreen() {
           <Txt variant="muted">Script your days as if they already happened, and log the signs as they show up.</Txt>
         </View>
       </Card>
+
+      <View style={{ gap: 6, marginTop: 8 }}>
+        <Txt variant="display" style={{ fontSize: 22, lineHeight: 28 }}>
+          Ready-made tracks
+        </Txt>
+        <Txt variant="muted">Written for the most common manifestations. Play one as it is, or make it yours.</Txt>
+      </View>
+      <TrackGrid />
     </Screen>
   );
 }

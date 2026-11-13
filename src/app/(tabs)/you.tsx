@@ -7,6 +7,7 @@ import { ThemePicker } from '@/components/theme-picker';
 import { Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { BILLING_LIVE } from '@/lib/premium';
 import { useStore } from '@/lib/store';
+import { DEFAULT_GOAL_MIN, streakOf } from '@/lib/streak';
 
 export default function YouScreen() {
   const t = useTheme();
@@ -14,7 +15,18 @@ export default function YouScreen() {
 
   return (
     <Screen>
-      <Txt variant="display">Me</Txt>
+      <Txt variant="display">Settings</Txt>
+
+      <Card onPress={() => router.push('/streak')}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Icon name="flame-outline" size={22} color={t.colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Txt variant="medium">Streak and daily goal</Txt>
+            <Txt variant="muted">{`${streakOf(settings.listenDays)}-day streak · ${settings.dailyGoalMin ?? DEFAULT_GOAL_MIN} min a day`}</Txt>
+          </View>
+          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
+        </View>
+      </Card>
 
       <Section label="Your name">
         <Field
