@@ -64,13 +64,25 @@ export function voiceAudioUri(text: string, voice: Voice): string | undefined {
   return file.exists ? file.uri : undefined;
 }
 
-async function makeOne(text: string, voice: Voice, previous?: string, next?: string) {
-  const res = await fetch(`${SERVER}/api/voice`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    // The lines either side help the voice read it as part of one flowing script.
-    body: JSON.stringify({ text: text.trim(), voice, previous, next }),
-  });
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Vercel's firewall starts turning requests away when many arrive in a row. Back off and try again
+// rather than failing the whole tape: 3, 8, 15 and 30 seconds.
+const BACKOFF_MS = [3000, 8000, 15000, 30000];
+
+async function makeOne(text: string, voice: Voice, previous?: string, next?: string, onWait?: (seconds: number) => void) {
+  let res: Response;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(`${SERVER}/api/voice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // The lines either side help the voice read it as part of one flowing script.
+      body: JSON.stringify({ text: text.trim(), voice, previous, next }),
+    });
+    const blocked = res.status === 403 || res.status === 429;
+    if (!blocked || attempt >= BACKOFF_MS.length) break;
+    onWait?.(BACKOFF_MS[attempt] / 1000);
+    await wait(BACKOFF_MS[attempt]);
+  }
   if (!res.ok) {
     let message = `The voice server answered ${res.status}.`;
     const body = await res.text().catch(() => '');
@@ -100,20 +112,23 @@ async function makeOne(text: string, voice: Voice, previous?: string, next?: str
   file.write(bytes);
 }
 
-/** Makes any missing audio, a few at a time, reporting how many are done. */
-export async function prepareVoice(texts: string[], voice: Voice, onProgress: (done: number, total: number) => void) {
+/** Makes any missing audio one line at a time, gently, reporting how many are done. */
+export async function prepareVoice(
+  texts: string[],
+  voice: Voice,
+  onProgress: (done: number, total: number) => void,
+  onWait?: (seconds: number) => void,
+) {
   if (isWeb && voice !== 'my-voice' && naturalVoices) await loadSaved(texts, voice);
   const missing = texts.filter((t) => !voiceAudioUri(t, voice));
   let done = 0;
   onProgress(0, missing.length);
-  for (let i = 0; i < missing.length; i += 2) {
-    await Promise.all(
-      missing.slice(i, i + 2).map(async (t) => {
-        const at = texts.indexOf(t);
-        await makeOne(t, voice, texts[at - 1], texts[at + 1]);
-        done++;
-        onProgress(done, missing.length);
-      }),
-    );
+  for (const t of missing) {
+    const at = texts.indexOf(t);
+    await makeOne(t, voice, texts[at - 1], texts[at + 1], onWait);
+    done++;
+    onProgress(done, missing.length);
+    // A short pause between lines, so a long mix doesn't look like a flood of requests.
+    if (done < missing.length) await wait(350);
   }
 }

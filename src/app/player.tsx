@@ -323,7 +323,7 @@ export default function PlayerScreen() {
       <Creating
         visible={!!prep}
         messages={VOICING_MESSAGES}
-        detail={prep ? `${prep.done} of ${prep.total} lines` : undefined}
+        detail={prep ? `${prep.done} of ${prep.total} lines${prep.waiting ? ' · pausing a moment so the voice server can catch up' : ''}` : undefined}
       />
     </Screen>
   );

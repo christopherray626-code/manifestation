@@ -29,7 +29,8 @@ type Player = {
   voice: Voice;
   setVoice: (v: Voice) => void;
   tape: ReturnType<typeof useTape>;
-  prep: { done: number; total: number } | null;
+  /** Voices being made: how many are done, and while Vercel asks us to slow down, the seconds of pause. */
+  prep: { done: number; total: number; waiting?: number } | null;
   voiceError: string;
   prefs: PlayerPrefs;
   setPrefs: (patch: Partial<PlayerPrefs>) => void;
@@ -52,7 +53,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const { goals, settings, updateSettings, updateGoal, mixes } = useStore();
   const [chosen, setChosen] = useState<Source | undefined>();
   const [trackVoice, setTrackVoice] = useState<Voice>(DEFAULT_VOICE);
-  const [prep, setPrep] = useState<{ done: number; total: number } | null>(null);
+  const [prep, setPrep] = useState<{ done: number; total: number; waiting?: number } | null>(null);
   const [voiceError, setVoiceError] = useState('');
 
   // What's loaded: what you picked, else what you last played, else your first goal, else the first track.
@@ -124,6 +125,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           missing.map((a) => a.text),
           voice,
           (done, total) => setPrep({ done, total }),
+          (seconds) => setPrep((p) => (p ? { ...p, waiting: seconds } : p)),
         );
       } catch (e) {
         setVoiceError(e instanceof Error ? e.message : "Couldn't make the voice. Try again.");
