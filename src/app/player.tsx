@@ -1,227 +1,218 @@
 import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Animated, Easing, Platform, Pressable, Share, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AccessibilityInfo, Animated, Easing, Modal, Platform, Pressable, ScrollView, Share, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Art, paletteFor } from '@/components/art';
 import { Creating, VOICING_MESSAGES } from '@/components/creating';
+import { categoryIcon } from '@/components/goal-bits';
 import { Slider } from '@/components/slider';
 import { SoundList } from '@/components/sound-list';
 import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
-import { Button, Card, Chip, ChipRow, Icon, ThemeOrb, Screen, Section, Txt, useTheme, type IconName } from '@/components/ui';
+import { Chip, ChipRow, Icon, Section, Txt, useTheme, type IconName } from '@/components/ui';
 import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
-import type { TapeMode } from '@/lib/types';
+import { TRACKS } from '@/lib/tracks';
 import { FREQUENCY_LIST } from '@/lib/frequencies';
 import { FREQUENCY_DEFAULT_VOLUME, MODES } from '@/lib/use-tape';
 
-
-/** The orb at the heart of the player: it breathes while playing and swells softly as each line begins. */
-function PulsingOrb({ playing, line }: { playing: boolean; line: number }) {
-  const [scale] = useState(() => new Animated.Value(1));
-  const [swell] = useState(() => new Animated.Value(1));
-  const [still, setStill] = useState(false);
-  // People who turn on Reduce motion get a still orb.
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setStill);
-    return () => sub.remove();
-  }, []);
-  useEffect(() => {
-    if (!playing || still) {
-      Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 1.08, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [playing, still, scale]);
-  useEffect(() => {
-    if (!playing || still) return;
-    swell.setValue(1.06);
-    Animated.spring(swell, { toValue: 1, friction: 5, tension: 30, useNativeDriver: true }).start();
-  }, [line, playing, still, swell]);
-  return (
-    <Animated.View style={{ transform: [{ scale }, { scale: swell }] }}>
-      <ThemeOrb size={240} />
-    </Animated.View>
-  );
-}
 
 export default function PlayerScreen() {
   const t = useTheme();
   const { goals, updateGoal } = useStore();
   const { goal, track, mix, list, voice, setVoice, tape, prep, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
+  const [sheet, setSheet] = useState<'sound' | 'voice' | 'more' | null>(null);
 
-  function pickGoal(id: string) {
-    choose({ kind: 'goal', id });
-  }
-
-  const recorded = goal?.affirmations.filter((a) => a.recording).length ?? 0;
+  const recorded = goal ? goal.affirmations.filter((a) => a.recording).length : 0;
   const current = list[tape.index];
-  const title = track?.title ?? goal?.title ?? '';
+  const before = list.length > 1 ? list[(tape.index - 1 + list.length) % list.length] : undefined;
+  const after = list.length > 1 ? list[(tape.index + 1) % list.length] : undefined;
+  const title = track ? track.title : goal ? goal.title : '';
+  const icon: IconName = track ? track.icon : goal ? categoryIcon(goal.category) : 'sparkles-outline';
+  const tone = mix ? undefined : track ? track.id : goal && goal.category !== 'other' ? goal.category : undefined;
+  const goalId = goal ? goal.id : '';
+  const toneIndex = track ? Math.max(TRACKS.findIndex((x) => x.id === track.id), 0) : Math.max(goals.findIndex((g) => g.id === goalId), 0);
+  const colors = paletteFor(tone, toneIndex, t);
+  const subliminal = tape.mode === 'subliminal';
 
-
-
-  function favoriteCurrent() {
-    if (!goal || !current) return;
-    changeFavorite(current.id);
-  }
   const changeFavorite = (affId: string) =>
-    updateGoal(goal!.id, (g) => ({
+    updateGoal(goalId, (g) => ({
       ...g,
       affirmations: g.affirmations.map((a) => (a.id === affId ? { ...a, favorite: !a.favorite } : a)),
     }));
-
   const share = () => Share.share({ message: current ? current.text : title }).catch(() => {});
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
-    <Screen>
-      {/* The hero: what's playing, the mode, the orb and the big controls, floating on the sky. */}
-      <View style={{ gap: 18, paddingTop: 2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Close player">
-            <Icon name="chevron-down" size={26} color={t.colors.text} />
-          </Pressable>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Txt variant="title" style={{ textAlign: 'center' }} numberOfLines={1}>
-              {title}
-            </Txt>
-            <Txt variant="muted" style={{ color: t.colors.text, opacity: 0.75 }}>{mix ? `Your mix · ${list.length} affirmations` : track ? 'Ready-made track' : `Manifestation · ${list.length} affirmations`}</Txt>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
+      {/* The track's own colour glows down from the top and melts into the theme. */}
+      <LinearGradient
+        colors={[colors[1] + 'CC', colors[2] + '88', t.colors.bg]}
+        locations={[0, 0.45, 0.95]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
+          {/* What's playing: its card, its name, and a way out. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close player">
+              <Icon name="chevron-down" size={26} color="#fff" />
+            </Pressable>
+            <Art icon={icon} index={toneIndex} tone={tone} size={44} />
+            <View style={{ flex: 1 }}>
+              <Txt variant="medium" numberOfLines={1} style={{ color: '#fff' }}>
+                {title}
+              </Txt>
+              <Txt variant="muted" numberOfLines={1} style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>
+                {`${mix ? 'Your mix' : track ? 'Ready-made' : 'Manifestation'} · ${MODES[tape.mode].label}`}
+              </Txt>
+            </View>
+            <Pressable onPress={share} hitSlop={12} accessibilityRole="button" accessibilityLabel="Share this affirmation">
+              <Icon name="share-social-outline" size={22} color="#fff" />
+            </Pressable>
           </View>
-          <Pressable onPress={share} hitSlop={12} accessibilityRole="button" accessibilityLabel="Share">
-            <Icon name="share-social-outline" size={22} color={t.colors.text} />
-          </Pressable>
-        </View>
 
-        <View style={{ alignSelf: 'center', flexDirection: 'row', backgroundColor: t.colors.bg, borderRadius: 12, padding: 4 }}>
-          {(Object.keys(MODES) as TapeMode[]).map((m) => (
-            <Pressable
-              key={m}
-              onPress={() => setMode(m)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: tape.mode === m }}
-              style={{ paddingVertical: 8, paddingHorizontal: 18, borderRadius: 9, backgroundColor: tape.mode === m ? t.colors.card : 'transparent' }}>
-              <Txt variant="medium" style={{ color: tape.mode === m ? t.colors.text : t.colors.muted }}>
-                {MODES[m].label}
+          {/* The affirmation is the star: the one playing, big, with its neighbours fading above and below. */}
+          <View style={{ flex: 1, justifyContent: 'center', gap: 18, paddingVertical: 12 }}>
+            {subliminal ? (
+              <View style={{ alignItems: 'center', gap: 14 }}>
+                <Breathing playing={tape.playing}>
+                  <Art icon={icon} index={toneIndex} tone={tone} size={150} />
+                </Breathing>
+                <Txt variant="quote" style={{ textAlign: 'center', color: t.colors.text, opacity: 0.85 }}>
+                  {tape.playing ? 'Playing below the sound…' : `${list.length} affirmations, layered under the sound`}
+                </Txt>
+              </View>
+            ) : (
+              <>
+                {before && (
+                  <Txt variant="body" numberOfLines={2} style={{ textAlign: 'center', color: t.colors.text, opacity: 0.32 }}>
+                    {before.text}
+                  </Txt>
+                )}
+                <Lyric key={current ? current.id : 'none'} text={current ? current.text : goal ? 'No affirmations here yet.' : ''} />
+                {after && (
+                  <Txt variant="body" numberOfLines={2} style={{ textAlign: 'center', color: t.colors.text, opacity: 0.32 }}>
+                    {after.text}
+                  </Txt>
+                )}
+                {goal && current && (
+                  <Pressable
+                    onPress={() => changeFavorite(current.id)}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={current.favorite ? 'Remove from favorites' : 'Add to favorites'}
+                    style={{ alignSelf: 'center' }}>
+                    <Icon name={current.favorite ? 'heart' : 'heart-outline'} size={22} color={current.favorite ? t.colors.accent : t.colors.muted} />
+                  </Pressable>
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Where you are in the tape: one segment per line. */}
+          {!subliminal && list.length > 1 && <Segments count={list.length} at={tape.index} />}
+          <Txt variant="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 6, minHeight: 16 }}>
+            {tape.endsAt ? `Stops at ${new Date(tape.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
+          </Txt>
+          {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
+          {goal && !tape.ready && subliminal && (
+            <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })} style={{ alignSelf: 'center' }}>
+              <Txt variant="muted" style={{ color: t.colors.accent, textAlign: 'center' }}>
+                Subliminals need a recorded voice. Record yours, or pick a natural voice under Voice.
               </Txt>
             </Pressable>
-          ))}
-        </View>
+          )}
 
-        <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-          <PulsingOrb playing={tape.playing} line={tape.index} />
-        </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 34, marginTop: 10, marginBottom: 18 }}>
+            <Pressable onPress={() => tape.skip(-1)} hitSlop={12} disabled={subliminal} accessibilityRole="button" accessibilityLabel="Previous line" style={{ opacity: subliminal ? 0.3 : 1 }}>
+              <Icon name="play-back" size={28} color={t.colors.text} />
+            </Pressable>
+            <Pressable
+              onPress={toggle}
+              disabled={!!prep}
+              accessibilityRole="button"
+              accessibilityLabel={tape.playing ? 'Pause' : 'Play'}
+              style={({ pressed }) => ({
+                width: 96,
+                height: 66,
+                borderRadius: 24,
+                backgroundColor: t.colors.accent,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ scale: pressed ? 0.96 : 1 }],
+              })}>
+              <Icon name={tape.playing ? 'pause' : 'play'} size={30} color={t.colors.onAccent} />
+            </Pressable>
+            <Pressable onPress={() => tape.skip(1)} hitSlop={12} disabled={subliminal} accessibilityRole="button" accessibilityLabel="Next line" style={{ opacity: subliminal ? 0.3 : 1 }}>
+              <Icon name="play-forward" size={28} color={t.colors.text} />
+            </Pressable>
+          </View>
 
-        <View style={{ minHeight: 64, justifyContent: 'center' }}>
-          <Txt variant="quote" style={{ textAlign: 'center', fontSize: 19, lineHeight: 27 }}>
-            {tape.mode === 'subliminal' ? (tape.playing ? 'Playing below the sound…' : '') : current ? `"${current.text}"` : goal ? 'No affirmations here yet.' : ''}
-          </Txt>
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }}>
-          <HeroButton
-            icon={goal ? (current?.favorite ? 'heart' : 'heart-outline') : 'play-skip-forward-outline'}
-            label={goal ? 'Favorite' : 'Next line'}
-            onPress={goal ? favoriteCurrent : () => tape.skip(1)}
-            active={!!goal && !!current?.favorite}
-          />
-          <Pressable
-            onPress={toggle}
-            disabled={!!prep}
-            accessibilityRole="button"
-            accessibilityLabel={tape.playing ? 'Pause' : 'Play'}
-            style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name={tape.playing ? 'pause' : 'play'} size={32} color={t.colors.onAccent} />
-          </Pressable>
-          <HeroButton
-            icon="hourglass-outline"
-            label={prefs.timer ? timerLabel(prefs.timer) : 'Add timer'}
-            onPress={() => router.push('/timer')}
-            active={!!prefs.timer}
-          />
-        </View>
-
-
-        <Txt variant="muted" style={{ textAlign: 'center' }}>
-          {tape.mode === 'spoken' && list.length ? `${tape.index + 1} of ${list.length}` : ''}
-          {tape.endsAt ? ` · stops at ${new Date(tape.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
-        </Txt>
-        {prep && (
-          <Txt variant="muted" style={{ textAlign: 'center', color: t.colors.accent }}>
-            Getting the voice ready… {prep.done} of {prep.total}
-          </Txt>
-        )}
-        {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
-      </View>
-
-      {goal && !tape.ready && tape.mode === 'subliminal' && (
-        <Card highlight>
-          <View style={{ gap: 10 }}>
-            <Txt variant="title">Subliminals need a recorded voice</Txt>
-            <Txt variant="muted">Record at least one affirmation in your voice, or pick one of the natural voices below.</Txt>
-            <Button
-              title="Record my voice"
-              icon="mic-outline"
-              onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}
+          {/* Everything else, one tap away. */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              backgroundColor: t.colors.card,
+              borderRadius: 22,
+              borderWidth: 1,
+              borderColor: t.colors.border,
+              paddingVertical: 8,
+              paddingHorizontal: 6,
+            }}>
+            <BarButton
+              icon={subliminal ? 'eye-off-outline' : 'mic-outline'}
+              label={MODES[tape.mode].label}
+              onPress={() => setMode(subliminal ? 'spoken' : 'subliminal')}
             />
+            <BarButton icon="options-outline" label="Sound" onPress={() => setSheet('sound')} />
+            <BarButton icon="person-circle-outline" label="Voice" onPress={() => setSheet('voice')} />
+            <BarButton icon="hourglass-outline" label={prefs.timer ? timerLabel(prefs.timer) : 'Timer'} onPress={() => router.push('/timer')} active={!!prefs.timer} />
+            <BarButton icon="ellipsis-horizontal" label="More" onPress={() => setSheet('more')} />
           </View>
-        </Card>
-      )}
+        </View>
+      </SafeAreaView>
 
-      <PanelCard label="Your mix">
-        <MixRow
-          icon="mic-outline"
-          label={tape.mode === 'subliminal' ? 'Voice (hidden)' : 'Voice'}
-          value={prefs.voiceVolume / (tape.mode === 'subliminal' ? SUBLIMINAL_MAX : 1)}
-          onChange={(v) => setPrefs({ voiceVolume: v * (tape.mode === 'subliminal' ? SUBLIMINAL_MAX : 1) })}
-        />
-        <MixRow
-          icon="musical-notes-outline"
-          label="Background"
-          value={prefs.sound === 'none' ? 0 : prefs.soundVolume}
-          disabled={prefs.sound === 'none'}
-          onChange={(soundVolume) => setPrefs({ soundVolume })}
-        />
-        <MixRow
-          icon="pulse-outline"
-          label="Frequency"
-          value={(prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME) / FREQUENCY_MAX}
-          disabled={!prefs.frequency || prefs.frequency === 'none'}
-          onChange={(v) => setPrefs({ frequencyVolume: v * FREQUENCY_MAX })}
-        />
-        {tape.mode === 'subliminal' && (
-          <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>
-        )}
-        <View style={{ gap: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Icon name="speedometer-outline" size={18} color={t.colors.accent} />
-            <Txt variant="medium">Speed</Txt>
-          </View>
+      <Sheet title="Sound" open={sheet === 'sound'} onClose={() => setSheet(null)}>
+        <PanelCard label="Levels">
+          <MixRow
+            icon="mic-outline"
+            label={subliminal ? 'Voice (hidden)' : 'Voice'}
+            value={prefs.voiceVolume / (subliminal ? SUBLIMINAL_MAX : 1)}
+            onChange={(v) => setPrefs({ voiceVolume: v * (subliminal ? SUBLIMINAL_MAX : 1) })}
+          />
+          <MixRow
+            icon="musical-notes-outline"
+            label="Background"
+            value={prefs.sound === 'none' ? 0 : prefs.soundVolume}
+            disabled={prefs.sound === 'none'}
+            onChange={(soundVolume) => setPrefs({ soundVolume })}
+          />
+          <MixRow
+            icon="pulse-outline"
+            label="Frequency"
+            value={(prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME) / FREQUENCY_MAX}
+            disabled={!prefs.frequency || prefs.frequency === 'none'}
+            onChange={(v) => setPrefs({ frequencyVolume: v * FREQUENCY_MAX })}
+          />
+          {subliminal && <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>}
+        </PanelCard>
+        <PanelCard label="Speed">
           <ChipRow>
             {SPEEDS.map((v) => (
               <Chip key={v} label={`${v}×`} selected={(prefs.speed ?? 1) === v} onPress={() => setPrefs({ speed: v })} />
             ))}
           </ChipRow>
-          <Txt variant="muted">Takes effect from the next line. Faster tapes fit more repetitions in, without changing the pitch.</Txt>
-        </View>
-        {tape.mode === 'spoken' && Platform.OS === 'web' && (
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Icon name="layers-outline" size={18} color={t.colors.accent} />
-              <Txt variant="medium">Layers</Txt>
-            </View>
+          <Txt variant="muted">Faster tapes fit more repetitions in, without changing the pitch.</Txt>
+        </PanelCard>
+        {!subliminal && Platform.OS === 'web' && (
+          <PanelCard label="Layers">
             <ChipRow>
               {[1, 2, 3].map((n) => (
                 <Chip
@@ -236,109 +227,189 @@ export default function PlayerScreen() {
               ))}
             </ChipRow>
             <Txt variant="muted">Extra voices read other lines at the same time, a little lower or higher, quieter and to each side.</Txt>
-          </View>
+          </PanelCard>
         )}
-      </PanelCard>
-
-      <PanelCard label="Voice" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
-        <VoicePicker value={voice} allowMine={!!goal} onChange={setVoice} />
-        <Why text={WHY.voices} label="Why the voice matters" />
-        {goal && goal.voice === 'my-voice' && (
-          <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}>
-            <Txt variant="muted" style={{ color: t.colors.accent }}>
-              {recorded === goal.affirmations.length
-                ? 'All recorded in your voice'
-                : tape.mode === 'subliminal'
-                  ? `${recorded} of ${goal.affirmations.length} recorded. Only recorded ones go in the subliminal. Record more`
-                  : `${recorded} of ${goal.affirmations.length} recorded. The rest use the calm voice. Record more`}
-            </Txt>
-          </Pressable>
-        )}
-        {goal && (
+        <PanelCard label="Background">
+          <SoundList value={prefs.sound} onChange={(sound) => setPrefs({ sound })} allowNone={!subliminal} />
+        </PanelCard>
+        <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
+          <Why text={WHY.frequencies} label="What these do" />
           <ChipRow>
-            <Chip label="All affirmations" selected={!prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: false })} />
-            <Chip label="Only favorites" selected={prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: true })} />
-          </ChipRow>
-        )}
-      </PanelCard>
-
-      <PanelCard label="Background">
-        <SoundList value={prefs.sound} onChange={(sound) => setPrefs({ sound })} allowNone={tape.mode === 'spoken'} />
-      </PanelCard>
-
-      <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
-        <Why text={WHY.frequencies} label="What these do" />
-        <ChipRow>
-          <Chip label="None" selected={!prefs.frequency || prefs.frequency === 'none'} onPress={() => setPrefs({ frequency: 'none' })} />
-          {FREQUENCY_LIST.map((f) => (
-            <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
-          ))}
-        </ChipRow>
-        {(() => {
-          const f = FREQUENCY_LIST.find((x) => x.id === prefs.frequency);
-          return f ? (
-            <>
-              <Txt variant="muted">{f.headphones ? `${f.about} Best with headphones.` : f.about}</Txt>
-            </>
-          ) : null;
-        })()}
-      </PanelCard>
-
-      <PanelCard label="About" tinted>
-        <Txt variant="body" style={{ color: t.colors.text }}>
-          {MODES[tape.mode].about}
-          {track ? ` This track has ${track.lines.length} affirmations.` : ''}
-        </Txt>
-        <Why text={tape.mode === 'subliminal' ? WHY.subliminal : WHY.spoken} />
-        {track && !mix && (
-          <Pressable onPress={() => router.push({ pathname: '/track/[id]', params: { id: track.id } })} accessibilityRole="button">
-            <Txt variant="medium" style={{ color: t.colors.accent }}>
-              See every affirmation, or make it yours
-            </Txt>
-          </Pressable>
-        )}
-        <Pressable onPress={() => router.push({ pathname: '/mix', params: { from: mix ? track?.id : track ? `track:${track.id}` : goal ? `goal:${goal.id}` : '' } })} accessibilityRole="button">
-          <Txt variant="medium" style={{ color: t.colors.accent }}>
-            {mix ? 'Change this mix' : 'Mix this with other tracks'}
-          </Txt>
-        </Pressable>
-      </PanelCard>
-
-      {goals.length > 0 && (
-        <Section label="My manifestations">
-          <ChipRow>
-            {goals.map((g) => (
-              <Chip key={g.id} label={g.title} selected={g.id === goal?.id} onPress={() => pickGoal(g.id)} />
+            <Chip label="None" selected={!prefs.frequency || prefs.frequency === 'none'} onPress={() => setPrefs({ frequency: 'none' })} />
+            {FREQUENCY_LIST.map((f) => (
+              <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
             ))}
           </ChipRow>
-        </Section>
-      )}
+          {(() => {
+            const f = FREQUENCY_LIST.find((x) => x.id === prefs.frequency);
+            return f ? <Txt variant="muted">{f.headphones ? `${f.about} Best with headphones.` : f.about}</Txt> : null;
+          })()}
+        </PanelCard>
+      </Sheet>
 
-      <Section label="Ready-made tracks">
-        <TrackShelf
-          selectedId={track?.id}
-          onPick={(picked) => choose({ kind: 'track', id: picked.id })}
-        />
-      </Section>
+      <Sheet title="Voice" open={sheet === 'voice'} onClose={() => setSheet(null)}>
+        <PanelCard label="Who reads it" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
+          <VoicePicker value={voice} allowMine={!!goal} onChange={setVoice} />
+          <Why text={WHY.voices} label="Why the voice matters" />
+          {goal && goal.voice === 'my-voice' && (
+            <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}>
+              <Txt variant="muted" style={{ color: t.colors.accent }}>
+                {recorded === goal.affirmations.length
+                  ? 'All recorded in your voice'
+                  : subliminal
+                    ? `${recorded} of ${goal.affirmations.length} recorded. Only recorded ones go in the subliminal. Record more`
+                    : `${recorded} of ${goal.affirmations.length} recorded. The rest use the calm voice. Record more`}
+              </Txt>
+            </Pressable>
+          )}
+        </PanelCard>
+        {goal && (
+          <PanelCard label="Which lines">
+            <ChipRow>
+              <Chip label="All affirmations" selected={!prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: false })} />
+              <Chip label="Only favorites" selected={prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: true })} />
+            </ChipRow>
+          </PanelCard>
+        )}
+      </Sheet>
+
+      <Sheet title="More" open={sheet === 'more'} onClose={() => setSheet(null)}>
+        <PanelCard label="About this tape">
+          <Txt variant="body">
+            {MODES[tape.mode].about}
+            {` It has ${list.length} affirmations.`}
+          </Txt>
+          <Why text={subliminal ? WHY.subliminal : WHY.spoken} />
+          {track && !mix && (
+            <Pressable onPress={() => { setSheet(null); router.push({ pathname: '/track/[id]', params: { id: track.id } }); }} accessibilityRole="button">
+              <Txt variant="medium" style={{ color: t.colors.accent }}>See every affirmation, or make it yours</Txt>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => {
+              setSheet(null);
+              router.push({ pathname: '/mix', params: { from: mix && track ? track.id : track ? `track:${track.id}` : goal ? `goal:${goal.id}` : '' } });
+            }}
+            accessibilityRole="button">
+            <Txt variant="medium" style={{ color: t.colors.accent }}>{mix ? 'Change this mix' : 'Mix this with other tracks'}</Txt>
+          </Pressable>
+        </PanelCard>
+        {goals.length > 0 && (
+          <Section label="Play something else">
+            <ChipRow>
+              {goals.map((g) => (
+                <Chip key={g.id} label={g.title} selected={g.id === goalId} onPress={() => choose({ kind: 'goal', id: g.id })} />
+              ))}
+            </ChipRow>
+          </Section>
+        )}
+        <Section label="Ready-made tracks">
+          <TrackShelf selectedId={track ? track.id : undefined} onPick={(picked) => choose({ kind: 'track', id: picked.id })} />
+        </Section>
+      </Sheet>
+
       <Creating
         visible={!!prep}
         messages={VOICING_MESSAGES}
         detail={prep ? `${prep.done} of ${prep.total} lines${prep.waiting ? ' · pausing a moment so the voice server can catch up' : ''}` : undefined}
       />
-    </Screen>
+    </View>
   );
 }
 
-/** One of the two buttons either side of play: an icon with a word under it. */
-function HeroButton({ icon, label, onPress, active }: { icon: IconName; label: string; onPress: () => void; active?: boolean }) {
+/** The line being spoken, big, fading and rising in each time it changes. */
+function Lyric({ text }: { text: string }) {
   const t = useTheme();
+  const [fade] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(fade, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  }, [fade]);
   return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" style={{ alignItems: 'center', gap: 6, width: 90 }}>
-      <Icon name={icon} size={24} color={active ? t.colors.accent : t.colors.text} />
-      <Txt variant="muted" style={{ color: active ? t.colors.accent : t.colors.text }}>
+    <Animated.View style={{ opacity: fade, transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>
+      <Txt variant="display" style={{ textAlign: 'center', fontSize: 28, lineHeight: 36, color: t.colors.text }}>
+        {text}
+      </Txt>
+    </Animated.View>
+  );
+}
+
+/** A slow breath for the subliminal cover, still when Reduce motion is on. */
+function Breathing({ playing, children }: { playing: boolean; children: ReactNode }) {
+  const [scale] = useState(() => new Animated.Value(1));
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!playing || still) {
+      Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.05, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [playing, still, scale]);
+  return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
+}
+
+/** One thin segment per line, lit up to the one playing. Long tapes become one smooth bar. */
+function Segments({ count, at }: { count: number; at: number }) {
+  const t = useTheme();
+  if (count > 24) {
+    return (
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: t.colors.border, overflow: 'hidden' }}>
+        <View style={{ width: `${((at + 1) / count) * 100}%`, height: '100%', backgroundColor: t.colors.accent }} />
+      </View>
+    );
+  }
+  return (
+    <View style={{ flexDirection: 'row', gap: 4 }}>
+      {Array.from({ length: count }, (_, i) => (
+        <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= at ? t.colors.accent : t.colors.border }} />
+      ))}
+    </View>
+  );
+}
+
+/** A button in the bar along the bottom of the player. */
+function BarButton({ icon, label, onPress, active }: { icon: IconName; label: string; onPress: () => void; active?: boolean }) {
+  const t = useTheme();
+  const color = active ? t.colors.accent : t.colors.text;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => ({ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 4, opacity: pressed ? 0.6 : 1 })}>
+      <Icon name={icon} size={21} color={color} />
+      <Txt variant="muted" numberOfLines={1} style={{ fontSize: 11, color }}>
         {label}
       </Txt>
     </Pressable>
+  );
+}
+
+/** A panel that slides up from the bottom over the player. */
+function Sheet({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: ReactNode }) {
+  const t = useTheme();
+  return (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} onPress={onClose} accessibilityLabel="Close" />
+      <View style={{ maxHeight: '82%', backgroundColor: t.colors.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, borderTopWidth: 1, borderColor: t.colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 6 }}>
+          <Txt variant="title" style={{ flex: 1 }}>
+            {title}
+          </Txt>
+          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Done">
+            <Txt variant="medium" style={{ color: t.colors.accent }}>Done</Txt>
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          {children}
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
