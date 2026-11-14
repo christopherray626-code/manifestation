@@ -10,6 +10,7 @@ import { Icon, useTheme, type IconName } from '@/components/ui';
  */
 const PALETTES = {
   gold: ['#FFD36E', '#F2994A', '#9C2C77'],
+  money: ['#C6F7A6', '#2FB67C', '#0E4A3A'],
   sunset: ['#FF9A62', '#FF4D8D', '#7B2FF7'],
   rose: ['#FFB8D9', '#F15BB5', '#5B2A86'],
   ocean: ['#5EF0D0', '#2B8CFF', '#2A1B6E'],
@@ -23,10 +24,10 @@ type Palette = keyof typeof PALETTES;
 const ORDER: Palette[] = ['sunset', 'ocean', 'gold', 'rose', 'violet', 'emerald', 'peach', 'sky', 'lilac'];
 const TONE_OF: Record<string, Palette> = {
   // Ready-made tracks
-  'money-magnet': 'gold',
+  'money-magnet': 'money',
   success: 'sunset',
   career: 'sky',
-  luck: 'emerald',
+  luck: 'gold',
   confidence: 'violet',
   'self-love': 'rose',
   love: 'peach',
@@ -37,7 +38,7 @@ const TONE_OF: Record<string, Palette> = {
   health: 'emerald',
   focus: 'sky',
   // Manifestation categories
-  money: 'gold',
+  money: 'money',
   car: 'sunset',
   home: 'ocean',
   other: 'violet',
