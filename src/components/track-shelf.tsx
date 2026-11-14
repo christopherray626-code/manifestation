@@ -20,6 +20,7 @@ export function TrackShelf({
           key={track.id}
           icon={track.icon}
           index={TRACKS.indexOf(track)}
+          tone={track.id}
           title={track.title}
           subtitle={track.about}
           selected={track.id === selectedId}

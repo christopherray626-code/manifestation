@@ -1,51 +1,102 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Icon, Txt, useTheme, type IconName } from '@/components/ui';
+import { Icon, useTheme, type IconName } from '@/components/ui';
 
-/**
- * The picture on a goal or track card: a soft gradient in one of the theme's tints, a glow, and the
- * icon in the middle. `index` picks the tint, so cards next to each other differ.
+/*
+ * Card colours: a bright gradient per topic, so a shelf reads like a row of album covers rather than
+ * one dark tile after another. Tracks and categories pick their own; anything else goes by position.
  */
-export function Art({ icon, index, size, selected }: { icon: IconName; index: number; size: number; selected?: boolean }) {
+const PALETTES = {
+  gold: ['#FFD36E', '#F2994A', '#9C2C77'],
+  sunset: ['#FF9A62', '#FF4D8D', '#7B2FF7'],
+  rose: ['#FFB8D9', '#F15BB5', '#5B2A86'],
+  ocean: ['#5EF0D0', '#2B8CFF', '#2A1B6E'],
+  violet: ['#C9B0FF', '#7C4DFF', '#1E1A5A'],
+  emerald: ['#A6F7A9', '#2EC4B6', '#134E6F'],
+  peach: ['#FFE2B8', '#FF8F8F', '#8E3B76'],
+  sky: ['#A8EBFF', '#5B8DEF', '#2E2A73'],
+  lilac: ['#F6CCFF', '#C77DFF', '#3C1E70'],
+} as const;
+type Palette = keyof typeof PALETTES;
+const ORDER: Palette[] = ['sunset', 'ocean', 'gold', 'rose', 'violet', 'emerald', 'peach', 'sky', 'lilac'];
+const TONE_OF: Record<string, Palette> = {
+  // Ready-made tracks
+  'money-magnet': 'gold',
+  success: 'sunset',
+  career: 'sky',
+  luck: 'emerald',
+  confidence: 'violet',
+  'self-love': 'rose',
+  love: 'peach',
+  'glow-up': 'sunset',
+  calm: 'ocean',
+  sleep: 'violet',
+  gratitude: 'lilac',
+  health: 'emerald',
+  focus: 'sky',
+  // Manifestation categories
+  money: 'gold',
+  car: 'sunset',
+  home: 'ocean',
+  other: 'violet',
+};
+
+/** The three gradient colours for a track id or category, else by position. */
+export function paletteFor(tone: string | undefined, index: number) {
+  return PALETTES[(tone && TONE_OF[tone]) || ORDER[Math.abs(index) % ORDER.length]];
+}
+
+/** Soft light shapes and a few sparkles laid over a card's gradient. */
+function Glints({ size, seed }: { size: number; seed: number }) {
+  const dots = [
+    [0.18, 0.16, 0.035],
+    [0.8, 0.22, 0.05],
+    [0.72, 0.62, 0.03],
+    [0.12, 0.58, 0.025],
+  ];
+  return (
+    <>
+      <View style={{ position: 'absolute', width: size * 1.1, height: size * 1.1, borderRadius: size, backgroundColor: '#fff', opacity: 0.12, top: -size * 0.55, right: -size * 0.45 }} />
+      <View style={{ position: 'absolute', width: size * 0.9, height: size * 0.9, borderRadius: size, backgroundColor: '#fff', opacity: 0.08, bottom: -size * 0.25, left: -size * 0.5 }} />
+      {dots.map(([x, y, r], i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: ((x + seed * 0.07 * (i % 2 ? 1 : -1) + 1) % 1) * size,
+            top: y * size,
+            width: size * r,
+            height: size * r,
+            borderRadius: size,
+            backgroundColor: '#fff',
+            opacity: 0.7,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+/** The picture for a goal or track: its bright gradient, soft light, and a white icon in a glow. */
+export function Art({ icon, index, size, selected, tone }: { icon: IconName; index: number; size: number; selected?: boolean; tone?: string }) {
   const t = useTheme();
-  const tint = t.colors.tints[index % t.colors.tints.length];
-  const angle = index % 2 ? { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } : { start: { x: 1, y: 0 }, end: { x: 0, y: 1 } };
+  const colors = paletteFor(tone, index);
   return (
     <View
       style={{
         width: size,
         height: size,
-        borderRadius: Math.max(t.radius, 14),
+        borderRadius: Math.max(t.radius, size > 80 ? 24 : 12),
         overflow: 'hidden',
         borderWidth: selected ? 2 : 0,
         borderColor: t.colors.accent,
       }}>
-      <LinearGradient colors={[tint, t.colors.card]} {...angle} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        {/* A soft glow behind the icon, and a ring out past it. */}
-        <View
-          style={{
-            position: 'absolute',
-            width: size * 1.1,
-            height: size * 1.1,
-            borderRadius: size,
-            borderWidth: 1,
-            borderColor: t.colors.accent,
-            opacity: 0.12,
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            width: size * 0.62,
-            height: size * 0.62,
-            borderRadius: size,
-            backgroundColor: t.colors.accent,
-            opacity: 0.14,
-          }}
-        />
-        <Icon name={icon} size={size * 0.27} color={t.colors.accent} />
+      <LinearGradient colors={[...colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        {size > 60 && <Glints size={size} seed={index} />}
+        <View style={{ position: 'absolute', width: size * 0.56, height: size * 0.56, borderRadius: size, backgroundColor: '#fff', opacity: 0.18 }} />
+        <Icon name={icon} size={size * 0.3} color="#fff" />
       </LinearGradient>
     </View>
   );
@@ -65,8 +116,8 @@ export function Shelf({ children }: { children: ReactNode }) {
 }
 
 /**
- * A card on a shelf: a tall poster. The theme's colour falls from the top into the dark, a soft glow
- * sits behind the icon, and the title is written on the card itself, with a small line under it.
+ * A card on a shelf: a tall, colourful poster. A bright gradient for its topic, soft light and sparkles,
+ * a white icon in a glow, and the title in white over a dark fade at the bottom.
  */
 export function ShelfCard({
   icon,
@@ -76,6 +127,7 @@ export function ShelfCard({
   onPress,
   selected,
   size = 128,
+  tone,
 }: {
   icon: IconName;
   index: number;
@@ -85,37 +137,46 @@ export function ShelfCard({
   selected?: boolean;
   /** The card's width; it's a third taller than it is wide. */
   size?: number;
+  /** A track id or category, to pick the card's colours. */
+  tone?: string;
 }) {
   const t = useTheme();
-  const tint = t.colors.tints[index % t.colors.tints.length];
+  const colors = paletteFor(tone, index);
   const height = Math.round(size * 1.35);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${subtitle}`}
-      style={({ pressed }) => ({ width: size, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      style={({ pressed }) => ({ width: size, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
       <View
         style={{
           width: size,
           height,
-          borderRadius: Math.max(t.radius, 16),
+          borderRadius: Math.max(t.radius, 20),
           overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: selected ? t.colors.accent : t.colors.border,
+          borderWidth: selected ? 2 : 0,
+          borderColor: t.colors.accent,
+          shadowColor: colors[1],
+          shadowOpacity: 0.35,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 6 },
         }}>
-        <LinearGradient colors={[tint + 'CC', t.colors.card, t.colors.bg]} locations={[0, 0.55, 1]} style={{ flex: 1, padding: 12 }}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ position: 'absolute', width: size * 0.7, height: size * 0.7, borderRadius: size, backgroundColor: tint, opacity: 0.18 }} />
-            <View style={{ position: 'absolute', width: size * 0.45, height: size * 0.45, borderRadius: size, backgroundColor: tint, opacity: 0.18 }} />
-            <Icon name={icon} size={size * 0.24} color={t.colors.text} />
+        <LinearGradient colors={[...colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
+          <Glints size={size} seed={index} />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: size * 0.12 }}>
+            <View style={{ position: 'absolute', width: size * 0.62, height: size * 0.62, borderRadius: size, backgroundColor: '#fff', opacity: 0.16 }} />
+            <View style={{ position: 'absolute', width: size * 0.42, height: size * 0.42, borderRadius: size, backgroundColor: '#fff', opacity: 0.18 }} />
+            <Icon name={icon} size={size * 0.3} color="#fff" />
           </View>
-          <Txt variant="medium" numberOfLines={2} style={{ fontSize: 14, lineHeight: 18 }}>
-            {title}
-          </Txt>
-          <Txt variant="muted" numberOfLines={1} style={{ fontSize: 12, lineHeight: 16, marginTop: 2 }}>
-            {subtitle}
-          </Txt>
+          <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']} style={{ paddingHorizontal: 12, paddingTop: 18, paddingBottom: 12 }}>
+            <Text numberOfLines={2} style={{ color: '#fff', fontFamily: t.fonts.bodyMedium, fontSize: 15, lineHeight: 19 }}>
+              {title}
+            </Text>
+            <Text numberOfLines={1} style={{ color: 'rgba(255,255,255,0.8)', fontFamily: t.fonts.body, fontSize: 12, lineHeight: 16, marginTop: 2 }}>
+              {subtitle}
+            </Text>
+          </LinearGradient>
         </LinearGradient>
       </View>
     </Pressable>

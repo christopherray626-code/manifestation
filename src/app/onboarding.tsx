@@ -195,7 +195,7 @@ export default function Onboarding() {
       {step === 'listen' && (
         <View style={{ gap: 18, alignItems: 'center' }}>
           <Txt variant="label">Your first listen</Txt>
-          <Art icon={first.icon} index={TRACKS.indexOf(first)} size={200} />
+          <Art icon={first.icon} index={TRACKS.indexOf(first)} tone={first.id} size={200} />
           <Txt variant="display" style={{ textAlign: 'center' }}>
             {first.title}
           </Txt>

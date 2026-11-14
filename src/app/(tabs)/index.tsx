@@ -159,6 +159,7 @@ export default function HomeScreen() {
                 key={g.id}
                 icon={categoryIcon(g.category)}
                 index={i}
+                tone={g.category === 'other' ? undefined : g.category}
                 title={g.title}
                 subtitle={dayLabel(g, t.romanDays)}
                 size={128}

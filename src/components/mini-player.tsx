@@ -37,7 +37,7 @@ export function MiniPlayer() {
         borderWidth: 1,
         borderColor: t.colors.border,
       }}>
-      <Art icon={track ? track.icon : categoryIcon(goal!.category)} index={Math.max(index, 0)} size={44} />
+      <Art icon={track ? track.icon : categoryIcon(goal!.category)} index={Math.max(index, 0)} tone={track ? track.id : goal!.category === 'other' ? undefined : goal!.category} size={44} />
       <View style={{ flex: 1 }}>
         <Txt variant="medium" numberOfLines={1}>
           {title}

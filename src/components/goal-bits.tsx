@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 
+import { Art } from '@/components/art';
 import { Card, Chip, ChipRow, Icon, Section, Txt, useTheme, type IconName } from '@/components/ui';
 import { dayOfGoal } from '@/lib/today';
 import type { Category, Goal, Rotation } from '@/lib/types';
@@ -65,7 +66,7 @@ export function GoalRow({ goal, index, onPress }: { goal: Goal; index: number; o
   return (
     <Card onPress={onPress}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <GoalIcon goal={goal} index={index} />
+        <Art icon={categoryIcon(goal.category)} index={index} tone={goal.category === 'other' ? undefined : goal.category} size={48} />
         <View style={{ flex: 1, gap: 2 }}>
           <Txt variant={t.goalIcon === 'none' && t.card !== 'line' ? 'medium' : 'title'} numberOfLines={1}>
             {goal.title}

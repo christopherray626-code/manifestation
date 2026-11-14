@@ -33,6 +33,7 @@ export function TrackGrid() {
                   key={id}
                   icon={track.icon}
                   index={TRACKS.indexOf(track)}
+                  tone={track.id}
                   title={track.title}
                   subtitle={`${track.lines.length} affirmations`}
                   size={size}

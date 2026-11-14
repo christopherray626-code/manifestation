@@ -68,7 +68,7 @@ export default function TrackScreen() {
     <Screen>
       <BackHeader title="" onBack={() => router.back()} />
       <View style={{ alignItems: 'center', gap: 14 }}>
-        <Art icon={track.icon} index={TRACKS.indexOf(track.parts?.[0] ?? track)} size={180} />
+        <Art icon={track.icon} index={TRACKS.indexOf(track.parts?.[0] ?? track)} tone={(track.parts?.[0] ?? track).id} size={180} />
         <View style={{ alignItems: 'center', gap: 4 }}>
           <Txt variant="display" style={{ textAlign: 'center' }}>
             {track.title}
