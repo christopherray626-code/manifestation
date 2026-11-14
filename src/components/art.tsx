@@ -165,11 +165,13 @@ export function ShelfCard({
         }}>
         <LinearGradient colors={[...colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }}>
           <Glints size={size} seed={index} />
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: size * 0.12 }}>
+          {/* The icon sits at the same height on every card, however many lines the title takes. */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.6, alignItems: 'center', justifyContent: 'center' }}>
             <View style={{ position: 'absolute', width: size * 0.62, height: size * 0.62, borderRadius: size, backgroundColor: '#fff', opacity: 0.16 }} />
             <View style={{ position: 'absolute', width: size * 0.42, height: size * 0.42, borderRadius: size, backgroundColor: '#fff', opacity: 0.18 }} />
             <Icon name={icon} size={size * 0.3} color="#fff" />
           </View>
+          <View style={{ flex: 1 }} />
           <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']} style={{ paddingHorizontal: 12, paddingTop: 18, paddingBottom: 12 }}>
             <Text numberOfLines={2} style={{ color: '#fff', fontFamily: t.fonts.bodyMedium, fontSize: 15, lineHeight: 19 }}>
               {title}
