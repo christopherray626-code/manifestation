@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AccessibilityInfo, Animated, Easing, Modal, Platform, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -391,24 +391,33 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
     AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
   }, []);
   const moving = playing && !still;
-  // Only there while it plays: they fade away on pause rather than sitting frozen over the cover.
+  // Only there while it plays: on pause they stop where they are and fade away from there.
   const [shown] = useState(() => new Animated.Value(playing ? 1 : 0));
   useEffect(() => {
-    Animated.timing(shown, { toValue: playing ? 1 : 0, duration: 600, useNativeDriver: true }).start();
+    Animated.timing(shown, { toValue: playing ? 1 : 0, duration: 800, useNativeDriver: true }).start();
   }, [playing, shown]);
+  // Where each line had got to when paused, so playing again carries on from there.
+  const paused = useRef<number[]>(drift.map(() => 0));
   useEffect(() => {
     if (!moving) return;
-    const loops = drift.map((v, i) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(i * 2300),
-          Animated.timing(v, { toValue: 1, duration: 22000 + (i % 3) * 5000, easing: Easing.linear, useNativeDriver: true }),
-          Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ]),
-      ),
-    );
+    const saved = paused.current;
+    const loops = drift.map((v, i) => {
+      const duration = 22000 + (i % 3) * 5000;
+      const rise = (ms: number) => Animated.timing(v, { toValue: 1, duration: ms, easing: Easing.linear, useNativeDriver: true });
+      const reset = Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true });
+      const at = saved[i];
+      return Animated.sequence([
+        // First time: stagger the starts. After a pause: finish the climb it was on.
+        at > 0 ? rise(duration * (1 - at)) : Animated.delay(i * 2300),
+        ...(at > 0 ? [reset] : []),
+        Animated.loop(Animated.sequence([rise(duration), reset])),
+      ]);
+    });
     loops.forEach((l) => l.start());
-    return () => loops.forEach((l) => l.stop());
+    return () => {
+      loops.forEach((l) => l.stop());
+      drift.forEach((v, i) => v.stopAnimation((value) => (saved[i] = value)));
+    };
   }, [moving, drift]);
   if (!lines.length) return null;
   return (
@@ -421,13 +430,14 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
             position: 'absolute',
             left: `${WHISPER_LEFT[i]}%`,
             width: '44%',
-            ...(moving ? { bottom: 200 } : { top: `${10 + i * 7}%` }),
+            // Laid out for drifting even while paused, so pausing never makes them jump.
+            ...(!still ? { bottom: 200 } : { top: `${10 + i * 7}%` }),
             color: t.colors.text,
             fontFamily: t.fonts.quote,
             fontStyle: 'italic',
             fontSize: WHISPER_SIZE[i],
-            opacity: moving ? v.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 0.08, 0.06, 0] }) : 0.05,
-            transform: moving ? [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [40, -height + 160] }) }] : [],
+            opacity: !still ? v.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 0.08, 0.06, 0] }) : 0.05,
+            transform: !still ? [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [40, -height + 160] }) }] : [],
           }}>
           {lines[(i * 7) % lines.length]}
         </Animated.Text>
