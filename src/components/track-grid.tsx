@@ -10,8 +10,8 @@ import { trackById, TRACK_GROUPS, TRACKS } from '@/lib/tracks';
 export function TrackGrid() {
   const { width } = useWindowDimensions();
   const [group, setGroup] = useState('all');
-  // Two columns inside the screen's side padding, with a 12pt gap; capped for tablets and the web.
-  const size = Math.floor((Math.min(width, 680) - 20 * 2 - 12) / 2);
+  // Three columns inside the screen's side padding, with 10pt gaps; capped for tablets and the web.
+  const size = Math.floor((Math.min(width, 680) - 20 * 2 - 10 * 2) / 3);
   const groups = TRACK_GROUPS.filter((g) => group === 'all' || g.id === group);
 
   return (
@@ -25,7 +25,7 @@ export function TrackGrid() {
 
       {groups.map((g) => (
         <Section key={g.id} label={g.label}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {g.tracks.map((id) => {
               const track = trackById(id)!;
               return (

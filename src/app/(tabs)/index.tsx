@@ -162,7 +162,6 @@ export default function HomeScreen() {
                 tone={g.category === 'other' ? undefined : g.category}
                 title={g.title}
                 subtitle={dayLabel(g, t.romanDays)}
-                size={128}
                 onPress={() => router.push({ pathname: '/goal/[id]', params: { id: g.id } })}
               />
             ))}
@@ -188,8 +187,8 @@ function NewGoalCard() {
       accessibilityRole="button"
       accessibilityLabel="New manifestation"
       style={({ pressed }) => ({
-        width: 128,
-        height: Math.round(128 * 1.35),
+        width: 108,
+        height: Math.round(108 * 1.2),
         borderRadius: Math.max(t.radius, 16),
         borderWidth: 1,
         borderStyle: 'dashed',

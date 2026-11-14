@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Icon, useTheme, type IconName } from '@/components/ui';
+import type { Theme } from '@/themes';
 
 /*
  * Card colours: a bright gradient per topic, so a shelf reads like a row of album covers rather than
@@ -44,9 +45,46 @@ const TONE_OF: Record<string, Palette> = {
   other: 'violet',
 };
 
-/** The three gradient colours for a track id or category, else by position. */
-export function paletteFor(tone: string | undefined, index: number) {
-  return PALETTES[(tone && TONE_OF[tone]) || ORDER[Math.abs(index) % ORDER.length]];
+/*
+ * How far each theme pulls card colours toward its own: `accent` blends in the theme's accent, `bg`
+ * sinks the dark end into the background, `soft` washes toward white (pastel on light themes) and
+ * `mute` takes saturation out (vintage on Old money and Tarot). Hustle stays loud.
+ */
+const MOODS: Record<string, { accent: number; bg: number; soft: number; mute: number }> = {
+  celestial: { accent: 0.18, bg: 0.35, soft: 0, mute: 0.2 },
+  aura: { accent: 0.22, bg: 0.3, soft: 0, mute: 0.1 },
+  tarot: { accent: 0.25, bg: 0.4, soft: 0, mute: 0.45 },
+  clean: { accent: 0.05, bg: 0, soft: 0.35, mute: 0.3 },
+  soft: { accent: 0.25, bg: 0, soft: 0.3, mute: 0.25 },
+  oldmoney: { accent: 0.25, bg: 0.4, soft: 0, mute: 0.5 },
+  hustle: { accent: 0.1, bg: 0.2, soft: 0, mute: 0 },
+};
+
+const toRgb = (hex: string) => {
+  const h = hex.replace('#', '').slice(0, 6);
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+};
+const toHex = (c: number[]) => '#' + c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mix = (a: number[], b: number[], t: number) => a.map((v, i) => v + (b[i] - v) * t);
+const grey = (c: number[], t: number) => {
+  const l = c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+  return mix(c, [l, l, l], t);
+};
+
+/** The three gradient colours for a track id or category (else by position), shaded for the theme. */
+export function paletteFor(tone: string | undefined, index: number, theme?: Theme) {
+  const base = PALETTES[(tone && TONE_OF[tone]) || ORDER[Math.abs(index) % ORDER.length]];
+  if (!theme) return base;
+  const mood = MOODS[theme.id] ?? MOODS.celestial;
+  const accent = toRgb(theme.colors.accent);
+  const bg = toRgb(theme.colors.bg);
+  return base.map((hex, i) => {
+    let c = grey(toRgb(hex), mood.mute);
+    c = mix(c, accent, mood.accent * (i === 2 ? 0.5 : 1));
+    if (mood.soft) c = mix(c, [255, 255, 255], mood.soft * (i === 2 ? 0.6 : 1));
+    if (mood.bg) c = mix(c, bg, mood.bg * [0, 0.4, 1][i]);
+    return toHex(c);
+  }) as unknown as readonly [string, string, string];
 }
 
 /** Soft light shapes and a few sparkles laid over a card's gradient. */
@@ -83,7 +121,7 @@ function Glints({ size, seed }: { size: number; seed: number }) {
 /** The picture for a goal or track: its bright gradient, soft light, and a white icon in a glow. */
 export function Art({ icon, index, size, selected, tone }: { icon: IconName; index: number; size: number; selected?: boolean; tone?: string }) {
   const t = useTheme();
-  const colors = paletteFor(tone, index);
+  const colors = paletteFor(tone, index, t);
   return (
     <View
       style={{
@@ -127,7 +165,7 @@ export function ShelfCard({
   subtitle,
   onPress,
   selected,
-  size = 128,
+  size = 108,
   tone,
 }: {
   icon: IconName;
@@ -136,14 +174,14 @@ export function ShelfCard({
   subtitle: string;
   onPress: () => void;
   selected?: boolean;
-  /** The card's width; it's a third taller than it is wide. */
+  /** The card's width; it's a fifth taller than it is wide. */
   size?: number;
   /** A track id or category, to pick the card's colours. */
   tone?: string;
 }) {
   const t = useTheme();
-  const colors = paletteFor(tone, index);
-  const height = Math.round(size * 1.35);
+  const colors = paletteFor(tone, index, t);
+  const height = Math.round(size * 1.2);
   return (
     <Pressable
       onPress={onPress}
@@ -169,11 +207,11 @@ export function ShelfCard({
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.6, alignItems: 'center', justifyContent: 'center' }}>
             <View style={{ position: 'absolute', width: size * 0.62, height: size * 0.62, borderRadius: size, backgroundColor: '#fff', opacity: 0.16 }} />
             <View style={{ position: 'absolute', width: size * 0.42, height: size * 0.42, borderRadius: size, backgroundColor: '#fff', opacity: 0.18 }} />
-            <Icon name={icon} size={size * 0.3} color="#fff" />
+            <Icon name={icon} size={size * 0.26} color="#fff" />
           </View>
           <View style={{ flex: 1 }} />
-          <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']} style={{ paddingHorizontal: 12, paddingTop: 18, paddingBottom: 12 }}>
-            <Text numberOfLines={2} style={{ color: '#fff', fontFamily: t.fonts.bodyMedium, fontSize: 15, lineHeight: 19 }}>
+          <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']} style={{ paddingHorizontal: 10, paddingTop: 14, paddingBottom: 10 }}>
+            <Text numberOfLines={2} style={{ color: '#fff', fontFamily: t.fonts.bodyMedium, fontSize: size < 120 ? 13 : 15, lineHeight: size < 120 ? 17 : 19 }}>
               {title}
             </Text>
             <Text numberOfLines={1} style={{ color: 'rgba(255,255,255,0.8)', fontFamily: t.fonts.body, fontSize: 12, lineHeight: 16, marginTop: 2 }}>
