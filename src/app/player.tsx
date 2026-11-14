@@ -40,6 +40,8 @@ export default function PlayerScreen() {
   const toneIndex = track ? Math.max(TRACKS.findIndex((x) => x.id === track.id), 0) : Math.max(goals.findIndex((g) => g.id === goalId), 0);
   const colors = paletteFor(tone, toneIndex, t);
   const subliminal = tape.mode === 'subliminal';
+  const session = useSession(tape.playing, subliminal ? 3 : (prefs.layers ?? 1), prefs.speed ?? 1);
+  const now = useNow(tape.playing && !!tape.endsAt);
 
   const changeFavorite = (affId: string) =>
     updateGoal(goalId, (g) => ({
@@ -57,6 +59,7 @@ export default function PlayerScreen() {
         locations={[0, 0.45, 0.95]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
+      <Aura colors={colors} playing={tape.playing} />
       {subliminal && <Whispers lines={list.map((a) => a.text)} playing={tape.playing} />}
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
@@ -85,6 +88,7 @@ export default function PlayerScreen() {
               <View style={{ alignItems: 'center', gap: 18 }}>
                 <View style={{ alignItems: 'center', justifyContent: 'center', width: 260, height: 260 }}>
                   <Ripples playing={tape.playing} color={colors[0]} />
+                  <Rising playing={tape.playing} />
                   <Breathing playing={tape.playing}>
                     <Art icon={icon} index={toneIndex} tone={tone} size={170} />
                   </Breathing>
@@ -117,13 +121,13 @@ export default function PlayerScreen() {
             ) : (
               <>
                 {before && (
-                  <Txt variant="body" numberOfLines={2} style={{ textAlign: 'center', color: t.colors.text, opacity: 0.32 }}>
+                  <Txt variant="body" numberOfLines={2} style={{ textAlign: 'center', color: t.colors.text, opacity: 0.3, fontSize: 14, lineHeight: 20 }}>
                     {before.text}
                   </Txt>
                 )}
                 <Lyric key={current ? current.id : 'none'} text={current ? current.text : goal ? 'No affirmations here yet.' : ''} />
                 {after && (
-                  <Txt variant="body" numberOfLines={2} style={{ textAlign: 'center', color: t.colors.text, opacity: 0.32 }}>
+                  <Txt variant="body" numberOfLines={2} style={{ textAlign: 'center', color: t.colors.text, opacity: 0.3, fontSize: 14, lineHeight: 20 }}>
                     {after.text}
                   </Txt>
                 )}
@@ -143,8 +147,13 @@ export default function PlayerScreen() {
 
           {/* Where you are in the tape: one segment per line. */}
           {!subliminal && list.length > 1 && <Segments count={list.length} at={tape.index} />}
-          <Txt variant="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 6, minHeight: 16 }}>
-            {tape.endsAt ? `Stops at ${new Date(tape.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
+          <Txt variant="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 8, minHeight: 16, color: t.colors.text, opacity: 0.8 }}>
+            {[
+              session.seconds ? `${session.clock} · about ${session.heard} affirmation${session.heard === 1 ? '' : 's'} heard` : '',
+              tape.endsAt ? `fades out in ${Math.max(1, Math.round((tape.endsAt - now) / 60000))} min` : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </Txt>
           {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
           {goal && !tape.ready && subliminal && (
@@ -343,7 +352,7 @@ export default function PlayerScreen() {
   );
 }
 
-/** The line being spoken, big, fading and rising in each time it changes. */
+/** The line being spoken, big, rising gently into place each time it changes. */
 function Lyric({ text }: { text: string }) {
   const t = useTheme();
   const [fade] = useState(() => new Animated.Value(0));
@@ -351,8 +360,18 @@ function Lyric({ text }: { text: string }) {
     Animated.timing(fade, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
   }, [fade]);
   return (
-    <Animated.View style={{ opacity: fade, transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>
-      <Txt variant="display" style={{ textAlign: 'center', fontSize: 28, lineHeight: 36, color: t.colors.text }}>
+    <Animated.View style={{ transform: [{ translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
+      <Txt
+        variant="display"
+        style={{
+          textAlign: 'center',
+          fontSize: 30,
+          lineHeight: 38,
+          color: t.colors.text,
+          textShadowColor: 'rgba(0,0,0,0.45)',
+          textShadowRadius: 14,
+          textShadowOffset: { width: 0, height: 1 },
+        }}>
         {text}
       </Txt>
     </Animated.View>
@@ -458,6 +477,138 @@ function Ripples({ playing, color }: { playing: boolean; color: string }) {
       ))}
     </>
   );
+}
+
+/** Big soft blobs in the track's colours drifting slowly behind the player, like a living aura. */
+function Aura({ colors, playing }: { colors: readonly string[]; playing: boolean }) {
+  const { width, height } = useWindowDimensions();
+  const [moves] = useState(() => [0, 1, 2].map(() => new Animated.Value(0)));
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
+  }, []);
+  const moving = playing && !still;
+  useEffect(() => {
+    if (!moving) return;
+    const loops = moves.map((m, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(m, { toValue: 1, duration: 9000 + i * 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(m, { toValue: 0, duration: 9000 + i * 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [moving, moves]);
+  const size = Math.max(width, 380) * 0.95;
+  const spots = [
+    { left: -size * 0.35, top: height * 0.05, dx: 60, dy: 40, color: colors[0] },
+    { left: width - size * 0.6, top: height * 0.28, dx: -50, dy: 70, color: colors[1] },
+    { left: width * 0.1 - size * 0.3, top: height * 0.55, dx: 70, dy: -50, color: colors[2] },
+  ];
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+      {spots.map((s, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: size,
+            height: size,
+            borderRadius: size,
+            backgroundColor: s.color,
+            opacity: 0.12,
+            transform: [
+              { translateX: moves[i].interpolate({ inputRange: [0, 1], outputRange: [0, s.dx] }) },
+              { translateY: moves[i].interpolate({ inputRange: [0, 1], outputRange: [0, s.dy] }) },
+              { scale: moves[i].interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
+            ],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** Tiny sparkles rising around the subliminal cover while it plays. */
+function Rising({ playing }: { playing: boolean }) {
+  const [dots] = useState(() => Array.from({ length: 7 }, () => new Animated.Value(0)));
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!playing || still) {
+      dots.forEach((d) => d.setValue(0));
+      return;
+    }
+    const loops = dots.map((d, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 900),
+          Animated.timing(d, { toValue: 1, duration: 5200 + (i % 3) * 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(d, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [playing, still, dots]);
+  return (
+    <>
+      {dots.map((d, i) => (
+        <Animated.View
+          key={i}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: RISE_X[i],
+            bottom: 30,
+            width: RISE_SIZE[i],
+            height: RISE_SIZE[i],
+            borderRadius: 6,
+            backgroundColor: '#fff',
+            opacity: d.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.8, 0.5, 0] }),
+            transform: [{ translateY: d.interpolate({ inputRange: [0, 1], outputRange: [0, -220] }) }],
+          }}
+        />
+      ))}
+    </>
+  );
+}
+const RISE_X = [24, 60, 205, 228, 40, 190, 120];
+const RISE_SIZE = [4, 6, 5, 3, 3, 6, 4];
+
+/**
+ * How long this session has played and roughly how many affirmations went in: one line every few
+ * seconds per voice, faster at higher speeds, three voices at once in a subliminal.
+ */
+function useSession(playing: boolean, layers: number, speed: number) {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [playing]);
+  const heard = Math.floor((seconds / SECONDS_PER_LINE) * layers * speed);
+  const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  return { seconds, heard, clock };
+}
+// A typical line plus the pause after it, at normal speed.
+const SECONDS_PER_LINE = 4;
+
+/** The time now, refreshed every half minute while `on`, for the timer countdown. */
+function useNow(on: boolean) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on) return;
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [on]);
+  return now;
 }
 
 /** A slow breath for the subliminal cover, still when Reduce motion is on. */
