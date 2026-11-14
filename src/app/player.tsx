@@ -391,6 +391,11 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
     AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
   }, []);
   const moving = playing && !still;
+  // Only there while it plays: they fade away on pause rather than sitting frozen over the cover.
+  const [shown] = useState(() => new Animated.Value(playing ? 1 : 0));
+  useEffect(() => {
+    Animated.timing(shown, { toValue: playing ? 1 : 0, duration: 600, useNativeDriver: true }).start();
+  }, [playing, shown]);
   useEffect(() => {
     if (!moving) return;
     const loops = drift.map((v, i) =>
@@ -407,7 +412,7 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
   }, [moving, drift]);
   if (!lines.length) return null;
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+    <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', opacity: shown }}>
       {drift.map((v, i) => (
         <Animated.Text
           key={i}
@@ -427,7 +432,7 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
           {lines[(i * 7) % lines.length]}
         </Animated.Text>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 const WHISPER_LEFT = [4, 38, 12, 52, 20, 44, 8, 30, 56];
