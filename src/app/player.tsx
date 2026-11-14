@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AccessibilityInfo, Animated, Easing, Modal, Platform, Pressable, ScrollView, Share, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Modal, Platform, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Art, paletteFor } from '@/components/art';
@@ -9,6 +9,7 @@ import { Creating, VOICING_MESSAGES } from '@/components/creating';
 import { categoryIcon } from '@/components/goal-bits';
 import { Slider } from '@/components/slider';
 import { SoundList } from '@/components/sound-list';
+import { SOUND_LIST } from '@/lib/sounds';
 import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
 import { Chip, ChipRow, Icon, Section, Txt, useTheme, type IconName } from '@/components/ui';
@@ -56,6 +57,7 @@ export default function PlayerScreen() {
         locations={[0, 0.45, 0.95]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
+      {subliminal && <Whispers lines={list.map((a) => a.text)} playing={tape.playing} />}
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
           {/* What's playing: its card, its name, and a way out. */}
@@ -80,13 +82,37 @@ export default function PlayerScreen() {
           {/* The affirmation is the star: the one playing, big, with its neighbours fading above and below. */}
           <View style={{ flex: 1, justifyContent: 'center', gap: 18, paddingVertical: 12 }}>
             {subliminal ? (
-              <View style={{ alignItems: 'center', gap: 14 }}>
-                <Breathing playing={tape.playing}>
-                  <Art icon={icon} index={toneIndex} tone={tone} size={150} />
-                </Breathing>
-                <Txt variant="quote" style={{ textAlign: 'center', color: t.colors.text, opacity: 0.85 }}>
-                  {tape.playing ? 'Playing below the sound…' : `${list.length} affirmations, layered under the sound`}
-                </Txt>
+              <View style={{ alignItems: 'center', gap: 18 }}>
+                <View style={{ alignItems: 'center', justifyContent: 'center', width: 260, height: 260 }}>
+                  <Ripples playing={tape.playing} color={colors[0]} />
+                  <Breathing playing={tape.playing}>
+                    <Art icon={icon} index={toneIndex} tone={tone} size={170} />
+                  </Breathing>
+                </View>
+                <View style={{ alignItems: 'center', gap: 4 }}>
+                  <Txt variant="display" style={{ textAlign: 'center', fontSize: 24, lineHeight: 30, color: t.colors.text }}>
+                    {tape.playing ? 'Sinking in…' : 'Ready to sink in'}
+                  </Txt>
+                  <Txt variant="muted" style={{ textAlign: 'center', color: t.colors.text, opacity: 0.75 }}>
+                    {`${list.length} affirmations, just below the sound`}
+                  </Txt>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
+                  {[
+                    '3 voices layered',
+                    SOUND_LIST.find((x) => x.id === prefs.sound)?.label,
+                    FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label,
+                    prefs.timer ? `${timerLabel(prefs.timer)} timer` : undefined,
+                  ]
+                    .filter((x): x is string => !!x)
+                    .map((label) => (
+                      <View key={label} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' }}>
+                        <Txt variant="muted" style={{ color: t.colors.text, fontSize: 12 }}>
+                          {label}
+                        </Txt>
+                      </View>
+                    ))}
+                </View>
               </View>
             ) : (
               <>
@@ -130,7 +156,7 @@ export default function PlayerScreen() {
           )}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 34, marginTop: 10, marginBottom: 18 }}>
-            <Pressable onPress={() => tape.skip(-1)} hitSlop={12} disabled={subliminal} accessibilityRole="button" accessibilityLabel="Previous line" style={{ opacity: subliminal ? 0.3 : 1 }}>
+            <Pressable onPress={() => tape.skip(-1)} hitSlop={12} disabled={subliminal} accessibilityRole="button" accessibilityLabel="Previous line" style={{ opacity: subliminal ? 0 : 1 }}>
               <Icon name="play-back" size={28} color={t.colors.text} />
             </Pressable>
             <Pressable
@@ -149,7 +175,7 @@ export default function PlayerScreen() {
               })}>
               <Icon name={tape.playing ? 'pause' : 'play'} size={30} color={t.colors.onAccent} />
             </Pressable>
-            <Pressable onPress={() => tape.skip(1)} hitSlop={12} disabled={subliminal} accessibilityRole="button" accessibilityLabel="Next line" style={{ opacity: subliminal ? 0.3 : 1 }}>
+            <Pressable onPress={() => tape.skip(1)} hitSlop={12} disabled={subliminal} accessibilityRole="button" accessibilityLabel="Next line" style={{ opacity: subliminal ? 0 : 1 }}>
               <Icon name="play-forward" size={28} color={t.colors.text} />
             </Pressable>
           </View>
@@ -330,6 +356,107 @@ function Lyric({ text }: { text: string }) {
         {text}
       </Txt>
     </Animated.View>
+  );
+}
+
+/**
+ * The affirmations themselves, drifting slowly up behind a subliminal, faint as words underwater: you
+ * see that they're there without reading them, which is the point. Still when Reduce motion is on.
+ */
+function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
+  const t = useTheme();
+  const { height } = useWindowDimensions();
+  const [still, setStill] = useState(false);
+  const [drift] = useState(() => Array.from({ length: 9 }, () => new Animated.Value(0)));
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
+  }, []);
+  const moving = playing && !still;
+  useEffect(() => {
+    if (!moving) return;
+    const loops = drift.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 2300),
+          Animated.timing(v, { toValue: 1, duration: 22000 + (i % 3) * 5000, easing: Easing.linear, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [moving, drift]);
+  if (!lines.length) return null;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+      {drift.map((v, i) => (
+        <Animated.Text
+          key={i}
+          numberOfLines={2}
+          style={{
+            position: 'absolute',
+            left: `${WHISPER_LEFT[i]}%`,
+            width: '44%',
+            ...(moving ? { bottom: 200 } : { top: `${10 + i * 7}%` }),
+            color: t.colors.text,
+            fontFamily: t.fonts.quote,
+            fontStyle: 'italic',
+            fontSize: WHISPER_SIZE[i],
+            opacity: moving ? v.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 0.08, 0.06, 0] }) : 0.05,
+            transform: moving ? [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [40, -height + 160] }) }] : [],
+          }}>
+          {lines[(i * 7) % lines.length]}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
+const WHISPER_LEFT = [4, 38, 12, 52, 20, 44, 8, 30, 56];
+const WHISPER_SIZE = [15, 19, 13, 17, 14, 21, 16, 13, 18];
+
+/** Soft rings spreading out from the cover while a subliminal plays, like sound moving through water. */
+function Ripples({ playing, color }: { playing: boolean; color: string }) {
+  const [rings] = useState(() => [0, 1, 2].map(() => new Animated.Value(0)));
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!playing || still) {
+      rings.forEach((r) => r.setValue(0));
+      return;
+    }
+    const loops = rings.map((r, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 1400),
+          Animated.timing(r, { toValue: 1, duration: 4200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(r, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [playing, still, rings]);
+  return (
+    <>
+      {rings.map((r, i) => (
+        <Animated.View
+          key={i}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: 170,
+            height: 170,
+            borderRadius: 60,
+            borderWidth: 2,
+            borderColor: color,
+            opacity: r.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 0.6, 0] }),
+            transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [1, 1.55] }) }],
+          }}
+        />
+      ))}
+    </>
   );
 }
 
