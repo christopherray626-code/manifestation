@@ -37,6 +37,8 @@ export default function TabLayout() {
       screenListeners={{ tabPress: () => tap() }}
       screenOptions={{
         headerShown: false,
+        // Tabs slide and fade a touch as you switch, rather than snapping.
+        animation: 'shift',
         tabBarActiveTintColor: t.colors.accent,
         tabBarInactiveTintColor: t.colors.tabInactive,
         tabBarStyle: { backgroundColor: t.colors.bg, borderTopColor: t.colors.border },

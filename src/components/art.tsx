@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Icon, useTheme, type IconName } from '@/components/ui';
+import { usePress } from '@/lib/motion';
 import type { Theme } from '@/themes';
 
 /*
@@ -182,13 +183,16 @@ export function ShelfCard({
   const t = useTheme();
   const colors = paletteFor(tone, index, t);
   const height = Math.round(size * 1.2);
+  const press = usePress(0.94);
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${subtitle}`}
-      style={({ pressed }) => ({ width: size, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-      <View
+      style={{ width: size }}>
+      <Animated.View
         style={{
           width: size,
           height,
@@ -219,7 +223,7 @@ export function ShelfCard({
             </Text>
           </LinearGradient>
         </LinearGradient>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }

@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -17,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { usePress, useRise } from '@/lib/motion';
 import { useStore } from '@/lib/store';
 import { getTheme, type Theme } from '@/themes';
 
@@ -185,19 +187,20 @@ export function Orb({ size = 150 }: { size?: number }) {
 
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   const t = useTheme();
+  // Each time the screen comes into view, its content rises softly into place.
+  const [visit, setVisit] = useState(0);
+  useFocusEffect(useCallback(() => setVisit((n) => n + 1), []));
+  const rise = useRise(visit);
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <Ambient />
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         {scroll ? (
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
-            {children}
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <Animated.View style={[styles.content, rise]}>{children}</Animated.View>
           </ScrollView>
         ) : (
-          <View style={[styles.content, { flex: 1 }]}>{children}</View>
+          <Animated.View style={[styles.content, { flex: 1 }, rise]}>{children}</Animated.View>
         )}
       </SafeAreaView>
     </View>
@@ -278,12 +281,11 @@ export function Card({
   style?: StyleProp<ViewStyle>;
 }) {
   const t = useTheme();
+  const press = usePress(0.98);
   if (!onPress) return <View style={[cardStyle(t, highlight), style]}>{children}</View>;
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [cardStyle(t, highlight), style, pressed && { opacity: 0.75 }]}>
-      {children}
+    <Pressable onPress={onPress} onPressIn={press.onPressIn} onPressOut={press.onPressOut}>
+      <Animated.View style={[cardStyle(t, highlight), style, press.style]}>{children}</Animated.View>
     </Pressable>
   );
 }
@@ -302,18 +304,18 @@ export function Button({
   const t = useTheme();
   const primary = kind === 'primary';
   const color = primary ? t.colors.onAccent : t.colors.muted;
+  const press = usePress(0.96);
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.button,
-        { borderRadius: t.radius },
-        primary
-          ? { backgroundColor: t.colors.accent }
-          : { borderWidth: 1, borderColor: t.colors.border, borderStyle: 'dashed' },
-        pressed && { opacity: 0.75 },
-      ]}>
+    <Pressable onPress={onPress} onPressIn={press.onPressIn} onPressOut={press.onPressOut} accessibilityRole="button">
+      <Animated.View
+        style={[
+          styles.button,
+          { borderRadius: t.radius },
+          primary
+            ? { backgroundColor: t.colors.accent }
+            : { borderWidth: 1, borderColor: t.colors.border, borderStyle: 'dashed' },
+          press.style,
+        ]}>
       {icon && <Ionicons name={icon} size={18} color={color} />}
       <Text
         style={{
@@ -325,23 +327,29 @@ export function Button({
         }}>
         {title}
       </Text>
+      </Animated.View>
     </Pressable>
   );
 }
 
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
   const t = useTheme();
+  const press = usePress(0.93);
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      hitSlop={2}
-      style={[
-        styles.chip,
-        { borderColor: selected ? t.colors.accent : t.colors.border },
-        selected && { backgroundColor: t.colors.accent + '22' },
-      ]}>
+      hitSlop={2}>
+      <Animated.View
+        style={[
+          styles.chip,
+          { borderColor: selected ? t.colors.accent : t.colors.border },
+          selected && { backgroundColor: t.colors.accent + '22' },
+          press.style,
+        ]}>
       <Text
         style={{
           fontFamily: t.fonts.body,
@@ -350,6 +358,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
         }}>
         {label}
       </Text>
+      </Animated.View>
     </Pressable>
   );
 }

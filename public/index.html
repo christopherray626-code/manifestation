@@ -34,6 +34,85 @@
         flex: 1;
       }
     </style>
+    <!--
+      Launch animation, drawn by the page itself so it shows before the app has loaded: a glow swells,
+      a star turns in, three sparks pop, then it all lifts away. It takes the saved theme's colours
+      (read straight from storage) and goes quiet for people who turn on Reduce motion.
+    -->
+    <script>
+      (function () {
+        var THEMES = {"celestial":["#0B1026","#D9B95C"],"aura":["#1A0B2E","#E7B8FF"],"tarot":["#15110D","#C9A365"],"clean":["#FAFAF8","#1C1C1A"],"soft":["#F6EEE6","#B9786A"],"oldmoney":["#14120F","#D8C49A"],"hustle":["#0A0A0A","#C6FF3D"]};
+        var c = THEMES.celestial;
+        try {
+          var saved = JSON.parse(localStorage.getItem('manifest-state-v1') || '{}');
+          c = THEMES[(saved.settings || {}).themeId] || c;
+        } catch (e) {}
+        var r = document.documentElement.style;
+        r.setProperty('--s-bg', c[0]);
+        r.setProperty('--s-ink', c[1]);
+      })();
+    </script>
+    <style id="splash-style">
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--s-bg, #0B1026);
+        animation: s-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1.35s forwards;
+      }
+      #splash .s-glow {
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--s-ink, #D9B95C) 0%, transparent 68%);
+        opacity: 0;
+        animation: s-glow 1.3s ease-out forwards;
+      }
+      #splash svg {
+        width: 96px;
+        height: 96px;
+        overflow: visible;
+      }
+      #splash .s-star {
+        fill: var(--s-ink, #D9B95C);
+        transform-origin: 50px 50px;
+        transform: scale(0) rotate(-90deg);
+        animation: s-star 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s forwards;
+      }
+      #splash .s-spark {
+        fill: var(--s-ink, #D9B95C);
+        transform-box: fill-box;
+        transform-origin: center;
+        transform: scale(0);
+        animation: s-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+      #splash .s-spark.a { animation-delay: 0.55s; }
+      #splash .s-spark.b { animation-delay: 0.7s; }
+      #splash .s-spark.c { animation-delay: 0.85s; }
+      @keyframes s-glow {
+        0% { opacity: 0; transform: scale(0.4); }
+        60% { opacity: 0.45; }
+        100% { opacity: 0.3; transform: scale(1.15); }
+      }
+      @keyframes s-star {
+        to { transform: scale(1) rotate(0deg); }
+      }
+      @keyframes s-pop {
+        to { transform: scale(1); }
+      }
+      @keyframes s-out {
+        to { opacity: 0; transform: scale(1.06); visibility: hidden; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash { animation: s-out 0.3s linear 0.6s forwards; }
+        #splash .s-glow, #splash .s-star, #splash .s-spark { animation: none; transform: none; opacity: 1; }
+        #splash .s-glow { opacity: 0.3; }
+      }
+    </style>
   </head>
 
   <body>
@@ -43,5 +122,24 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
+    <div id="splash" aria-hidden="true">
+      <div class="s-glow"></div>
+      <svg viewBox="0 0 100 100">
+        <path class="s-star" d="M50 6 C54 38 62 46 94 50 C62 54 54 62 50 94 C46 62 38 54 6 50 C38 46 46 38 50 6Z" />
+        <path class="s-spark a" d="M86 10 C87 17 89 19 96 20 C89 21 87 23 86 30 C85 23 83 21 76 20 C83 19 85 17 86 10Z" />
+        <path class="s-spark b" d="M14 72 C15 77 16 78 21 79 C16 80 15 81 14 86 C13 81 12 80 7 79 C12 78 13 77 14 72Z" />
+        <path class="s-spark c" d="M84 78 C84.6 81 85.4 81.8 88 82.4 C85.4 83 84.6 83.8 84 86.8 C83.4 83.8 82.6 83 80 82.4 C82.6 81.8 83.4 81 84 78Z" />
+      </svg>
+    </div>
+    <script>
+      // Take it off the page once it has lifted away (or after a few seconds if the tab was hidden,
+      // when animations don't run).
+      (function () {
+        var el = document.getElementById('splash');
+        var done = function () { if (el && el.parentNode) el.parentNode.removeChild(el); };
+        el.addEventListener('animationend', function (e) { if (e.animationName === 's-out') done(); });
+        setTimeout(done, 4000);
+      })();
+    </script>
   </body>
 </html>
