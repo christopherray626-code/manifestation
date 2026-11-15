@@ -17,6 +17,7 @@ import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
+import { NATIVE } from '@/lib/motion';
 import { TRACKS } from '@/lib/tracks';
 import { FREQUENCY_LIST } from '@/lib/frequencies';
 import { FREQUENCY_DEFAULT_VOLUME, MODES, SUBLIMINAL_LAYER_CHOICES } from '@/lib/use-tape';
@@ -40,6 +41,7 @@ export default function PlayerScreen() {
   const toneIndex = track ? Math.max(TRACKS.findIndex((x) => x.id === track.id), 0) : Math.max(goals.findIndex((g) => g.id === goalId), 0);
   const colors = paletteFor(tone, toneIndex, t);
   const subliminal = tape.mode === 'subliminal';
+  const opening = useOpening();
   const session = useSession(tape.playing, subliminal ? (prefs.subLayers ?? 3) : (prefs.layers ?? 1), prefs.speed ?? 1);
   const now = useNow(tape.playing && !!tape.endsAt);
 
@@ -52,7 +54,7 @@ export default function PlayerScreen() {
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
+    <Animated.View style={[{ flex: 1, backgroundColor: t.colors.bg }, opening]}>
       {/* The track's own colour glows down from the top and melts into the theme. */}
       <LinearGradient
         colors={[colors[1] + 'CC', colors[2] + '88', t.colors.bg]}
@@ -366,8 +368,28 @@ export default function PlayerScreen() {
         messages={VOICING_MESSAGES}
         detail={prep ? `${prep.done} of ${prep.total} lines${prep.waiting ? ' · pausing a moment so the voice server can catch up' : ''}` : undefined}
       />
-    </View>
+    </Animated.View>
   );
+}
+
+/**
+ * The player sliding up into place when it opens. The stack's own slide doesn't run on the web, so
+ * the screen does it itself; still for people who turn on Reduce motion.
+ */
+function useOpening() {
+  const [v] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((still) => {
+        if (still) return v.setValue(1);
+        Animated.spring(v, { toValue: 1, useNativeDriver: NATIVE, speed: 14, bounciness: 4 }).start(() => v.setValue(1));
+      })
+      .catch(() => v.setValue(1));
+  }, [v]);
+  return {
+    opacity: v.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1, 1] }),
+    transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [80, 0] }) }],
+  };
 }
 
 /** The line being spoken, big, rising gently into place each time it changes. */

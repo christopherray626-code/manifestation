@@ -16,13 +16,14 @@ import {
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, Platform, StyleSheet } from 'react-native';
 
 import { useTheme } from '@/components/ui';
 import { useReminders } from '@/lib/reminders';
 import { setHapticsEnabled } from '@/lib/haptics';
 import { StreakCelebration } from '@/components/streak';
+import { NATIVE } from '@/lib/motion';
 import { PlayerProvider } from '@/lib/player';
 import { StoreProvider, useStore } from '@/lib/store';
 import { setAppOpens } from '@/lib/today';
@@ -129,6 +130,29 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       </Stack>
       <StreakCelebration />
+      <ThemeFade />
     </ThemeProvider>
   );
+}
+
+/**
+ * Switching themes: a sheet of the old background colour, laid over the new look, fades away, so the
+ * change washes through instead of snapping.
+ */
+function ThemeFade() {
+  const t = useTheme();
+  const [shown, setShown] = useState(t.colors.bg);
+  const [from, setFrom] = useState<string | null>(null);
+  const [fade] = useState(() => new Animated.Value(0));
+  if (shown !== t.colors.bg) {
+    setFrom(shown);
+    setShown(t.colors.bg);
+  }
+  useEffect(() => {
+    if (!from) return;
+    fade.setValue(1);
+    Animated.timing(fade, { toValue: 0, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: NATIVE }).start(() => setFrom(null));
+  }, [from, fade]);
+  if (!from) return null;
+  return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: from, opacity: fade }]} />;
 }
