@@ -771,7 +771,7 @@ function PanelCard({ label, right, tinted, children }: { label: string; right?: 
 
 // The loudest each layer goes at the top of its slider. A subliminal voice stays far under the music
 // even at full; frequencies are pure tones, which sound loud, so they top out low.
-const SUBLIMINAL_MAX = 0.06;
+const SUBLIMINAL_MAX = 0.072; // was 0.06; Chris and other listeners like to just hear the voices at the top
 // How fast the voice can read. Phones top out at double speed.
 const SPEEDS = [1, 1.25, 1.5, 1.75, 2];
 const FREQUENCY_MAX = 0.4;
