@@ -427,7 +427,9 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
   const t = useTheme();
   const { height } = useWindowDimensions();
   const [still, setStill] = useState(false);
-  const [drift] = useState(() => Array.from({ length: 9 }, () => new Animated.Value(0)));
+  // One clock for every line, each a fixed step apart, so they stay evenly spaced and never pile up.
+  const [clock] = useState(() => new Animated.Value(0));
+  const [places] = useState(() => WHISPER_PHASE.map((phase) => Animated.modulo(Animated.add(clock, phase), 1)));
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setStill).catch(() => {});
   }, []);
@@ -437,47 +439,41 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
   useEffect(() => {
     Animated.timing(shown, { toValue: playing ? 1 : 0, duration: 800, useNativeDriver: true }).start();
   }, [playing, shown]);
-  // Where each line had got to when paused, so playing again carries on from there.
-  const paused = useRef<number[]>(drift.map(() => 0));
+  // Where the clock had got to when paused, so playing again carries on from there.
+  const paused = useRef(0);
   useEffect(() => {
     if (!moving) return;
-    const saved = paused.current;
-    const loops = drift.map((v, i) => {
-      const duration = 22000 + (i % 3) * 5000;
-      const rise = (ms: number) => Animated.timing(v, { toValue: 1, duration: ms, easing: Easing.linear, useNativeDriver: true });
-      const reset = Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true });
-      const at = saved[i];
-      return Animated.sequence([
-        // First time: stagger the starts. After a pause: finish the climb it was on.
-        at > 0 ? rise(duration * (1 - at)) : Animated.delay(i * 2300),
-        ...(at > 0 ? [reset] : []),
-        Animated.loop(Animated.sequence([rise(duration), reset])),
-      ]);
-    });
-    loops.forEach((l) => l.start());
+    const at = paused.current;
+    const rise = (from: number) =>
+      Animated.timing(clock, { toValue: 1, duration: WHISPER_MS * (1 - from), easing: Easing.linear, useNativeDriver: true });
+    const reset = Animated.timing(clock, { toValue: 0, duration: 0, useNativeDriver: true });
+    const run = Animated.sequence([rise(at), reset, Animated.loop(Animated.sequence([rise(0), reset]))]);
+    run.start();
     return () => {
-      loops.forEach((l) => l.stop());
-      drift.forEach((v, i) => v.stopAnimation((value) => (saved[i] = value)));
+      run.stop();
+      clock.stopAnimation((value) => (paused.current = value));
     };
-  }, [moving, drift]);
+  }, [moving, clock]);
   if (!lines.length) return null;
   return (
     <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', opacity: shown }}>
-      {drift.map((v, i) => (
+      {places.map((v, i) => (
         <Animated.Text
           key={i}
           numberOfLines={2}
           style={{
             position: 'absolute',
-            left: `${WHISPER_LEFT[i]}%`,
+            // Two columns that never overlap: even lines on the left, odd on the right.
+            left: i % 2 ? '52%' : '4%',
             width: '44%',
+            textAlign: i % 2 ? 'right' : 'left',
             // Laid out for drifting even while paused, so pausing never makes them jump.
-            ...(!still ? { bottom: 200 } : { top: `${10 + i * 7}%` }),
+            ...(!still ? { bottom: 200 } : { top: `${12 + i * 12}%` }),
             color: t.colors.text,
             fontFamily: t.fonts.quote,
             fontStyle: 'italic',
             fontSize: WHISPER_SIZE[i],
-            opacity: !still ? v.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 0.08, 0.06, 0] }) : 0.05,
+            opacity: !still ? v.interpolate({ inputRange: [0, 0.12, 0.85, 1], outputRange: [0, 0.08, 0.06, 0] }) : 0.05,
             transform: !still ? [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [40, -height + 160] }) }] : [],
           }}>
           {lines[(i * 7) % lines.length]}
@@ -486,8 +482,10 @@ function Whispers({ lines, playing }: { lines: string[]; playing: boolean }) {
     </Animated.View>
   );
 }
-const WHISPER_LEFT = [4, 38, 12, 52, 20, 44, 8, 30, 56];
-const WHISPER_SIZE = [15, 19, 13, 17, 14, 21, 16, 13, 18];
+// One full climb, and where each line starts on it: three per column, the columns half a step apart.
+const WHISPER_MS = 30000;
+const WHISPER_PHASE = [0, 1 / 6, 1 / 3, 1 / 2, 2 / 3, 5 / 6];
+const WHISPER_SIZE = [15, 18, 14, 17, 16, 15];
 
 /** Soft rings spreading out from the cover while a subliminal plays, like sound moving through water. */
 function Ripples({ playing, color }: { playing: boolean; color: string }) {
