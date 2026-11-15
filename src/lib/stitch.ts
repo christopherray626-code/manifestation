@@ -133,9 +133,11 @@ export async function stitch(
   }
 
   const out = new Float32Array(length);
+  // Many overlapping voices add up; scale so 15 layers sit at about the loudness 3 do.
+  const level = layers > 3 ? Math.pow(3 / layers, 0.75) : 1;
   for (let k = 0; k < layers; k++) {
     const shift = Math.floor((length * k) / layers);
-    for (let i = 0; i < length; i++) out[(i + shift) % length] += seq[i];
+    for (let i = 0; i < length; i++) out[(i + shift) % length] += seq[i] * level;
   }
   return {
     uri: URL.createObjectURL(wav([out])),

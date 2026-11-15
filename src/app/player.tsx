@@ -19,7 +19,7 @@ import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
 import { TRACKS } from '@/lib/tracks';
 import { FREQUENCY_LIST } from '@/lib/frequencies';
-import { FREQUENCY_DEFAULT_VOLUME, MODES } from '@/lib/use-tape';
+import { FREQUENCY_DEFAULT_VOLUME, MODES, SUBLIMINAL_LAYER_CHOICES } from '@/lib/use-tape';
 
 
 export default function PlayerScreen() {
@@ -40,7 +40,7 @@ export default function PlayerScreen() {
   const toneIndex = track ? Math.max(TRACKS.findIndex((x) => x.id === track.id), 0) : Math.max(goals.findIndex((g) => g.id === goalId), 0);
   const colors = paletteFor(tone, toneIndex, t);
   const subliminal = tape.mode === 'subliminal';
-  const session = useSession(tape.playing, subliminal ? 3 : (prefs.layers ?? 1), prefs.speed ?? 1);
+  const session = useSession(tape.playing, subliminal ? (prefs.subLayers ?? 3) : (prefs.layers ?? 1), prefs.speed ?? 1);
   const now = useNow(tape.playing && !!tape.endsAt);
 
   const changeFavorite = (affId: string) =>
@@ -103,7 +103,7 @@ export default function PlayerScreen() {
                 </View>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
                   {[
-                    '3 voices layered',
+                    `${prefs.subLayers ?? 3} voices layered`,
                     SOUND_LIST.find((x) => x.id === prefs.sound)?.label,
                     FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label,
                     prefs.timer ? `${timerLabel(prefs.timer)} timer` : undefined,
@@ -246,6 +246,24 @@ export default function PlayerScreen() {
           </ChipRow>
           <Txt variant="muted">Faster tapes fit more repetitions in, without changing the pitch.</Txt>
         </PanelCard>
+        {subliminal && Platform.OS === 'web' && (
+          <PanelCard label="Layers">
+            <ChipRow>
+              {SUBLIMINAL_LAYER_CHOICES.map((n) => (
+                <Chip
+                  key={n}
+                  label={`${n} layers`}
+                  selected={(prefs.subLayers ?? 3) === n}
+                  onPress={() => {
+                    setPrefs({ subLayers: n });
+                    tape.restart();
+                  }}
+                />
+              ))}
+            </ChipRow>
+            <Txt variant="muted">How many copies of your affirmations play over each other, each starting at a different line. More layers make a denser wash of voices under the sound.</Txt>
+          </PanelCard>
+        )}
         {!subliminal && Platform.OS === 'web' && (
           <PanelCard label="Layers">
             <ChipRow>
