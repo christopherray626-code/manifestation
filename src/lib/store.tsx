@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { withToday } from '@/lib/streak';
+import { applyTrackEdits } from '@/lib/tracks';
 import type { BoardPhoto, Goal, JournalEntry, SavedMix, Settings } from '@/lib/types';
 
 export const STORE_KEY = 'manifest-state-v1';
@@ -54,6 +55,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .then((raw) => {
         if (!raw) return;
         const saved = JSON.parse(raw) as Partial<State>;
+        applyTrackEdits(saved.settings?.trackEdits);
         setState({
           settings: { ...defaultState.settings, ...saved.settings },
           goals: saved.goals ?? [],
@@ -73,8 +75,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const store: Store = {
     ...state,
     loaded,
-    updateSettings: (patch) =>
-      setState((s) => ({ ...s, settings: { ...s.settings, ...patch } })),
+    updateSettings: (patch) => {
+      if ('trackEdits' in patch) applyTrackEdits(patch.trackEdits);
+      setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+    },
     addGoal: (goal) => setState((s) => ({ ...s, goals: [goal, ...s.goals] })),
     updateGoal: (id, change) =>
       setState((s) => ({ ...s, goals: s.goals.map((g) => (g.id === id ? change(g) : g)) })),

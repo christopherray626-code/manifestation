@@ -1,5 +1,5 @@
 import type { IconName } from '@/components/ui';
-import type { Affirmation } from '@/lib/types';
+import type { Affirmation, TrackEdit } from '@/lib/types';
 
 /*
  * Ready-made affirmation tracks for the goals most people come in with. The big-goal tracks (money,
@@ -273,6 +273,25 @@ export const TRACKS: Track[] = [
 const MERGED: Record<string, string> = { wealth: 'money-magnet' };
 
 /** Track ids joined with "+" make a combined track, e.g. "money-magnet+luck". */
+/** The built-in wording, kept so developer-mode edits can be undone. */
+const ORIGINAL = new Map(TRACKS.map((t) => [t.id, { title: t.title, lines: [...t.lines] }]));
+
+export const originalTrack = (id: string) => ORIGINAL.get(id);
+
+/**
+ * Developer mode: puts your own wording into the ready-made tracks, everywhere they're used, and puts
+ * the built-in wording back for any track without an edit.
+ */
+export function applyTrackEdits(edits: Record<string, TrackEdit> | undefined) {
+  for (const track of TRACKS) {
+    const base = ORIGINAL.get(track.id)!;
+    const edit = edits?.[track.id];
+    const lines = edit?.lines.map((l) => l.trim()).filter(Boolean);
+    track.title = edit?.title?.trim() || base.title;
+    track.lines = lines?.length ? lines : [...base.lines];
+  }
+}
+
 export const comboId = (ids: string[]) => ids.join('+');
 
 /**

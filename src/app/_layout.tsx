@@ -122,6 +122,8 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="journal" />
         <Stack.Screen name="mix" />
         <Stack.Screen name="streak" />
+        <Stack.Screen name="dev/index" />
+        <Stack.Screen name="dev/[id]" />
         <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="player" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />

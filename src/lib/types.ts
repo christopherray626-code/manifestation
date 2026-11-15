@@ -120,7 +120,14 @@ export type Settings = {
   opens?: number;
   /** What the Listen tab last played, for "Continue listening" on Home. */
   lastPlayed?: { kind: 'goal' | 'track' | 'mix'; id: string };
+  /** Shows the developer tools in Settings. */
+  devMode?: boolean;
+  /** Developer mode: your own wording for ready-made tracks, by track id. Used in place of the built-in lines. */
+  trackEdits?: Record<string, TrackEdit>;
 };
+
+/** A ready-made track rewritten in developer mode. */
+export type TrackEdit = { title?: string; lines: string[] };
 
 export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

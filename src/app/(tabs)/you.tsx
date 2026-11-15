@@ -64,6 +64,25 @@ export default function YouScreen() {
         </ChipRow>
       </Section>
 
+      <Section label="Developer mode">
+        <ChipRow>
+          <Chip label="On" selected={!!settings.devMode} onPress={() => updateSettings({ devMode: true })} />
+          <Chip label="Off" selected={!settings.devMode} onPress={() => updateSettings({ devMode: false })} />
+        </ChipRow>
+        {settings.devMode && (
+          <Card onPress={() => router.push('/dev')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Icon name="create-outline" size={22} color={t.colors.accent} />
+              <View style={{ flex: 1 }}>
+                <Txt variant="medium">Edit ready-made tracks</Txt>
+                <Txt variant="muted">{`${Object.keys(settings.trackEdits ?? {}).length} rewritten`}</Txt>
+              </View>
+              <Icon name="chevron-forward" size={18} color={t.colors.muted} />
+            </View>
+          </Card>
+        )}
+      </Section>
+
       <Card onPress={() => router.push('/paywall')}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <Icon name="star-outline" size={22} color={t.colors.accent} />
