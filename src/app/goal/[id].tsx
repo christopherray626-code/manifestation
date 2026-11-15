@@ -26,11 +26,14 @@ export default function GoalScreen() {
   const [note, setNote] = useState('');
   const [writing, setWriting] = useState(false);
   // Lines recorded in their own voice are left alone, so the recording still matches the words.
-  const enhanceable = goal ? goal.affirmations.filter((a) => !a.recording && !/^It[’']s done\b/.test(a.text)) : [];
+  const canEnhance = (a: Affirmation) => !a.recording && !/^It[’']s done\b/.test(a.text);
+  const enhanceable = goal ? goal.affirmations.filter(canEnhance) : [];
+  // Which lines the current Enhance is for: all of them, or the one whose sparkle was tapped.
+  const [enhancing, setEnhancing] = useState<string[]>([]);
   const enhance = useEnhance(
     goal ? { title: goal.title, details: goal.details, feeling: goal.feeling, name: settings.name } : {},
     (lines) => {
-      const byId = new Map(enhanceable.map((a, i) => [a.id, lines[i]]));
+      const byId = new Map(enhancing.map((affId, i) => [affId, lines[i]]));
       updateGoal(id, (g) => ({
         ...g,
         affirmations: g.affirmations.map((a) => (byId.has(a.id) && byId.get(a.id) !== a.text ? { ...a, text: byId.get(a.id)! } : a)),
@@ -147,10 +150,13 @@ export default function GoalScreen() {
           <Txt variant="muted">Edit, remove, or keep. Tap the heart on your favorites.</Txt>
           {enhanceable.length > 0 && (
             <Button
-              title={enhance.busy ? 'Enhancing…' : 'Enhance my affirmations'}
+              title={enhance.busy && enhancing.length > 1 ? 'Enhancing…' : 'Enhance my affirmations'}
               icon="sparkles-outline"
               kind="ghost"
-              onPress={() => enhance.start(enhanceable.map((a) => a.text))}
+              onPress={() => {
+                setEnhancing(enhanceable.map((a) => a.id));
+                enhance.start(enhanceable.map((a) => a.text));
+              }}
             />
           )}
           {!!enhance.error && <Txt variant="muted">{enhance.error}</Txt>}
@@ -195,6 +201,21 @@ export default function GoalScreen() {
                     )}
                   </Pressable>
                   <View style={{ flexDirection: 'row', gap: 14, paddingTop: 2 }}>
+                    {canEnhance(a) && (
+                      <Pressable
+                        onPress={() => {
+                          setEnhancing([a.id]);
+                          enhance.start([a.text]);
+                        }}
+                        hitSlop={8}
+                        accessibilityLabel="Enhance this affirmation">
+                        <Icon
+                          name={enhance.busy && enhancing[0] === a.id && enhancing.length === 1 ? 'hourglass-outline' : 'sparkles-outline'}
+                          size={19}
+                          color={t.colors.muted}
+                        />
+                      </Pressable>
+                    )}
                     <Pressable
                       onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id, start: String(i) } })}
                       hitSlop={8}
