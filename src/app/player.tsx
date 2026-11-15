@@ -202,7 +202,7 @@ export default function PlayerScreen() {
               paddingHorizontal: 6,
             }}>
             <BarButton
-              icon={subliminal ? 'eye-off-outline' : 'mic-outline'}
+              icon={subliminal ? 'water-outline' : 'chatbubble-ellipses-outline'}
               label={MODES[tape.mode].label}
               onPress={() => setMode(subliminal ? 'spoken' : 'subliminal')}
             />
