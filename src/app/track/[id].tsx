@@ -1,14 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Art } from '@/components/art';
-import { BackHeader, Button, Card, Chip, ChipRow, Screen, Txt, useTheme } from '@/components/ui';
+import { useEnhance } from '@/components/enhance';
+import { BackHeader, Button, Card, Chip, ChipRow, Icon, Screen, Txt, useTheme } from '@/components/ui';
 import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
-import { comboId, trackById, TRACKS, type Track } from '@/lib/tracks';
+import { comboId, isClosing, originalTrack, trackById, TRACKS, type Track } from '@/lib/tracks';
 import { DEFAULT_VOICE, makeAffirmation, newId, type Category, type Goal, type Settings } from '@/lib/types';
 
 // Which goal category a track's copy lands in when you make it your own.
@@ -40,13 +41,38 @@ function goalFromTrack(track: Track, rotation: Settings['defaultRotation']): Goa
 export default function TrackScreen() {
   const t = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { addGoal, settings } = useStore();
+  const { addGoal, settings, updateSettings } = useStore();
   const { open } = usePlayer();
   const base = trackById(id);
   // Other tracks to play along with this one, back to back.
   const [added, setAdded] = useState<string[]>([]);
   const baseIds = base?.parts?.map((p) => p.id) ?? (base ? [base.id] : []);
   const track = trackById(comboId([...baseIds, ...added]));
+  // Developer mode, single tracks only: enhance the whole track or one line, then pick what to keep.
+  const dev = !!settings.devMode && !!base && !base.parts;
+  const [enhancing, setEnhancing] = useState<number[]>([]);
+  const [devNote, setDevNote] = useState('');
+  const enhance = useEnhance({ title: base ? base.title : '' }, (next) => {
+    if (!base) return;
+    const lines = [...base.lines];
+    enhancing.forEach((at, i) => (lines[at] = next[i]));
+    updateSettings({ trackEdits: { ...settings.trackEdits, [base.id]: { title: base.title, lines } } });
+    setDevNote('Saved on this phone. Copy your rewrites from Settings when you’re happy.');
+  });
+  function enhanceLines(at: number[]) {
+    if (!base) return;
+    const keep = at.filter((i) => !isClosing(base.lines[i]));
+    setEnhancing(keep);
+    setDevNote('');
+    enhance.start(keep.map((i) => base.lines[i]));
+  }
+  function backToOriginal() {
+    if (!base) return;
+    const edits = { ...settings.trackEdits };
+    delete edits[base.id];
+    updateSettings({ trackEdits: edits });
+    setDevNote('Back to the original wording.');
+  }
   const toggle = (other: string) => setAdded((now) => (now.includes(other) ? now.filter((x) => x !== other) : [...now, other]));
 
   if (!track) {
@@ -89,6 +115,36 @@ export default function TrackScreen() {
         </ChipRow>
       </View>
 
+      {dev && (
+        <Card>
+          <View style={{ gap: 10 }}>
+            <Txt variant="label">Developer</Txt>
+            <Button
+              title={enhance.busy && enhancing.length > 1 ? 'Enhancing…' : 'Enhance this track'}
+              icon="sparkles-outline"
+              onPress={() => enhanceLines(track.lines.map((_, i) => i))}
+            />
+            <Txt variant="muted">Or tap the sparkle on one line. You see before and after, and keep only what you like.</Txt>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Button title="Edit by hand" icon="create-outline" kind="ghost" onPress={() => router.push(`/dev/${track.id}`)} />
+              </View>
+              {!!settings.trackEdits?.[track.id] && (
+                <View style={{ flex: 1 }}>
+                  <Button title="Original" icon="refresh" kind="ghost" onPress={backToOriginal} />
+                </View>
+              )}
+            </View>
+            {!!enhance.error && <Txt variant="muted">{enhance.error}</Txt>}
+            {!!devNote && <Txt variant="muted">{devNote}</Txt>}
+            {!!settings.trackEdits?.[track.id] && (
+              <Txt variant="muted">{`Rewritten. The original had ${originalTrack(track.id)?.lines.length ?? 0} lines.`}</Txt>
+            )}
+          </View>
+          {enhance.sheet}
+        </Card>
+      )}
+
       <Card>
         <View style={{ gap: 12 }}>
           {track.lines.map((line, i) => (
@@ -99,6 +155,15 @@ export default function TrackScreen() {
               <Txt variant="body" style={{ flex: 1 }}>
                 {line}
               </Txt>
+              {dev && !isClosing(line) && (
+                <Pressable onPress={() => enhanceLines([i])} hitSlop={8} accessibilityLabel={`Enhance line ${i + 1}`}>
+                  <Icon
+                    name={enhance.busy && enhancing.length === 1 && enhancing[0] === i ? 'hourglass-outline' : 'sparkles-outline'}
+                    size={18}
+                    color={t.colors.muted}
+                  />
+                </Pressable>
+              )}
             </View>
           ))}
         </View>
