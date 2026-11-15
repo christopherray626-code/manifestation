@@ -602,12 +602,14 @@ const RISE_SIZE = [4, 6, 5, 3, 3, 6, 4];
  * seconds per voice, faster at higher speeds, three voices at once in a subliminal.
  */
 function useSession(playing: boolean, layers: number, speed: number) {
-  const [seconds, setSeconds] = useState(0);
+  // The count itself lives in the player (src/lib/player.tsx); this just refreshes the display.
+  const { sessionSeconds } = usePlayer();
+  const [seconds, setSeconds] = useState(() => sessionSeconds());
   useEffect(() => {
-    if (!playing) return;
-    const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
+    const tick = () => setSeconds(sessionSeconds());
+    const timer = setInterval(tick, playing ? 1000 : 5000);
     return () => clearInterval(timer);
-  }, [playing]);
+  }, [playing, sessionSeconds]);
   const heard = Math.floor((seconds / SECONDS_PER_LINE) * layers * speed);
   const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   return { seconds, heard, clock };

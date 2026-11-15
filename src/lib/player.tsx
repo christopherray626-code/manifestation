@@ -44,10 +44,15 @@ type Player = {
   open: (source?: Source) => void;
   /** Set when today's goal was just reached: the streak to celebrate. */
   celebrate: number | null;
+  /** Seconds played of what's loaded, kept through pauses and closing the player. */
+  sessionSeconds: () => number;
   dismissCelebration: () => void;
 };
 
 const PlayerContext = createContext<Player | null>(null);
+
+// After this long paused, pressing play starts a fresh session.
+const SESSION_BREAK_MS = 30 * 60 * 1000;
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const { goals, settings, updateSettings, updateGoal, mixes } = useStore();
@@ -85,6 +90,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // The daily goal: listening time adds up while a tape plays; reaching the goal counts the day.
   const [celebrate, setCelebrate] = useState<number | null>(null);
+
+  // This listening session: counted here, not on the player screen, so pausing or closing the player
+  // doesn't start it over. A different track, or coming back after a long break, starts a new one.
+  const session = useRef({ key: '', seconds: 0, since: null as number | null, pausedAt: null as number | null });
+  const sessionKey = source ? `${source.kind}:${source.id}` : '';
+  useEffect(() => {
+    const s = session.current;
+    const now = Date.now();
+    if (s.key !== sessionKey) {
+      session.current = { key: sessionKey, seconds: 0, since: tape.playing ? now : null, pausedAt: null };
+      return;
+    }
+    if (tape.playing && s.since === null) {
+      if (s.pausedAt && now - s.pausedAt > SESSION_BREAK_MS) s.seconds = 0;
+      s.since = now;
+    } else if (!tape.playing && s.since !== null) {
+      s.seconds += (now - s.since) / 1000;
+      s.since = null;
+      s.pausedAt = now;
+    }
+  }, [tape.playing, sessionKey]);
+  const sessionSeconds = () => {
+    const s = session.current;
+    return Math.floor(s.seconds + (s.since !== null ? (Date.now() - s.since) / 1000 : 0));
+  };
   const latestSettings = useRef(settings);
   useEffect(() => {
     latestSettings.current = settings;
@@ -208,6 +238,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     open,
     celebrate,
     dismissCelebration: () => setCelebrate(null),
+    sessionSeconds,
   };
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
