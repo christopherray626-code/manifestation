@@ -133,7 +133,7 @@ export async function stitch(
   }
 
   const out = new Float32Array(length);
-  // Many overlapping voices add up; scale so 15 layers sit at about the loudness 3 do.
+  // Many overlapping voices add up; scale so 20 layers sit near the loudness 3 do.
   const level = layers > 3 ? Math.pow(3 / layers, 0.75) : 1;
   for (let k = 0; k < layers; k++) {
     const shift = Math.floor((length * k) / layers);

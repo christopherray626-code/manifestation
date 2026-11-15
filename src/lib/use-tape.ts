@@ -66,7 +66,8 @@ export const SUBLIMINAL_LEVELS = [
 /** Overlapping voice tracks in a subliminal, each starting at a different affirmation. */
 const SUBLIMINAL_LAYERS = 3;
 /** The layer counts offered for subliminals. */
-export const SUBLIMINAL_LAYER_CHOICES = [3, 5, 7, 10, 15];
+// r/Subliminal: stacking 15-20 at once is common and there's no agreed limit; consistency matters more.
+export const SUBLIMINAL_LAYER_CHOICES = [3, 5, 10, 15, 20];
 
 export function modeOf(prefs: PlayerPrefs): TapeMode {
   // Older saves may say "sleep", which became subliminal with a timer.
@@ -344,7 +345,7 @@ export function useTape({
     const start = Math.max(files.indexOf(from), 0);
     const spokenLayers = Math.min(Math.max(latest.current.prefs.layers ?? 1, 1), 3, files.length);
     // The web build mixes any number of layers into one track, even more than there are lines.
-    const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), 15);
+    const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), 20);
     stitch(
       files.map((i) => uris[i]!),
       start,

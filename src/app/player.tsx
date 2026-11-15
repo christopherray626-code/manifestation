@@ -263,7 +263,8 @@ export default function PlayerScreen() {
                 />
               ))}
             </ChipRow>
-            <Txt variant="muted">How many copies of your affirmations play over each other, each starting at a different line. More layers make a denser wash of voices under the sound.</Txt>
+            <Txt variant="muted">How many copies of your affirmations play over each other, each starting at a different line. Stacking 15 to 20 is common. If you feel worn out after listening, use fewer.</Txt>
+            <Txt variant="muted">What matters most is listening every day, not how many layers.</Txt>
           </PanelCard>
         )}
         {!subliminal && Platform.OS === 'web' && (

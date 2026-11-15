@@ -52,7 +52,7 @@ export type PlayerPrefs = {
   speed?: number;
   /** Spoken tapes: how many voices read at once (1 to 3). Missing means 1. */
   layers?: number;
-  /** Subliminals: how many copies of the tape overlap (3 to 15). Missing means 3. */
+  /** Subliminals: how many copies of the tape overlap (3 to 20). Missing means 3. */
   subLayers?: number;
   /** 0-1 levels. */
   voiceVolume: number;
