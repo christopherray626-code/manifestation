@@ -26,6 +26,7 @@ import { StreakCelebration } from '@/components/streak';
 import { PlayerProvider } from '@/lib/player';
 import { StoreProvider, useStore } from '@/lib/store';
 import { setAppOpens } from '@/lib/today';
+import { useWidget } from '@/widget/use-widget';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -60,6 +61,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
   const t = useTheme();
   const ready = fontsReady && loaded;
   useReminders(settings.reminders, goals, ready && settings.onboarded);
+  useWidget(goals, settings, ready);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();

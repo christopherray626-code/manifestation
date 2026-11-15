@@ -4,7 +4,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { withToday } from '@/lib/streak';
 import type { BoardPhoto, Goal, JournalEntry, SavedMix, Settings } from '@/lib/types';
 
-const KEY = 'manifest-state-v1';
+export const STORE_KEY = 'manifest-state-v1';
+const KEY = STORE_KEY;
 
 type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[]; board: BoardPhoto[]; mixes: SavedMix[] };
 
