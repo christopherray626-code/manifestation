@@ -57,3 +57,21 @@ Chris's own style (from examples he shared; never copy his lines, write new ones
 - **A dash for an afterthought that adds emotion**: "..., it's like magic."
 
 The tracks for money, wealth, success, confidence, love, luck and glow up are written this way.
+
+## From r/Subliminal (via Reddit Answers, Nov 2026)
+
+Folded into the writer and the Enhance prompt in `api/write.ts`:
+
+- **Sensory and felt:** "Every time I see myself, I notice how much more… has become", not just "I have…".
+- **Adverbs of ease and certainty:** effortlessly, naturally, automatically, constantly, permanently,
+  undeniably. Used sparingly, one per line at most.
+- **Releasing, said positively:** "I am free from…", "I release…" instead of "I have no…".
+- **A reason ("because")** and **the person's name** now and then (both already in the guide above).
+- **Booster lines** ("I get results fast") are an idea in Nexus, not in the writer yet.
+
+## Enhance
+
+The Enhance button (a manifestation's page, and the developer-mode track editor) sends the person's own
+lines to `api/write.ts` with `mode: 'enhance'`. It rewrites each one for one, keeping its meaning and its
+"I"/"you" perspective, and adds one or two of the moves above. They pick which rewrites to keep. Lines
+recorded in their own voice and "It's done." lines are left alone.

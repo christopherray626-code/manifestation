@@ -42,8 +42,12 @@ How to write them:
   a double bind where both options lead to the goal ("Whether it comes this week or next, it's already
   on its way."), future pacing ("Tomorrow you'll wake up and it will still be true."), a plain truth
   followed by the step ("You've made it through every hard day so far, and you're getting stronger.").
-- Use their own details: real, sensory, specific moments they can picture.
-- Say what they want, never what they don't (write "calm", not "not anxious").
+- Use their own details: real, sensory, specific moments they can picture. Write what they'd see, hear
+  and feel, and how it lands: "Every time you check your account, you smile at how much it's grown."
+- Now and then use an adverb of ease, certainty or permanence: effortlessly, naturally, automatically,
+  constantly, permanently, undeniably. One per line at most, and not in every line.
+- Say what they want, never what they don't (write "calm", not "not anxious"). To let something go,
+  use "free from" or "release": "You're free from worrying about money."
 - Frame identity, not just outcome: "I am the kind of person who…".
 - Rhythm matters: short, even, easy to say. A repeated structure or the odd rhyme helps. Keep each
   under 20 words, vary how they start.
@@ -51,6 +55,20 @@ How to write them:
 - Nothing negative, no hedging ("I hope", "I try"), no quotes, emojis, hashtags or numbering.
 
 Reply with only the affirmations, one per line.`;
+
+// Enhance: rewrite their own lines, one for one, keeping what each one says.
+const ENHANCE_GUIDE = `${WRITING_GUIDE.replace(/\n\nReply with only[\s\S]*$/, '')}
+
+Now you're enhancing affirmations the person wrote themselves. Many are bare ("I am rich"). Rewrite each
+one so it hits harder, using the style above:
+- Keep what each line is about and its meaning. Don't swap in a different goal or a new topic.
+- Keep its perspective: an "I" line stays "I", a "you" line stays "you". Keep a "why" question a question.
+- Make it vivid and felt: a sensory moment, an emotion, a reason with "because", an assumption word, or
+  an adverb of ease. Pick one or two per line, never all of them, and vary which across the set.
+- Keep it natural to say aloud and under about 22 words. Shorter is fine if it's already strong.
+- If a line is already strong, change it only lightly. A line starting "It's done" stays exactly as is.
+
+Reply with the same number of lines, numbered to match ("1. …"), in the same order, and nothing else.`;
 
 const clip = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -67,6 +85,8 @@ async function POST(request: Request) {
   } catch {
     return reply(400, 'Send JSON with the goal.');
   }
+
+  if (body.mode === 'enhance') return enhance(key, body);
 
   const title = clip(body.title, 200);
   if (!title) return reply(400, 'The goal needs a name.');
@@ -114,6 +134,61 @@ async function POST(request: Request) {
     .slice(0, count);
   if (!affirmations.length) return reply(502, 'Claude sent back nothing usable.');
   return Response.json({ affirmations });
+}
+
+async function ask(key: string, system: string, content: string, maxTokens: number) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content }],
+    }),
+  });
+  if (!res.ok) {
+    console.error('Anthropic error', res.status, await res.text());
+    return null;
+  }
+  const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+  return (data.content ?? []).map((c) => (c.type === 'text' ? c.text ?? '' : '')).join('\n');
+}
+
+/** Rewrites the person's own lines, one for one. Any line that doesn't come back keeps its old wording. */
+async function enhance(key: string, body: Record<string, unknown>) {
+  const lines = Array.isArray(body.lines)
+    ? body.lines.filter((t): t is string => typeof t === 'string').slice(0, 20).map((t) => t.trim().slice(0, 300))
+    : [];
+  if (!lines.length) return reply(400, 'Send the lines to enhance.');
+  const title = clip(body.title, 200);
+  const details = clip(body.details, 800);
+  const feeling = clip(body.feeling, 200);
+  const name = clip(body.name, 60);
+  const about = [
+    title && `What they're manifesting: ${title}`,
+    details && `Details: ${details}`,
+    feeling && `How it will feel: ${feeling}`,
+    name && `Their name: ${name}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const text = await ask(
+    key,
+    ENHANCE_GUIDE,
+    `${about}\n\nEnhance these:\n${lines.map((l, i) => `${i + 1}. ${l}`).join('\n')}`,
+    3000,
+  );
+  if (text == null) return reply(502, "Claude couldn't enhance them right now.");
+  const got: string[] = [];
+  for (const row of text.split('\n')) {
+    const m = row.match(/^\s*(\d+)[.)]\s*(.+)$/);
+    if (!m) continue;
+    const i = Number(m[1]) - 1;
+    const line = m[2].replace(/^["“']|["”']$/g, '').trim();
+    if (i >= 0 && i < lines.length && line.length > 3 && line.length <= 240) got[i] = line;
+  }
+  return Response.json({ lines: lines.map((l, i) => got[i] ?? l) });
 }
 
 /** Lets us check the setup without spending anything. */

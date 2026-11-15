@@ -2,6 +2,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { useEnhance } from '@/components/enhance';
 import { BackHeader, Button, Field, Screen, Section, Txt } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { originalTrack, TRACKS } from '@/lib/tracks';
@@ -14,6 +15,10 @@ export default function DevTrack() {
   const [title, setTitle] = useState(track ? track.title : '');
   const [text, setText] = useState(track ? track.lines.join('\n') : '');
   const [saved, setSaved] = useState('');
+  const enhance = useEnhance({ title }, (next) => {
+    setText(next.join('\n'));
+    setSaved('Enhanced. Save to keep it.');
+  });
   if (!track) return <Redirect href="/dev" />;
   const base = originalTrack(track.id)!;
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -56,6 +61,14 @@ export default function DevTrack() {
           style={{ minHeight: 360 }}
         />
       </Section>
+      <Button
+        title={enhance.busy ? 'Enhancing…' : 'Enhance'}
+        icon="sparkles-outline"
+        kind="ghost"
+        onPress={() => enhance.start(text.split('\n').map((l) => l.trim()).filter(Boolean))}
+      />
+      {!!enhance.error && <Txt variant="muted">{enhance.error}</Txt>}
+      {enhance.sheet}
       <Button title="Save" icon="checkmark" onPress={save} />
       {!!saved && <Txt variant="muted">{saved}</Txt>}
       <View style={{ flexDirection: 'row', gap: 10 }}>

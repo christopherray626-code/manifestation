@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 
+import { useEnhance } from '@/components/enhance';
 import { RotationPicker } from '@/components/goal-bits';
 import { BackHeader, Button, Card, Field, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { writeAffirmationsSmart } from '@/lib/affirmations';
@@ -24,6 +25,18 @@ export default function GoalScreen() {
   const [showRotation, setShowRotation] = useState(false);
   const [note, setNote] = useState('');
   const [writing, setWriting] = useState(false);
+  // Lines recorded in their own voice are left alone, so the recording still matches the words.
+  const enhanceable = goal ? goal.affirmations.filter((a) => !a.recording && !/^It[’']s done\b/.test(a.text)) : [];
+  const enhance = useEnhance(
+    goal ? { title: goal.title, details: goal.details, feeling: goal.feeling, name: settings.name } : {},
+    (lines) => {
+      const byId = new Map(enhanceable.map((a, i) => [a.id, lines[i]]));
+      updateGoal(id, (g) => ({
+        ...g,
+        affirmations: g.affirmations.map((a) => (byId.has(a.id) && byId.get(a.id) !== a.text ? { ...a, text: byId.get(a.id)! } : a)),
+      }));
+    },
+  );
 
   if (!goal) {
     return (
@@ -132,7 +145,17 @@ export default function GoalScreen() {
 
         <Section label="Your affirmations">
           <Txt variant="muted">Edit, remove, or keep. Tap the heart on your favorites.</Txt>
+          {enhanceable.length > 0 && (
+            <Button
+              title={enhance.busy ? 'Enhancing…' : 'Enhance my affirmations'}
+              icon="sparkles-outline"
+              kind="ghost"
+              onPress={() => enhance.start(enhanceable.map((a) => a.text))}
+            />
+          )}
+          {!!enhance.error && <Txt variant="muted">{enhance.error}</Txt>}
         </Section>
+        {enhance.sheet}
 
         {goal.affirmations.map((a, i) => {
           const isToday = today?.id === a.id;

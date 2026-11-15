@@ -229,3 +229,42 @@ export async function writeAffirmationsSmart(
   }
   return writeAffirmations(goal, existing, count);
 }
+
+/**
+ * Enhance: the Claude writer rewrites the person's own lines one for one, richer and more vivid, in the
+ * app's style. Sent in batches so a long list doesn't time out. Returns null if the writer can't be
+ * reached; any single line it couldn't do comes back unchanged.
+ */
+export async function enhanceLines(
+  lines: string[],
+  about: { title?: string; details?: string; feeling?: string; name?: string } = {},
+): Promise<string[] | null> {
+  if (SERVER === undefined || !lines.length) return null;
+  const BATCH = 10;
+  const batches: string[][] = [];
+  for (let i = 0; i < lines.length; i += BATCH) batches.push(lines.slice(i, i + BATCH));
+  try {
+    const done = await Promise.all(
+      batches.map(async (batch) => {
+        const stop = new AbortController();
+        const timer = setTimeout(() => stop.abort(), 45000);
+        try {
+          const res = await fetch(`${SERVER}/api/write`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'enhance', lines: batch, ...about }),
+            signal: stop.signal,
+          });
+          if (!res.ok) throw new Error(String(res.status));
+          const { lines: got } = (await res.json()) as { lines?: string[] };
+          return batch.map((l, i) => got?.[i] ?? l);
+        } finally {
+          clearTimeout(timer);
+        }
+      }),
+    );
+    return done.flat();
+  } catch {
+    return null;
+  }
+}
