@@ -76,8 +76,8 @@ const VOICINGS = [
 /**
  * Builds the track. `uris` are in tape order and play from `from`; the track ends with a gap so it loops
  * cleanly. With `layers` over 1, copies of the sequence overlap, each a fraction of the way through, mixed
- * into one loop: identical copies for subliminals, or, with `voiced`, copies in a slightly different
- * pitch, quieter and to either side, for a layered spoken tape.
+ * into one loop, each in a slightly different pitch, level and place between the ears: up to 20 for a
+ * subliminal, or, with `voiced`, up to 3 clearer voices for a layered spoken tape.
  */
 export async function stitch(
   uris: string[],
@@ -108,12 +108,15 @@ export async function stitch(
     at += data.length + gap;
   }
 
-  if (voiced && layers > 1) {
+  if (layers > 1) {
     // Stereo, so the extra voices can sit to the sides.
     const left = new Float32Array(length);
     const right = new Float32Array(length);
-    const used = VOICINGS.slice(0, layers);
-    const level = 1 / Math.max(1, used.reduce((n, v) => n + v.gain, 0) * 0.75);
+    const used = voiced ? VOICINGS.slice(0, layers) : subliminalVoicings(layers);
+    const level = voiced
+      ? 1 / Math.max(1, used.reduce((n, v) => n + v.gain, 0) * 0.75)
+      : // Many overlapping voices add up; scale so 20 layers sit near the loudness 3 do.
+        (layers > 3 ? Math.pow(3 / layers, 0.75) : 1) / (used.reduce((n, v) => n + v.gain, 0) / layers);
     used.forEach((v, k) => {
       const shift = Math.floor((length * k) / layers);
       const l = v.gain * level * Math.cos(((v.pan + 1) * Math.PI) / 4);
@@ -132,18 +135,27 @@ export async function stitch(
     return { uri: URL.createObjectURL(wav([left, right])), starts: startSamples.map((s) => s / RATE), order };
   }
 
-  const out = new Float32Array(length);
-  // Many overlapping voices add up; scale so 20 layers sit near the loudness 3 do.
-  const level = layers > 3 ? Math.pow(3 / layers, 0.75) : 1;
-  for (let k = 0; k < layers; k++) {
-    const shift = Math.floor((length * k) / layers);
-    for (let i = 0; i < length; i++) out[(i + shift) % length] += seq[i] * level;
-  }
   return {
-    uri: URL.createObjectURL(wav([out])),
+    uri: URL.createObjectURL(wav([seq])),
     starts: startSamples.map((s) => s / RATE),
     order,
   };
+}
+
+/**
+ * Subliminal layers, each a little different, as r/Subliminal advises: its own slight pitch (up to about
+ * 8% up or down), its own level, and its own place between the ears, so a stack sounds like a soft crowd
+ * instead of one smeared voice. The first layer stays at normal pitch, full level and centred.
+ */
+function subliminalVoicings(layers: number) {
+  return Array.from({ length: layers }, (_, k) => {
+    if (k === 0) return { rate: 1, gain: 1, pan: 0 };
+    // Spread evenly but unordered (golden-ratio steps), so neighbouring layers differ.
+    const a = (k * 0.618034) % 1;
+    const b = (k * 0.754878 + 0.3) % 1;
+    const c = (k * 0.569840 + 0.6) % 1;
+    return { rate: 1 + (a * 2 - 1) * 0.08, gain: 0.55 + b * 0.45, pan: (c * 2 - 1) * 0.8 };
+  });
 }
 
 /** 16-bit WAV (mono or stereo), which every browser plays and can speed up without changing pitch. */
