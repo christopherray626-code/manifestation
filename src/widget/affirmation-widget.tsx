@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 
-import { paletteFor } from '@/components/art';
-import { STORE_KEY } from '@/lib/store';
+import { paletteFor } from '@/lib/palette';
+import { STORE_KEY } from '@/lib/storage-key';
 import { setAppOpens, todaysAffirmation } from '@/lib/today';
 import type { Goal, Settings } from '@/lib/types';
 import { getTheme } from '@/themes';

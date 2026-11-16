@@ -5,7 +5,9 @@ import { withToday } from '@/lib/streak';
 import { applyTrackEdits } from '@/lib/tracks';
 import type { BoardPhoto, Goal, JournalEntry, SavedMix, Settings } from '@/lib/types';
 
-export const STORE_KEY = 'manifest-state-v1';
+import { STORE_KEY } from '@/lib/storage-key';
+
+export { STORE_KEY };
 const KEY = STORE_KEY;
 
 type State = { settings: Settings; goals: Goal[]; journal: JournalEntry[]; board: BoardPhoto[]; mixes: SavedMix[] };
