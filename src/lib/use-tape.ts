@@ -605,8 +605,11 @@ export function useTape({
     const playChunk = (c: number, ready: Promise<Stitched | null>, wait: Promise<void> = Promise.resolve()) => {
       Promise.all([ready, wait]).then(([t]) => {
         if (!t) {
-          // Joining failed at the very start (not just called off): play it the plain way, not silence.
-          if (c === 0 && thisRun === run.current && !stitched.current) lineByLine(chunks[0][0], thisRun);
+          // Joining failed (not just called off): play on the plain way, line by line, not silence.
+          if (thisRun === run.current) {
+            track.pause();
+            lineByLine(chunks[c][0], thisRun);
+          }
           return;
         }
         if (thisRun !== run.current) return release(t.uri);

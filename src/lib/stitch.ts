@@ -1,6 +1,5 @@
-import { AppState } from 'react-native';
-
 import { decode, playable } from '@/lib/audio-io';
+import { breathe as yieldToScreen } from '@/lib/clock';
 import { wav } from '@/lib/wav';
 
 /*
@@ -132,8 +131,8 @@ export async function stitch(
     // the app closed: Android pauses JavaScript timers then, and the next part would never be ready.
     let since = Date.now();
     const breathe = async () => {
-      if (Date.now() - since < BURST_MS || AppState.currentState !== 'active') return;
-      await new Promise((r) => setTimeout(r, 0));
+      if (Date.now() - since < BURST_MS) return;
+      await yieldToScreen();
       since = Date.now();
     };
     for (const [k, v] of used.entries()) {

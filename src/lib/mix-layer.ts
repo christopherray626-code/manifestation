@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Platform } from 'react-native';
 
 import { decode, keepLoop, keptLoop } from '@/lib/audio-io';
+import { later } from '@/lib/clock';
 import { hash } from '@/lib/today';
 import { wav } from '@/lib/wav';
 
@@ -384,7 +385,8 @@ class NativeLoop {
     this.player.pause();
     (async () => {
       // Opening the app shouldn't compete with getting a sound ready that nobody has asked to hear yet.
-      if (!this.want) await new Promise((r) => setTimeout(r, 1500));
+      // (later(), not a plain timer: it mustn't be left waiting if the phone is locked meanwhile.)
+      if (!this.want) await new Promise<void>((r) => later(1500, r));
       if (uri !== this.uri) return;
       // Bundled sounds have to be on the phone's disk before they can be decoded.
       const local = typeof source === 'number' ? ((await Asset.fromModule(source).downloadAsync()).localUri ?? uri) : uri;
