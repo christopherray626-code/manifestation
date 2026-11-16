@@ -5,6 +5,7 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -41,42 +42,53 @@ const STARS = Array.from({ length: 34 }, (_, i) => ({
   gold: i % 4 === 0,
 }));
 
-function Stars() {
+const GLOW = require('@/assets/images/launch-glow.png');
+
+/** Stars on dark themes. With `twinkle` (Starlight), a few at a time softly brighten and dim. */
+function Stars({ twinkle = false, count = STARS.length }: { twinkle?: boolean; count?: number }) {
   const t = useTheme();
+  const [phase] = useState(() => [0, 1, 2].map(() => new Animated.Value(0)));
+  useEffect(() => {
+    if (!twinkle) return;
+    let loops: Animated.CompositeAnimation[] = [];
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((still) => {
+        if (still) return;
+        loops = phase.map((v, k) =>
+          Animated.loop(
+            Animated.sequence([
+              Animated.delay(k * 1300),
+              Animated.timing(v, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+              Animated.timing(v, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+              Animated.delay(2400 - k * 600),
+            ]),
+          ),
+        );
+        loops.forEach((l) => l.start());
+      })
+      .catch(() => {});
+    return () => loops.forEach((l) => l.stop());
+  }, [twinkle, phase]);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {STARS.map((s, i) => (
-        <View
-          key={i}
-          style={{
-            position: 'absolute',
-            left: `${s.left}%`,
-            top: `${s.top}%`,
-            width: s.size,
-            height: s.size,
-            borderRadius: s.size,
-            backgroundColor: s.gold ? t.colors.accent : '#FFFFFF',
-            opacity: s.gold ? 0.7 : 0.5,
-          }}
-        />
-      ))}
-    </View>
-  );
-}
-
-/**
- * A soft glow made of stacked circles, each a little more see-through than the last, so it fades out
- * like light instead of ending in a hard edge.
- */
-function Glow({ color, size, opacity }: { color: string; size: number; opacity: number }) {
-  return (
-    <View pointerEvents="none" style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {Array.from({ length: 14 }, (_, i) => {
-        const d = size * (1 - i * 0.065);
+      {STARS.slice(0, count).map((s, i) => {
+        const base = s.gold ? 0.7 : 0.5;
+        // Every third star joins one of three twinkle groups.
+        const group = twinkle && i % 3 === 0 ? phase[(i / 3) % 3 | 0] : null;
         return (
-          <View
+          <Animated.View
             key={i}
-            style={{ position: 'absolute', width: d, height: d, borderRadius: d, backgroundColor: color, opacity: opacity / 14 }}
+            style={{
+              position: 'absolute',
+              left: `${s.left}%`,
+              top: `${s.top}%`,
+              width: s.size,
+              height: s.size,
+              borderRadius: s.size,
+              backgroundColor: s.gold ? t.colors.accent : '#FFFFFF',
+              opacity: group ? group.interpolate({ inputRange: [0, 1], outputRange: [base * 0.35, 1] }) : base,
+              transform: group ? [{ scale: group.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }] : [],
+            }}
           />
         );
       })}
@@ -84,9 +96,30 @@ function Glow({ color, size, opacity }: { color: string; size: number; opacity: 
   );
 }
 
+/** A soft round glow that fades out like light: a white radial image tinted to the colour, so it has no edges. */
+function Glow({ color, size, opacity }: { color: string; size: number; opacity: number }) {
+  return (
+    <View pointerEvents="none">
+      <Image source={GLOW} tintColor={color} style={{ width: size, height: size, opacity: Math.min(1, opacity * 1.6) }} />
+    </View>
+  );
+}
+
+/** The Moon theme's moon: a pale disc with a halo, high in the corner. */
+function Moon() {
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: -40, right: -70, width: 220, height: 220, alignItems: 'center', justifyContent: 'center', opacity: 0.75 }}>
+      <Glow color="#E6ECF8" size={220} opacity={0.22} />
+      <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: '#C9D2E3', opacity: 0.16 }} />
+      <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, borderWidth: 1, borderColor: '#E6ECF8', opacity: 0.18 }} />
+    </View>
+  );
+}
+
 /**
- * The sky behind every screen: two slow glows in the theme's colours drifting about, and stars on dark
- * themes. It's what makes the app feel like its own place rather than a stack of panels. Holds still
+ * The sky behind every screen, in the theme's own style: two slow glows drifting about, plus stars on
+ * dark themes (twinkling on Starlight), a moon on Moon, and three pastel colours drifting and blending
+ * on Aura. It's what makes the app feel like its own place rather than a stack of panels. Holds still
  * when Reduce motion is on.
  */
 function Ambient() {
@@ -108,29 +141,40 @@ function Ambient() {
       .catch(() => {});
     return () => loop?.stop();
   }, [drift]);
-  const a = t.colors.tints[0];
-  const b = t.colors.accent;
+  const move = (x: number, y: number) => ({
+    transform: [
+      { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, x] }) },
+      { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, y] }) },
+    ],
+  });
+
+  if (t.decor === 'aura') {
+    const [a, b, c] = t.colors.tints;
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+        <Animated.View style={[{ position: 'absolute', top: -160, left: -180 }, move(80, 60)]}>
+          <Glow color={a} size={520} opacity={0.6} />
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', top: '30%', right: -220 }, move(-70, 50)]}>
+          <Glow color={b} size={520} opacity={0.6} />
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', bottom: -200, left: -120 }, move(60, -70)]}>
+          <Glow color={c} size={540} opacity={0.6} />
+        </Animated.View>
+      </View>
+    );
+  }
+
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: -140,
-          left: -160,
-          transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 60] }) }, { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 40] }) }],
-        }}>
-        <Glow color={a} size={460} opacity={t.dark ? 0.35 : 0.25} />
+      <Animated.View style={[{ position: 'absolute', top: -140, left: -160 }, move(60, 40)]}>
+        <Glow color={t.colors.tints[0]} size={460} opacity={t.dark ? 0.35 : 0.25} />
       </Animated.View>
-      <Animated.View
-        style={{
-          position: 'absolute',
-          bottom: -180,
-          right: -200,
-          transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, -50] }) }, { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, -60] }) }],
-        }}>
-        <Glow color={b} size={520} opacity={t.dark ? 0.28 : 0.2} />
+      <Animated.View style={[{ position: 'absolute', bottom: -180, right: -200 }, move(-50, -60)]}>
+        <Glow color={t.colors.accent} size={520} opacity={t.dark ? (t.decor === 'moon' ? 0.12 : 0.28) : 0.2} />
       </Animated.View>
-      {t.dark && <Stars />}
+      {t.decor === 'moon' && <Moon />}
+      {t.dark && <Stars twinkle={t.decor === 'stars'} count={t.decor === 'moon' ? 14 : STARS.length} />}
     </View>
   );
 }

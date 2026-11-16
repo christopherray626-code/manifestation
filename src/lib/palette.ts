@@ -48,7 +48,8 @@ const TONE_OF: Record<string, Palette> = {
 const MOODS: Record<string, { accent: number; bg: number; soft: number; mute: number }> = {
   celestial: { accent: 0.18, bg: 0.35, soft: 0, mute: 0.2 },
   aura: { accent: 0.22, bg: 0.3, soft: 0, mute: 0.1 },
-  tarot: { accent: 0.25, bg: 0.4, soft: 0, mute: 0.45 },
+  tarot: { accent: 0.15, bg: 0.45, soft: 0, mute: 0.55 },
+  dream: { accent: 0.15, bg: 0, soft: 0.45, mute: 0.05 },
   clean: { accent: 0.05, bg: 0, soft: 0.35, mute: 0.3 },
   soft: { accent: 0.25, bg: 0, soft: 0.3, mute: 0.25 },
   oldmoney: { accent: 0.25, bg: 0.4, soft: 0, mute: 0.5 },
