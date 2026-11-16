@@ -461,10 +461,47 @@ export function Field(props: TextInputProps & { error?: string }) {
   );
 }
 
-export function Section({ label, children }: { label: string; children: ReactNode }) {
+/** The small (i) itself. `open` fills it in. */
+function InfoButton({ open, onPress, about }: { open: boolean; onPress: () => void; about?: string }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={14}
+      accessibilityRole="button"
+      accessibilityLabel={about ? `About ${about}` : 'More about this'}
+      accessibilityState={{ expanded: open }}>
+      <Ionicons name={open ? 'information-circle' : 'information-circle-outline'} size={18} color={open ? t.colors.accent : t.colors.muted} />
+    </Pressable>
+  );
+}
+
+/**
+ * Puts a small (i) beside whatever it wraps (a heading, a button). The explanation shows underneath
+ * only when the (i) is tapped: the screen stays clean, and the words are there for anyone who wants them.
+ */
+export function WithInfo({ info, about, children }: { info: string; about?: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flex: 1 }}>{children}</View>
+        <InfoButton open={open} onPress={() => setOpen((on) => !on)} about={about} />
+      </View>
+      {open ? <Txt variant="muted">{info}</Txt> : null}
+    </View>
+  );
+}
+
+export function Section({ label, info, children }: { label: string; info?: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
     <View style={{ gap: 10 }}>
-      <Txt variant="label">{label}</Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Txt variant="label">{label}</Txt>
+        {info ? <InfoButton open={open} onPress={() => setOpen((on) => !on)} about={label} /> : null}
+      </View>
+      {info && open ? <Txt variant="muted">{info}</Txt> : null}
       {children}
     </View>
   );

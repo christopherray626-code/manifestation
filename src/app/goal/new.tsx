@@ -5,8 +5,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { CATEGORIES } from '@/components/goal-bits';
 import { Creating, WRITING_MESSAGES } from '@/components/creating';
 import { VoicePicker } from '@/components/voice-picker';
-import { Why } from '@/components/why';
-import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt } from '@/components/ui';
+import { BackHeader, Button, Chip, ChipRow, Field, Screen, Section, Txt, WithInfo } from '@/components/ui';
 import { writeAffirmationsSmart } from '@/lib/affirmations';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
@@ -59,9 +58,11 @@ export default function NewGoalScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <BackHeader title="" onBack={() => router.back()} />
-        <Txt variant="display">What are you manifesting?</Txt>
-        <Txt variant="muted">Describe it as it is now that it’s here. The more detail, the more personal your affirmations.</Txt>
-        <Why text={WHY.presentTense} label="Why it’s written as already yours" />
+        <WithInfo
+          info={`Describe it as it is now that it’s here. The more detail, the more personal your affirmations.\n\n${WHY.presentTense}`}
+          about="how to describe it">
+          <Txt variant="display">What are you manifesting?</Txt>
+        </WithInfo>
 
         <Section label="Name it">
           <Field

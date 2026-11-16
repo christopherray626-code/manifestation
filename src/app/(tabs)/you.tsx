@@ -66,7 +66,9 @@ export default function YouScreen() {
         </ChipRow>
       </Section>
 
-      <Section label="Move your data">
+      <Section
+        label="Move your data"
+        info="Moves your manifestations, mixes, journal and settings between the website and the phone app. Photos and recordings of your own voice stay on the device they were made on.">
         <MoveData />
       </Section>
 

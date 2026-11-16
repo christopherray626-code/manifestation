@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { BackHeader, Button, Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
+import { BackHeader, Button, Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme, WithInfo } from '@/components/ui';
 import { confirm } from '@/lib/confirm';
 import { mixId, parseMix, type MixPart } from '@/lib/mix';
 import { usePlayer } from '@/lib/player';
@@ -37,8 +37,9 @@ export default function MixScreen() {
 
   return (
     <Screen>
-      <BackHeader title={editing ? 'Edit mix' : 'Make a mix'} onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-      <Txt variant="muted">Pick as many as you like. They play one after another, then start over.</Txt>
+      <WithInfo info="Pick as many as you like. They play one after another, then start over." about="mixes">
+        <BackHeader title={editing ? 'Edit mix' : 'Make a mix'} onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+      </WithInfo>
 
       {live.length > 0 && (
         <Card>

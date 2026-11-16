@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
-import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme } from '@/components/ui';
+import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme, WithInfo } from '@/components/ui';
 import { confirm } from '@/lib/confirm';
 import { tap } from '@/lib/haptics';
 import { deletePhoto as deleteFile, savePhoto, usePhotoUris } from '@/lib/photos';
@@ -55,9 +55,6 @@ export default function BoardScreen() {
           <Icon name="images-outline" size={40} color={t.colors.accent} />
           <Txt variant="title" style={{ textAlign: 'center' }}>
             Picture it already here
-          </Txt>
-          <Txt variant="muted" style={{ textAlign: 'center', maxWidth: 300 }}>
-            Add photos of the home, the trip, the life. Then play them as a slideshow.
           </Txt>
         </View>
       ) : (
@@ -128,7 +125,9 @@ function PhotoSheet({ id, uri, onClose }: { id: string | null; uri?: string; onC
           />
           {goals.length > 0 && (
             <View style={{ gap: 8 }}>
-              <Txt variant="label">Goes with</Txt>
+              <WithInfo info="The slideshow shows today’s affirmation from that manifestation under the photo." about="Goes with">
+                <Txt variant="label">Goes with</Txt>
+              </WithInfo>
               <ChipRow>
                 {goals.map((g) => (
                   <Chip
@@ -139,7 +138,6 @@ function PhotoSheet({ id, uri, onClose }: { id: string | null; uri?: string; onC
                   />
                 ))}
               </ChipRow>
-              <Txt variant="muted">The slideshow shows today&apos;s affirmation from it under the photo.</Txt>
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: 10 }}>

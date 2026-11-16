@@ -2,8 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, Pressable, TextInput, View } from 'react-native';
 
-import { Why } from '@/components/why';
-import { BackHeader, Button, Card, Chip, ChipRow, Icon, Screen, Txt, useTheme } from '@/components/ui';
+import { BackHeader, Button, Card, Chip, ChipRow, Icon, Screen, Txt, useTheme, WithInfo } from '@/components/ui';
 import { success } from '@/lib/haptics';
 import { useStore } from '@/lib/store';
 import { localDay } from '@/lib/today';
@@ -65,11 +64,9 @@ export default function JournalScreen() {
   return (
     <Screen>
       <BackHeader title="" onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-      <View style={{ gap: 6 }}>
+      <WithInfo info={WHY_SCRIPTING} about="scripting">
         <Txt variant="display">Journal</Txt>
-        <Txt variant="muted">Write it as if it already happened.</Txt>
-        <Why text={WHY_SCRIPTING} label="What is scripting?" />
-      </View>
+      </WithInfo>
 
       <ChipRow>
         <Chip label="Script my day" selected={kind === 'script'} onPress={() => setKind('script')} />

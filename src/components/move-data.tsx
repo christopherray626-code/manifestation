@@ -58,10 +58,6 @@ export function MoveData() {
 
   return (
     <View style={{ gap: 10 }}>
-      <Txt variant="muted">
-        Move your manifestations, mixes, journal and settings between the website and the phone app. Photos and recordings of your
-        own voice stay on the device they were made on.
-      </Txt>
       <Button title={isWeb ? 'Copy my data' : 'Share my data'} icon="copy-outline" kind="ghost" onPress={copy} />
       <Field value={pasted} onChangeText={setPasted} placeholder="Paste copied data here" multiline numberOfLines={3} style={{ maxHeight: 120 }} />
       <Button title="Add it to this app" icon="download-outline" kind="ghost" onPress={add} />

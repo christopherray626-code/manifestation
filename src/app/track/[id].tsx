@@ -4,8 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { Art } from '@/components/art';
 import { useEnhance } from '@/components/enhance';
-import { BackHeader, Button, Card, Chip, ChipRow, Icon, Screen, Txt, useTheme } from '@/components/ui';
-import { Why } from '@/components/why';
+import { BackHeader, Button, Card, Chip, ChipRow, Icon, Screen, Txt, useTheme, WithInfo } from '@/components/ui';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
@@ -107,7 +106,6 @@ export default function TrackScreen() {
 
       <View style={{ gap: 8 }}>
         <Txt variant="title">Combine with</Txt>
-        <Txt variant="muted">Add other tracks to play one after another in a single session.</Txt>
         <ChipRow>
           {TRACKS.filter((other) => !baseIds.includes(other.id)).map((other) => (
             <Chip key={other.id} label={other.title} selected={added.includes(other.id)} onPress={() => toggle(other.id)} />
@@ -169,15 +167,11 @@ export default function TrackScreen() {
         </View>
       </Card>
 
-      <Why text={WHY.youAndWhy} label="Why it’s written this way" />
-
-      <View style={{ gap: 8 }}>
+      <WithInfo
+        info={`Copies this track into your manifestations, so you can add your own affirmations, edit or remove any, and record them in your voice.\n\n${WHY.youAndWhy}`}
+        about="making it yours">
         <Button title="Make it mine" icon="add" kind="ghost" onPress={makeItMine} />
-        <Txt variant="muted" style={{ textAlign: 'center', color: t.colors.muted }}>
-          Copies this track into your manifestations, so you can add your own affirmations, edit or remove any, and record them in
-          your voice.
-        </Txt>
-      </View>
+      </WithInfo>
     </Screen>
   );
 }

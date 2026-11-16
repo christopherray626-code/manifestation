@@ -231,7 +231,6 @@ export default function GoalScreen() {
         )}
 
         <Section label="Your affirmations">
-          <Txt variant="muted">Edit, remove, or keep. Tap the heart on your favorites.</Txt>
           {enhanceable.length > 0 && (
             <Button
               title={enhance.busy && enhancing.length > 1 ? 'Enhancing…' : 'Enhance my affirmations'}

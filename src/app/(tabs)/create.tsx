@@ -15,19 +15,11 @@ export default function CreateScreen() {
   const { open } = usePlayer();
   return (
     <Screen>
-      <View style={{ gap: 6 }}>
-        <Txt variant="display">My manifestations</Txt>
-        <Txt variant="muted">Each one has its own affirmations and tape.</Txt>
-      </View>
+      <Txt variant="display">My manifestations</Txt>
 
       {goals.length === 0 ? (
         <Card>
-          <View style={{ gap: 6 }}>
-            <Txt variant="title">Start your first manifestation</Txt>
-            <Txt variant="muted">
-              {"Describe what you’re manifesting, and you’ll get affirmations written around it. Or write your own."}
-            </Txt>
-          </View>
+          <Txt variant="title">Start your first manifestation</Txt>
         </Card>
       ) : (
         goals.map((g, i) => (
@@ -68,18 +60,18 @@ export default function CreateScreen() {
       <Button title="Make a mix" icon="layers-outline" kind="ghost" onPress={() => router.push('/mix')} />
 
       <Card onPress={() => router.push('/journal')}>
-        <View style={{ gap: 4 }}>
-          <Txt variant="medium">Journal</Txt>
-          <Txt variant="muted">Script your days as if they already happened, and log the signs as they show up.</Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Icon name="create-outline" size={20} color={t.colors.accent} />
+          <Txt variant="medium" style={{ flex: 1 }}>
+            Journal
+          </Txt>
+          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
         </View>
       </Card>
 
-      <View style={{ gap: 6, marginTop: 8 }}>
-        <Txt variant="display" style={{ fontSize: 22, lineHeight: 28 }}>
-          Ready-made tracks
-        </Txt>
-        <Txt variant="muted">Written for the most common manifestations. Play one as it is, or make it yours.</Txt>
-      </View>
+      <Txt variant="display" style={{ fontSize: 22, lineHeight: 28, marginTop: 8 }}>
+        Ready-made tracks
+      </Txt>
       <TrackGrid />
     </Screen>
   );

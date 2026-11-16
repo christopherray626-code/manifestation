@@ -47,7 +47,7 @@ function JournalCard() {
         <Icon name="create-outline" size={20} color={t.colors.accent} />
         <View style={{ flex: 1 }}>
           <Txt variant="medium">Script your day</Txt>
-          <Txt variant="muted">{journal.length ? `${journal.length} ${journal.length === 1 ? 'entry' : 'entries'} so far` : 'Write it as if it already happened'}</Txt>
+          <Txt variant="muted">{journal.length ? `${journal.length} ${journal.length === 1 ? 'entry' : 'entries'} so far` : 'No entries yet'}</Txt>
         </View>
         <Icon name="chevron-forward" size={18} color={t.colors.muted} />
       </View>
@@ -146,12 +146,7 @@ export default function HomeScreen() {
         {goals.length === 0 ? (
           <View style={{ gap: 14 }}>
             <Card>
-              <View style={{ gap: 6 }}>
-                <Txt variant="title">Start your first manifestation</Txt>
-                <Txt variant="muted">
-                  {"Describe what you’re manifesting, and you’ll get affirmations written around it. Or write your own."}
-                </Txt>
-              </View>
+              <Txt variant="title">Start your first manifestation</Txt>
             </Card>
             <Button title="New manifestation" icon="add" onPress={() => router.push('/goal/new')} />
           </View>

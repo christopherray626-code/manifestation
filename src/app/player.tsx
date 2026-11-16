@@ -13,7 +13,6 @@ import { SOUND_LIST } from '@/lib/sounds';
 import { TrackShelf } from '@/components/track-shelf';
 import { VOICE_LIST, VoicePicker } from '@/components/voice-picker';
 import { Chip, ChipRow, Icon, Section, Txt, useTheme, type IconName } from '@/components/ui';
-import { Why } from '@/components/why';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
 import { WHY } from '@/lib/tips';
@@ -323,9 +322,8 @@ export default function PlayerScreen() {
       </Sheet>
 
       <Sheet title="Voice" open={sheet === 'voice'} onClose={() => setSheet(null)}>
-        <PanelCard label="Who reads it" right={VOICE_LIST.find((v) => v.id === voice)?.label}>
+        <PanelCard right={VOICE_LIST.find((v) => v.id === voice)?.label}>
           <VoicePicker value={voice} allowMine={!!goal} onChange={setVoice} />
-          <Why text={WHY.voices} label="Why the voice matters" />
           {goal && goal.voice === 'my-voice' && (
             <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })}>
               <Txt variant="muted" style={{ color: t.colors.accent }}>
@@ -363,12 +361,10 @@ export default function PlayerScreen() {
       </Sheet>
 
       <Sheet title="More" open={sheet === 'more'} onClose={() => setSheet(null)}>
-        <PanelCard label="About this tape">
-          <Txt variant="body">
-            {MODES[tape.mode].about}
-            {` It has ${list.length} affirmations.`}
-          </Txt>
-          <Why text={subliminal ? WHY.subliminal : WHY.spoken} />
+        <PanelCard
+          label="This tape"
+          right={`${list.length} affirmation${list.length === 1 ? '' : 's'}`}
+          info={`${MODES[tape.mode].about}\n\n${subliminal ? WHY.subliminal : WHY.spoken}`}>
           {track && !mix && (
             <Pressable onPress={() => { setSheet(null); router.push({ pathname: '/track/[id]', params: { id: track.id } }); }} accessibilityRole="button">
               <Txt variant="medium" style={{ color: t.colors.accent }}>See every affirmation, or make it yours</Txt>
@@ -800,7 +796,7 @@ function PanelCard({
   info,
   children,
 }: {
-  label: string;
+  label?: string;
   right?: string;
   tinted?: boolean;
   /** The explanation, kept behind a small (i) next to the heading until it's tapped. */
@@ -818,13 +814,13 @@ function PanelCard({
         gap: 14,
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Txt variant="label">{label}</Txt>
+        {label ? <Txt variant="label">{label}</Txt> : null}
         {info ? (
           <Pressable
             onPress={() => setShowInfo((on) => !on)}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel={`About ${label}`}
+            accessibilityLabel={`About ${label ?? 'this'}`}
             accessibilityState={{ expanded: showInfo }}>
             <Icon name={showInfo ? 'information-circle' : 'information-circle-outline'} size={17} color={showInfo ? t.colors.accent : t.colors.muted} />
           </Pressable>

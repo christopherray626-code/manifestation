@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { TodayProgress, WeekDots } from '@/components/streak';
-import { BackHeader, Card, Chip, ChipRow, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
+import { BackHeader, Card, Chip, ChipRow, Icon, Screen, Section, Txt, useTheme, WithInfo } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { bestStreak, DEFAULT_GOAL_MIN, GOAL_CHOICES, MILESTONES, nextMilestone, streakOf } from '@/lib/streak';
 
@@ -64,23 +64,21 @@ export default function StreakScreen() {
         {next && <Txt variant="muted">{`${next - streak} more ${next - streak === 1 ? 'day' : 'days'} to reach ${next}.`}</Txt>}
       </Section>
 
-      <Section label="Daily goal">
+      <Section label="Daily goal" info="Minutes of listening that count a day. Writing in your journal counts too.">
         <ChipRow>
           {GOAL_CHOICES.map((m) => (
             <Chip key={m} label={`${m} min`} selected={goalMin === m} onPress={() => updateSettings({ dailyGoalMin: m })} />
           ))}
         </ChipRow>
-        <Txt variant="muted">Minutes of listening that count a day. Writing in your journal counts too.</Txt>
       </Section>
 
       <Card>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Icon name="bed-outline" size={20} color={t.colors.accent} />
-          <View style={{ flex: 1, gap: 4 }}>
+        <WithInfo info="Miss a single day and your streak keeps going. Miss two in a week and it starts again." about="rest days">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Icon name="bed-outline" size={20} color={t.colors.accent} />
             <Txt variant="medium">One rest day a week</Txt>
-            <Txt variant="muted">Miss a single day and your streak keeps going. Miss two in a week and it starts again.</Txt>
           </View>
-        </View>
+        </WithInfo>
       </Card>
     </Screen>
   );
