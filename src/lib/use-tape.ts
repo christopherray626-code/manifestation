@@ -111,6 +111,17 @@ const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
 type HasVolume = { volume: number };
 const glides = new WeakMap<HasVolume, ReturnType<typeof setInterval>>();
+// Each player's level as we last set it. Asking the player itself makes JavaScript wait for the
+// phone's main thread every time, which is exactly what stutters while a finger is on a slider.
+const levels = new WeakMap<HasVolume, number>();
+/** Sets a player's volume at once (stopping any glide). */
+function setVolume(player: HasVolume, to: number) {
+  const running = glides.get(player);
+  if (running) clearInterval(running);
+  glides.delete(player);
+  levels.set(player, to);
+  player.volume = to;
+}
 /**
  * Moves a player's volume to `to` in small steps over about a sixth of a second. With the app closed,
  * Android pauses JavaScript timers, so a glide would stall half-way: there it jumps straight to the level.
@@ -119,8 +130,9 @@ function glideVolume(player: HasVolume, to: number) {
   const running = glides.get(player);
   if (running) clearInterval(running);
   glides.delete(player);
-  const from = player.volume;
+  const from = levels.get(player) ?? to;
   if (Math.abs(to - from) < 0.002 || AppState.currentState !== 'active') {
+    levels.set(player, to);
     player.volume = to;
     return;
   }
@@ -128,7 +140,9 @@ function glideVolume(player: HasVolume, to: number) {
   let step = 0;
   const timer = setInterval(() => {
     step++;
-    player.volume = from + ((to - from) * step) / steps;
+    const now = from + ((to - from) * step) / steps;
+    levels.set(player, now);
+    player.volume = now;
     if (step >= steps) {
       clearInterval(timer);
       glides.delete(player);
@@ -360,7 +374,7 @@ export function useTape({
     }
     background.replace(SOUNDS[prefs.sound] ?? SOUNDS.pad);
     background.loop = true;
-    background.volume = prefs.soundVolume;
+    setVolume(background, prefs.soundVolume);
     if (playing) background.play();
     // Only react to a new sound choice here; volume and play state have their own effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -393,10 +407,15 @@ export function useTape({
    * Moves the sound to new levels straight away, without saving anything: a slider calls this while it's
    * dragged, so the mix follows your finger without re-drawing the app, and saves once on release.
    */
-  function setLevels(l: { voiceVolume?: number; soundVolume?: number; frequencyVolume?: number }) {
-    if (l.voiceVolume !== undefined) for (const player of [track, layer0, layer1, layer2]) glideVolume(player, l.voiceVolume);
+  function setLevels(l: { voiceVolume?: number; soundVolume?: number; frequencyVolume?: number }, live = false) {
+    // Under a finger the steps are already tiny, so they go straight to the sound: one call per move,
+    // and only to the players that are in use. Otherwise glide.
+    const set = live ? setVolume : glideVolume;
+    if (l.voiceVolume !== undefined) {
+      for (const player of live && stitched.current ? [track] : [track, layer0, layer1, layer2]) set(player, l.voiceVolume);
+    }
     if (fade.current) return; // the timer's fade-out owns the other levels
-    if (l.soundVolume !== undefined) glideVolume(background, l.soundVolume);
+    if (l.soundVolume !== undefined) set(background, l.soundVolume);
     if (l.frequencyVolume !== undefined) tone.setVolume(l.frequencyVolume);
   }
 
@@ -429,7 +448,7 @@ export function useTape({
     // Already loaded ahead of time (see preload), so it can start the instant the last line ends.
     if (loaded.current[k] !== uri) player.replace({ uri });
     loaded.current[k] = undefined;
-    player.volume = volume;
+    setVolume(player, volume);
     // Faster without going squeaky: the pitch stays the same.
     player.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
     player.play();
@@ -548,7 +567,7 @@ export function useTape({
         stitched.current = t;
         track.replace({ uri: t.uri });
         track.loop = looping;
-        track.volume = latest.current.prefs.voiceVolume;
+        setVolume(track, latest.current.prefs.voiceVolume);
         track.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
         track.play();
         if (old) release(old.uri);
@@ -610,7 +629,7 @@ export function useTape({
     keeperStart();
     if (prefs.sound !== 'none') {
       background.loop = true;
-      background.volume = prefs.soundVolume;
+      setVolume(background, prefs.soundVolume);
       background.play();
     }
     if (frequency !== 'none') {
@@ -687,12 +706,12 @@ export function useTape({
     const fadeMs = (prefs.fadeSec ?? 20) * 1000;
     // Timed by the clock, not by counting steps, so it ends on time with the app closed too.
     const wait = later(Math.max(endsAt - Date.now() - fadeMs, 0), () => {
-      const start = background.volume;
+      const start = levels.get(background) ?? latest.current.prefs.soundVolume;
       const began = Date.now();
       stopVoices();
       const step = () => {
         const done = Math.min(1, (Date.now() - began) / fadeMs);
-        background.volume = start * (1 - done);
+        setVolume(background, start * (1 - done));
         tone.setVolume(frequencyVolume * (1 - done));
         if (done >= 1) {
           fade.current = null;

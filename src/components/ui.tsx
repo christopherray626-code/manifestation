@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from 'expo-router';
-import { Children, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Children, useEffect, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -20,13 +19,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePress, useRise } from '@/lib/motion';
-import { useStore } from '@/lib/store';
+import { useThemeId } from '@/lib/store';
 import { getTheme, type Theme } from '@/themes';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
 export function useTheme(): Theme {
-  return getTheme(useStore().settings.themeId);
+  return getTheme(useThemeId());
 }
 
 export function Icon({ name, size = 20, color }: { name: IconName; size?: number; color?: string }) {
@@ -230,17 +229,16 @@ export function Orb({ size = 150 }: { size?: number }) {
 }
 
 /** One section of a scrolling screen, rising in a beat after the one above it. */
-function RiseIn({ visit, index, children }: { visit: number; index: number; children: ReactNode }) {
-  const rise = useRise(visit, Math.min(index, 7) * 55);
+function RiseIn({ index, children }: { index: number; children: ReactNode }) {
+  const rise = useRise(0, Math.min(index, 5) * 30);
   return <Animated.View style={rise}>{children}</Animated.View>;
 }
 
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   const t = useTheme();
-  // Each time the screen comes into view, its content rises softly into place.
-  const [visit, setVisit] = useState(0);
-  useFocusEffect(useCallback(() => setVisit((n) => n + 1), []));
-  const rise = useRise(visit);
+  // The first time a screen opens, its content rises softly into place. Not on every return to it:
+  // replaying it each time you switched tabs or came back made the app feel slow to answer.
+  const rise = useRise(0);
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <Ambient />
@@ -249,7 +247,7 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
               {Children.toArray(children).map((child, i) => (
-                <RiseIn key={i} visit={visit} index={i}>
+                <RiseIn key={i} index={i}>
                   {child}
                 </RiseIn>
               ))}

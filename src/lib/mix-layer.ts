@@ -3,7 +3,8 @@ import { useAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
 import { useState } from 'react';
 import { Platform } from 'react-native';
 
-import { decode, playable } from '@/lib/audio-io';
+import { decode, keepLoop, keptLoop } from '@/lib/audio-io';
+import { hash } from '@/lib/today';
 import { wav } from '@/lib/wav';
 
 /*
@@ -339,18 +340,22 @@ export function useMixLayer(source: Source, updateInterval?: number, kind: 'stre
 
 /*
  * Phones: a background loop plays a seamless copy of the sound, blended end-into-start like the web's
- * (see blendLoop) and saved as a WAV, which the player loops without a gap. Each sound is made once per
- * session; until it's ready the layer stays quiet, then starts if it was asked to play.
+ * (see blendLoop) and saved as a WAV, which the player loops without a gap. Each sound is made once and
+ * kept on the phone; until it's ready the layer stays quiet, then starts if it was asked to play.
  */
 const nativeLoops = new Map<string, Promise<string | null>>();
 function seamlessFile(uri: string) {
   let got = nativeLoops.get(uri);
   if (!got) {
     got = (async () => {
+      // Named after where the sound comes from (which changes if the sound itself is ever replaced).
+      const key = `loop2-${hash(uri).toString(36)}-${uri.length}`;
+      const kept = keptLoop(key);
+      if (kept) return kept;
       const audio = await decode(uri);
       if (!audio) return null;
       const channels = blendLoop(audio.channels, audio.sampleRate);
-      return playable(wav(channels, audio.sampleRate), 'loop');
+      return keepLoop(wav(channels, audio.sampleRate), key);
     })().catch(() => null);
     nativeLoops.set(uri, got);
   }
@@ -378,6 +383,9 @@ class NativeLoop {
     this.ready = false;
     this.player.pause();
     (async () => {
+      // Opening the app shouldn't compete with getting a sound ready that nobody has asked to hear yet.
+      if (!this.want) await new Promise((r) => setTimeout(r, 1500));
+      if (uri !== this.uri) return;
       // Bundled sounds have to be on the phone's disk before they can be decoded.
       const local = typeof source === 'number' ? ((await Asset.fromModule(source).downloadAsync()).localUri ?? uri) : uri;
       const file = (await seamlessFile(local)) ?? local;

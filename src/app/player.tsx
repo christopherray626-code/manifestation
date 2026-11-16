@@ -29,6 +29,9 @@ export default function PlayerScreen() {
   const { goal, track, mix, list, voice, setVoice, tape, prep, cancelPrep, making, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
   const [sheet, setSheet] = useState<'sound' | 'voice' | 'more' | null>(null);
+  // The drifting colours, ripples and sparkles rest while a panel covers them: they can't be seen
+  // properly there, and drawing them under it is what the sliders were fighting with.
+  const moving = tape.playing && !sheet;
 
   const recorded = goal ? goal.affirmations.filter((a) => a.recording).length : 0;
   const current = list[tape.index];
@@ -61,8 +64,8 @@ export default function PlayerScreen() {
         locations={[0, 0.45, 0.95]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      <Aura colors={colors} playing={tape.playing} />
-      {subliminal && <Whispers lines={list.map((a) => a.text)} playing={tape.playing} />}
+      <Aura colors={colors} playing={moving} />
+      {subliminal && <Whispers lines={list.map((a) => a.text)} playing={moving} />}
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
           {/* What's playing: its card, its name, and a way out. */}
@@ -89,9 +92,9 @@ export default function PlayerScreen() {
             {subliminal ? (
               <View style={{ alignItems: 'center', gap: 18 }}>
                 <View style={{ alignItems: 'center', justifyContent: 'center', width: 260, height: 260 }}>
-                  <Ripples playing={tape.playing} color={colors[0]} />
-                  <Rising playing={tape.playing} />
-                  <Breathing playing={tape.playing}>
+                  <Ripples playing={moving} color={colors[0]} />
+                  <Rising playing={moving} />
+                  <Breathing playing={moving}>
                     <Art icon={icon} index={toneIndex} tone={tone} size={170} />
                   </Breathing>
                 </View>
@@ -227,7 +230,7 @@ export default function PlayerScreen() {
             icon="mic-outline"
             label={subliminal ? 'Voice (hidden)' : 'Voice'}
             value={prefs.voiceVolume / (subliminal ? SUBLIMINAL_MAX : 1)}
-            onLive={(v) => tape.setLevels({ voiceVolume: v * (subliminal ? SUBLIMINAL_MAX : 1) })}
+            onLive={(v) => tape.setLevels({ voiceVolume: v * (subliminal ? SUBLIMINAL_MAX : 1) }, true)}
             onChange={(v) => setPrefs({ voiceVolume: v * (subliminal ? SUBLIMINAL_MAX : 1) })}
           />
           <MixRow
@@ -235,7 +238,7 @@ export default function PlayerScreen() {
             label="Background"
             value={prefs.sound === 'none' ? 0 : prefs.soundVolume}
             disabled={prefs.sound === 'none'}
-            onLive={(soundVolume) => tape.setLevels({ soundVolume })}
+            onLive={(soundVolume) => tape.setLevels({ soundVolume }, true)}
             onChange={(soundVolume) => setPrefs({ soundVolume })}
           />
           <MixRow
@@ -243,7 +246,7 @@ export default function PlayerScreen() {
             label="Frequency"
             value={(prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME) / FREQUENCY_MAX}
             disabled={!prefs.frequency || prefs.frequency === 'none'}
-            onLive={(v) => tape.setLevels({ frequencyVolume: v * FREQUENCY_MAX })}
+            onLive={(v) => tape.setLevels({ frequencyVolume: v * FREQUENCY_MAX }, true)}
             onChange={(v) => setPrefs({ frequencyVolume: v * FREQUENCY_MAX })}
           />
           {subliminal && <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>}

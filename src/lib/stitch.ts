@@ -15,6 +15,10 @@ const LEAD_SEC = 0.02; // kept before the first sound
 const TAIL_SEC = 0.06; // kept after the last, so words don't get clipped
 const FADE_IN_SEC = 0.01;
 const FADE_OUT_SEC = 0.025;
+// Mixing layers: how long one burst of work runs before the app gets a turn, and how many samples are
+// done between looks at the clock.
+const BURST_MS = 10;
+const BURST_SAMPLES = 40000;
 
 const clips = new Map<string, Promise<Float32Array | null>>();
 
@@ -120,26 +124,50 @@ export async function stitch(
       ? 1 / Math.max(1, used.reduce((n, v) => n + v.gain, 0) * 0.75)
       : // Many overlapping voices add up; scale so 20 layers sit near the loudness 3 do.
         (layers > 3 ? Math.pow(3 / layers, 0.75) : 1) / (used.reduce((n, v) => n + v.gain, 0) / layers);
+    // Mixing is millions of sums (every sample of every layer). Done in one go it froze the app for
+    // seconds each time a part of a long tape was made, so taps and sliders did nothing meanwhile. It
+    // now works in bursts of about a hundredth of a second and lets the app answer in between. Not with
+    // the app closed: Android pauses JavaScript timers then, and the next part would never be ready.
+    let since = Date.now();
+    const breathe = async () => {
+      if (Date.now() - since < BURST_MS || AppState.currentState !== 'active') return;
+      await new Promise((r) => setTimeout(r, 0));
+      since = Date.now();
+    };
     for (const [k, v] of used.entries()) {
-      // A breath between layers, so the app stays responsive while a phone mixes a long tape. Not with
-      // the app closed: Android pauses JavaScript timers then, and the next chunk would never be ready,
-      // leaving the background playing with no voice.
-      if (AppState.currentState === 'active') await new Promise((r) => setTimeout(r, 0));
-      const shift = Math.floor((length * k) / layers);
-      const l = v.gain * level * Math.cos(((v.pan + 1) * Math.PI) / 4);
-      const r = v.gain * level * Math.sin(((v.pan + 1) * Math.PI) / 4);
+      const l = v.gain * level * Math.cos(((v.pan + 1) * Math.PI) / 4) * Math.SQRT2;
+      const r = v.gain * level * Math.sin(((v.pan + 1) * Math.PI) / 4) * Math.SQRT2;
       const n = Math.floor(length / v.rate);
-      for (let j = 0; j < n; j++) {
-        // Reading faster raises the pitch, slower lowers it.
-        const x = j * v.rate;
-        const i = Math.floor(x);
-        const s = i + 1 < length ? seq[i] + (seq[i + 1] - seq[i]) * (x - i) : seq[i] ?? 0;
-        const o = (j + shift) % length;
-        left[o] += s * l * Math.SQRT2;
-        right[o] += s * r * Math.SQRT2;
+      const rate = v.rate;
+      let o = Math.floor((length * k) / layers) % length;
+      for (let from = 0; from < n; from += BURST_SAMPLES) {
+        await breathe();
+        const to = Math.min(n, from + BURST_SAMPLES);
+        if (rate === 1) {
+          for (let j = from; j < to; j++) {
+            const s = seq[j];
+            left[o] += s * l;
+            right[o] += s * r;
+            if (++o === length) o = 0;
+          }
+        } else {
+          for (let j = from; j < to; j++) {
+            // Reading faster raises the pitch, slower lowers it.
+            const x = j * rate;
+            const i = x | 0;
+            const a = seq[i];
+            const s = i + 1 < length ? a + (seq[i + 1] - a) * (x - i) : a;
+            left[o] += s * l;
+            right[o] += s * r;
+            if (++o === length) o = 0;
+          }
+        }
       }
     }
-    return { uri: await playable(wav([left, right], RATE), 'tape'), starts: startSamples.map((s) => s / RATE), order };
+    await breathe();
+    const bytes = wav([left, right], RATE);
+    await breathe();
+    return { uri: await playable(bytes, 'tape'), starts: startSamples.map((s) => s / RATE), order };
   }
 
   return {

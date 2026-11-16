@@ -174,9 +174,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     const tick = () => {
       count();
-      timer = later(5000, tick);
+      timer = later(10000, tick);
     };
-    timer = later(5000, tick);
+    timer = later(10000, tick);
     return () => {
       cancel(timer);
       // The last few seconds before the pause count too.

@@ -135,6 +135,13 @@ function usable(goals: Goal[]): Goal[] {
 }
 
 const StoreContext = createContext<Store | null>(null);
+// The theme's id on its own: nearly everything on screen reads the theme, and only this changes when it
+// does. Reading it from the whole store made every text, icon and card redraw on every save.
+const ThemeIdContext = createContext<string>(defaultState.settings.themeId);
+
+export function useThemeId() {
+  return useContext(ThemeIdContext);
+}
 
 /** Everything lives on the phone for now; no accounts or server. */
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -228,7 +235,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }),
   };
 
-  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+  return (
+    <StoreContext.Provider value={store}>
+      <ThemeIdContext.Provider value={state.settings.themeId}>{children}</ThemeIdContext.Provider>
+    </StoreContext.Provider>
+  );
 }
 
 export function useStore() {

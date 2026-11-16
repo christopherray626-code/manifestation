@@ -26,6 +26,14 @@ export async function playable(wav: ArrayBuffer, _name: string): Promise<string>
   return URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
 }
 
+/** Phones keep blended loops between launches (see audio-io.native.ts); the web blends in memory. */
+export function keptLoop(_key: string): string | null {
+  return null;
+}
+export async function keepLoop(wav: ArrayBuffer, key: string): Promise<string> {
+  return playable(wav, key);
+}
+
 /** Frees what `playable` made once nothing plays it any more. */
 export function release(uri: string) {
   URL.revokeObjectURL(uri);

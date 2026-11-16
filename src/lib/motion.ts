@@ -52,7 +52,7 @@ export function useRise(key: unknown, delay = 0) {
     v.setValue(0);
     const anim = Animated.sequence([
       Animated.delay(delay),
-      Animated.timing(v, { toValue: 1, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE }),
+      Animated.timing(v, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE }),
     ]);
     // Always land on fully shown, even if the animation is interrupted.
     anim.start(() => v.setValue(1));
@@ -64,7 +64,7 @@ export function useRise(key: unknown, delay = 0) {
   return {
     opacity: v,
     transform: [
-      { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) },
+      { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
       { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) },
     ],
   };

@@ -45,11 +45,20 @@ async function loadSaved(texts: string[], voice: Voice) {
   );
 }
 
+let voicesFolder: Directory | undefined;
 function folder() {
-  const dir = new Directory(Paths.document, 'voices');
-  dir.create({ idempotent: true, intermediates: true });
-  return dir;
+  if (!voicesFolder) {
+    voicesFolder = new Directory(Paths.document, 'voices');
+    voicesFolder.create({ idempotent: true, intermediates: true });
+  }
+  return voicesFolder;
 }
+
+// Which lines are saved on the phone (name -> where, or null for "not made yet"). The player asks about
+// every line of a tape each time it redraws; asking the phone's storage each time (two slow calls per
+// line, hundreds of lines) is what made the whole app stutter while a long tape's voices were being made.
+// Only keep() below ever adds a file, so the answers stay true.
+const onPhone = new Map<string, string | null>();
 
 function fileName(text: string, voice: Voice) {
   const t = text.trim();
@@ -61,8 +70,13 @@ export function voiceAudioUri(text: string, voice: Voice): string | undefined {
   if (voice === 'my-voice' || !naturalVoices) return undefined;
   const name = fileName(text, voice);
   if (isWeb) return webAudio.get(name);
-  const file = new File(folder(), name);
-  return file.exists ? file.uri : undefined;
+  let uri = onPhone.get(name);
+  if (uri === undefined) {
+    const file = new File(folder(), name);
+    uri = file.exists ? file.uri : null;
+    onPhone.set(name, uri);
+  }
+  return uri ?? undefined;
 }
 
 /**
@@ -178,6 +192,7 @@ async function keep(bytes: Uint8Array<ArrayBuffer>, text: string, voice: Voice) 
   const file = new File(folder(), name);
   file.create({ overwrite: true });
   file.write(bytes);
+  onPhone.set(name, file.uri);
 }
 
 // Lines asked for in one request, and the pause between requests, so a long tape is a few gentle
