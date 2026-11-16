@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 
+import { UpdateReady } from '@/components/app-update';
 import { Shelf, ShelfCard } from '@/components/art';
 import { categoryIcon, dayLabel } from '@/components/goal-bits';
 import { TrackShelf } from '@/components/track-shelf';
@@ -131,6 +132,8 @@ export default function HomeScreen() {
         </View>
         <QuoteLine />
       </View>
+
+      <UpdateReady />
 
       <TodayCard />
       <PlayToday />

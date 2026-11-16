@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { select, tap } from '@/lib/haptics';
 import { usePress, useRise } from '@/lib/motion';
 import { useThemeId } from '@/lib/store';
 import { getTheme, type Theme } from '@/themes';
@@ -359,8 +360,13 @@ export function Button({
   const primary = kind === 'primary';
   const color = primary ? t.colors.onAccent : t.colors.muted;
   const press = usePress(0.96);
+  // A small tap you can feel, so a press registers the instant it lands.
+  const pressed = () => {
+    tap();
+    onPress();
+  };
   return (
-    <Pressable onPress={onPress} onPressIn={press.onPressIn} onPressOut={press.onPressOut} accessibilityRole="button">
+    <Pressable onPress={pressed} onPressIn={press.onPressIn} onPressOut={press.onPressOut} accessibilityRole="button">
       <Animated.View
         style={[
           styles.button,
@@ -389,9 +395,13 @@ export function Button({
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
   const t = useTheme();
   const press = usePress(0.93);
+  const pressed = () => {
+    select();
+    onPress();
+  };
   return (
     <Pressable
-      onPress={onPress}
+      onPress={pressed}
       onPressIn={press.onPressIn}
       onPressOut={press.onPressOut}
       accessibilityRole="button"

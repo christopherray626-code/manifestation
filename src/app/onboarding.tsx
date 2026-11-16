@@ -7,7 +7,7 @@ import { Creating, VOICING_MESSAGES, WRITING_MESSAGES } from '@/components/creat
 import { ThemePicker } from '@/components/theme-picker';
 import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme } from '@/components/ui';
 import { VOICE_LIST } from '@/components/voice-picker';
-import { success, tap } from '@/lib/haptics';
+import { success } from '@/lib/haptics';
 import { usePlayer } from '@/lib/player';
 import { askPermission, supported as remindersSupported } from '@/lib/reminders';
 import { useStore } from '@/lib/store';
@@ -54,7 +54,6 @@ export default function Onboarding() {
   const first = trackById(picked[0]) ?? TRACKS[0];
   const at = STEPS.indexOf(step);
   const next = () => {
-    tap();
     // Reminders are phone-only, so the web skips straight to the paywall.
     const following = STEPS[at + 1];
     if (!following || (following === 'reminder' && !remindersSupported)) finish();
@@ -83,7 +82,6 @@ export default function Onboarding() {
   }, [step]);
 
   async function remindAt(hour: number, minute: number) {
-    tap();
     if (await askPermission()) {
       updateSettings({ reminders: [{ id: newId(), hour, minute, opens: 'affirmation', enabled: true }] });
       success();

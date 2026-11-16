@@ -16,6 +16,11 @@ export const tap = () => {
   if (ok()) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 };
 
+/** The lightest one, for picking between choices. */
+export const select = () => {
+  if (ok()) Haptics.selectionAsync().catch(() => {});
+};
+
 export const success = () => {
   if (ok()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 };

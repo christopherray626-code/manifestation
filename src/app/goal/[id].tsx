@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 
 import { useEnhance } from '@/components/enhance';
@@ -25,6 +25,22 @@ export default function GoalScreen() {
   const [showRotation, setShowRotation] = useState(false);
   const [note, setNote] = useState('');
   const [writing, setWriting] = useState(false);
+  // A long list (a 250-line tape) is slow to open and to scroll past: show the first few until asked.
+  const [showAll, setShowAll] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  // The line just removed, kept for a few seconds so it can be put back.
+  const [removed, setRemoved] = useState<{ aff: Affirmation; at: number } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRemoved = useRef<Affirmation | null>(null);
+  // Leaving the screen: the removal stands, so its recording can go.
+  useEffect(
+    () => () => {
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+      if (lastRemoved.current) deleteRecording(lastRemoved.current.recording);
+    },
+    [],
+  );
   // Lines recorded in their own voice are left alone, so the recording still matches the words.
   const canEnhance = (a: Affirmation) => !a.recording && !/^It[’']s done\b/.test(a.text);
   const enhanceable = goal ? goal.affirmations.filter(canEnhance) : [];
@@ -59,6 +75,13 @@ export default function GoalScreen() {
     if (!text) return;
     change((g) => ({ ...g, affirmations: [...g.affirmations, makeAffirmation(text, true)] }));
     setDraft('');
+    if (!showAll && goal!.affirmations.length >= FOLD) setNote('Added. It’s at the end of your list.');
+  }
+
+  function saveTitle() {
+    const text = titleDraft.trim();
+    if (text && text !== goal!.title) change((g) => ({ ...g, title: text }));
+    setRenaming(false);
   }
 
   async function writeMore() {
@@ -79,8 +102,37 @@ export default function GoalScreen() {
     change((g) => ({ ...g, affirmations: [...g.affirmations, ...more] }));
   }
 
+  /** The removal is final: its recording (if any) is deleted. */
+  function settle() {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = null;
+    if (lastRemoved.current) deleteRecording(lastRemoved.current.recording);
+    lastRemoved.current = null;
+  }
+
+  function undoRemove() {
+    if (!removed) return;
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = null;
+    lastRemoved.current = null;
+    const { aff, at } = removed;
+    change((g) => {
+      const list = [...g.affirmations];
+      list.splice(Math.min(at, list.length), 0, aff);
+      return { ...g, affirmations: list };
+    });
+    setRemoved(null);
+  }
+
   function remove(aff: Affirmation) {
-    deleteRecording(aff.recording);
+    // One tap removes, with a few seconds to take it back (it used to be gone for good, recording and all).
+    settle();
+    lastRemoved.current = aff;
+    setRemoved({ aff, at: goal!.affirmations.findIndex((a) => a.id === aff.id) });
+    undoTimer.current = setTimeout(() => {
+      settle();
+      setRemoved(null);
+    }, 8000);
     change((g) => ({
       ...g,
       affirmations: g.affirmations.filter((a) => a.id !== aff.id),
@@ -120,13 +172,41 @@ export default function GoalScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
-        <BackHeader title={goal.title} onBack={() => router.back()} />
+        {renaming ? (
+          <Field
+            value={titleDraft}
+            onChangeText={setTitleDraft}
+            autoFocus
+            onBlur={saveTitle}
+            onSubmitEditing={saveTitle}
+            returnKeyType="done"
+            placeholder="Name it"
+          />
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <BackHeader title={goal.title} onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+            </View>
+            <Pressable
+              onPress={() => {
+                setTitleDraft(goal.title);
+                setRenaming(true);
+              }}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Rename">
+              <Icon name="create-outline" size={20} color={t.colors.muted} />
+            </Pressable>
+          </View>
+        )}
 
         {today ? (
           <QuoteBlock label="Today's affirmation" text={today.text} />
         ) : (
           <Txt variant="muted">{"Add an affirmation below and it becomes today's affirmation."}</Txt>
         )}
+
+        {goal.affirmations.length > 0 && <Button title="Play my tape" icon="play" onPress={() => open({ kind: 'goal', id: goal.id })} />}
 
         <Pressable
           onPress={() => setShowRotation((s) => !s)}
@@ -167,7 +247,22 @@ export default function GoalScreen() {
         </Section>
         {enhance.sheet}
 
-        {goal.affirmations.map((a, i) => {
+        {removed && (
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Txt variant="muted" style={{ flex: 1 }} numberOfLines={1}>
+                {`Removed “${removed.aff.text}”`}
+              </Txt>
+              <Pressable onPress={undoRemove} hitSlop={12} accessibilityRole="button">
+                <Txt variant="medium" style={{ color: t.colors.accent }}>
+                  Undo
+                </Txt>
+              </Pressable>
+            </View>
+          </Card>
+        )}
+
+        {(showAll ? goal.affirmations : goal.affirmations.slice(0, FOLD)).map((a, i) => {
           const isToday = today?.id === a.id;
           return (
             <Card key={a.id} highlight={a.mine}>
@@ -244,6 +339,9 @@ export default function GoalScreen() {
             </Card>
           );
         })}
+        {!showAll && goal.affirmations.length > FOLD && (
+          <Button title={`Show all ${goal.affirmations.length} affirmations`} icon="chevron-down" kind="ghost" onPress={() => setShowAll(true)} />
+        )}
 
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
@@ -289,6 +387,9 @@ export default function GoalScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+// How many affirmations show before "Show all".
+const FOLD = 20;
 
 function recordedLabel(goal: Goal) {
   const done = goal.affirmations.filter((a) => a.recording).length;

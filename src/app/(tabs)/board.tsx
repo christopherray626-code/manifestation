@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme } from '@/components/ui';
+import { confirm } from '@/lib/confirm';
 import { tap } from '@/lib/haptics';
 import { deletePhoto as deleteFile, savePhoto, usePhotoUris } from '@/lib/photos';
 import { useStore } from '@/lib/store';
@@ -99,7 +100,8 @@ function PhotoSheet({ id, uri, onClose }: { id: string | null; uri?: string; onC
   if (!photo) return null;
   const at = board.indexOf(photo);
 
-  function remove() {
+  async function remove() {
+    if (!(await confirm('Remove this photo?', 'It comes off your board. The original stays in your phone’s photos.'))) return;
     deletePhoto(photo!.id);
     deleteFile(photo!.file).catch(() => {});
     onClose();

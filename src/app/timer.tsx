@@ -13,6 +13,8 @@ const ENDINGS: { id: NonNullable<PlayerPrefs['endSound']>; label: string }[] = [
   { id: 'chimes', label: 'Chimes' },
 ];
 
+const QUICK = [15, 30, 45, 60, 120, 480];
+
 /** The sleep timer: hours and minutes on wheels, how long the fade is, and what happens at the end. */
 export default function TimerScreen() {
   const t = useTheme();
@@ -50,6 +52,21 @@ export default function TimerScreen() {
           <Icon name="close" size={26} color={t.colors.text} />
         </Pressable>
       </View>
+
+      {/* The usual lengths, one tap each; the wheels below are for anything else. */}
+      <ChipRow>
+        {QUICK.map((m) => (
+          <Chip
+            key={m}
+            label={label(m)}
+            selected={total === m}
+            onPress={() => {
+              setHours(Math.floor(m / 60));
+              setMinutes(m % 60);
+            }}
+          />
+        ))}
+      </ChipRow>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 8 }}>
         <Wheel count={24} value={hours} onChange={setHours} label="Hours" />

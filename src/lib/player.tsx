@@ -59,6 +59,16 @@ type Player = {
 
 const PlayerContext = createContext<Player | null>(null);
 
+/** Why the voice couldn't be made, in words a person can act on. */
+function voiceProblem(e: unknown) {
+  const message = e instanceof Error ? e.message : '';
+  // No connection shows up as the phone's own technical error (unknown host, network request failed…).
+  if (/network request failed|failed to fetch|fetch failed|unknownhost|unable to resolve|no address|timed? ?out|econn|enotfound|internet|offline/i.test(message)) {
+    return 'You’re offline, so the rest of the voice can’t be made right now. What’s already made still plays. Press play again when you’re back online.';
+  }
+  return message || 'Couldn’t make the voice. Try again.';
+}
+
 // How many lines' voices to make before a tape starts; the rest are made while it plays.
 const FIRST_LINES = 3;
 // On the web, when to rebuild the joined recording so newly made lines are heard (and at the end).
@@ -203,6 +213,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   /** Stops making voices for what was loaded before (a different track or voice is coming). */
   function stopMaking() {
     job.current++;
+    setVoiceError('');
     setPrep(null);
     setMaking(null);
   }
@@ -255,7 +266,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       if (job.current !== id) return;
       failed = !started;
-      setVoiceError(e instanceof Error ? e.message : "Couldn't make the voice. Try again.");
+      setVoiceError(voiceProblem(e));
       // Whatever was made still plays.
       if (!started) setPrep(null);
     } finally {

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { BackHeader, Button, Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
+import { confirm } from '@/lib/confirm';
 import { mixId, parseMix, type MixPart } from '@/lib/mix';
 import { usePlayer } from '@/lib/player';
 import { useStore } from '@/lib/store';
@@ -130,7 +131,8 @@ export default function MixScreen() {
           title="Delete this mix"
           icon="trash-outline"
           kind="ghost"
-          onPress={() => {
+          onPress={async () => {
+            if (!(await confirm('Delete this mix?', 'The tracks and manifestations in it stay.', 'Delete'))) return;
             deleteMix(editing.id);
             if (router.canGoBack()) router.back();
             else router.replace('/create');

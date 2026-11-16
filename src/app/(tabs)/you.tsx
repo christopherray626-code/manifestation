@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { RotationPicker } from '@/components/goal-bits';
+import { AppVersion } from '@/components/app-update';
 import { MoveData } from '@/components/move-data';
 import { ReminderList } from '@/components/reminder-list';
 import { ThemePicker } from '@/components/theme-picker';
@@ -99,6 +100,8 @@ export default function YouScreen() {
         </View>
       </Card>
 
+
+      <AppVersion />
 
       <Txt variant="muted" style={{ textAlign: 'center', marginTop: 8 }}>
         Everything you write stays on this phone.

@@ -20,6 +20,13 @@ export function Wheel({ count, value, onChange, label }: { count: number; value:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Set from outside (a one-tap length): roll to it.
+  useEffect(() => {
+    if (value !== at) ref.current?.scrollTo({ y: value * ROW, animated: true });
+    // Only when the value itself changes; `at` follows the scrolling.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const i = Math.min(count - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.y / ROW)));
     setAt(i);
