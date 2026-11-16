@@ -200,6 +200,8 @@ export function useTape({
   // The whole tape plays as one stitched recording (see stitch.ts).
   const track = useMixLayer(null, 200);
   const stitched = useRef<Stitched | null>(null);
+  // Which mode the joined recording that's playing was made for.
+  const stitchedMode = useRef<TapeMode | null>(null);
   // Called when a chunk of a long tape finishes, to start the next one.
   const trackEnded = useRef<(() => void) | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -557,6 +559,7 @@ export function useTape({
         MODES[m].gapMs,
         layers,
         m === 'spoken',
+        () => thisRun !== run.current,
       ).then((t) => (t ? { ...t, order: t.order.map((p) => chunks[c][p]) } : null));
 
     const playChunk = (c: number, ready: Promise<Stitched | null>) => {
@@ -565,6 +568,7 @@ export function useTape({
         if (thisRun !== run.current) return release(t.uri);
         const old = stitched.current;
         stitched.current = t;
+        stitchedMode.current = m;
         track.replace({ uri: t.uri });
         track.loop = looping;
         setVolume(track, latest.current.prefs.voiceVolume);
@@ -679,12 +683,28 @@ export function useTape({
     if (playing) setEndsAt(minutes ? Date.now() + minutes * 60000 : null);
   }
 
-  /** Switching mode mid-tape restarts the voices in the new style. */
+  /**
+   * A change mid-tape that needs the voices joined again (mode, layers, which lines). Joining takes a
+   * few seconds, more with many layers. When only the layers or lines changed, what's playing carries
+   * on (looping) until the new recording is ready and then hands over, so the voice never drops out.
+   * A change of mode stops it first: a subliminal's stack of voices at spoken volume would be a roar.
+   */
   function restart() {
     if (!playing) return;
-    stopVoices();
-    // Let the new mode reach latest.current before starting again.
-    setTimeout(() => startVoices(index), 0);
+    // Let the new settings reach latest.current before starting again.
+    setTimeout(() => {
+      if (stitched.current && stitchedMode.current === latest.current.mode) {
+        const thisRun = ++run.current;
+        gapTimers.current.forEach(cancel);
+        upcomingChunk.current?.then((u) => u && release(u.uri));
+        upcomingChunk.current = null;
+        trackEnded.current = null;
+        track.loop = true;
+        if (startTrack(index, thisRun)) return;
+      }
+      stopVoices();
+      startVoices(index);
+    }, 0);
   }
 
   /** The timer's ending: a soft sound and, on phones, a buzz, if they asked for them. */

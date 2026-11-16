@@ -92,6 +92,8 @@ export async function stitch(
   gapMs: number,
   layers = 1,
   voiced = false,
+  /** Checked as the mixing goes: true gives up (something newer was asked for meanwhile). */
+  cancelled?: () => boolean,
 ): Promise<Stitched | null> {
   const rotated = uris.map((_, i) => (i + from) % uris.length);
   const decoded = await Promise.all(rotated.map((i) => clip(uris[i])));
@@ -142,6 +144,7 @@ export async function stitch(
       let o = Math.floor((length * k) / layers) % length;
       for (let from = 0; from < n; from += BURST_SAMPLES) {
         await breathe();
+        if (cancelled?.()) return null;
         const to = Math.min(n, from + BURST_SAMPLES);
         if (rate === 1) {
           for (let j = from; j < to; j++) {
