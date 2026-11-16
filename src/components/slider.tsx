@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Animated, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 
 import { useTheme } from '@/components/ui';
@@ -7,6 +7,12 @@ const KNOB = 22;
 const HEIGHT = 40;
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
+
+/**
+ * A scrolling panel that holds sliders provides this, and holds still while one is being dragged
+ * (called with true on touch, false on release).
+ */
+export const SliderHold = createContext<(dragging: boolean) => void>(() => {});
 
 /**
  * A simple drag-or-tap slider from 0 to 1. Changes stream out while dragging so you hear the mix move,
@@ -35,6 +41,7 @@ export function Slider({
   const left = useRef(0);
   const [width, setWidth] = useState(0);
   const dragging = useRef(false);
+  const hold = useContext(SliderHold);
   const [pos] = useState(() => new Animated.Value(clamp(value)));
   // The centre of the knob travels from half a knob in from the left to half a knob in from the right.
   const travel = Math.max(width - KNOB, 1);
@@ -69,18 +76,34 @@ export function Slider({
       onChange(latest.current);
     }
     dragging.current = false;
+    hold(false);
   };
+  // Where the lane starts on screen, measured when it's laid out and again on each touch, so the
+  // first movement of a drag never works from a stale or missing position.
+  const measure = (then?: () => void) =>
+    lane.current?.measureInWindow((px) => {
+      if (Number.isFinite(px)) left.current = px;
+      then?.();
+    });
 
   const valueAt = (pageX: number) => clamp((pageX - left.current - KNOB / 2) / travel);
   const grant = (e: GestureResponderEvent) => {
     const x = e.nativeEvent.pageX;
     dragging.current = true;
-    lane.current?.measureInWindow((px) => {
-      left.current = px;
+    hold(true);
+    measure(() => {
+      if (!dragging.current) return;
       const v = valueAt(x);
       pos.setValue(v);
       send(v, true);
     });
+    /*
+     * Returning true is what tells Android this touch is taken. Without it, a scrolling panel around
+     * the slider takes the touch back the moment the finger drifts a few pixels up or down, and the
+     * drag is cut off mid-way: the slider stops following, jumps, or only moves in little hops.
+     * (Browsers never did that, which is why it only went wrong in the phone app.)
+     */
+    return true;
   };
   const move = (e: GestureResponderEvent) => {
     const v = valueAt(e.nativeEvent.pageX);
@@ -91,7 +114,10 @@ export function Slider({
   return (
     <View
       ref={lane}
-      onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+      onLayout={(e: LayoutChangeEvent) => {
+        setWidth(e.nativeEvent.layout.width);
+        measure();
+      }}
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={label}

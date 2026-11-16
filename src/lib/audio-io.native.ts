@@ -22,21 +22,40 @@ export async function decode(uri: string, sampleRate?: number): Promise<Decoded 
   }
 }
 
-// Joined tapes and blended loops are big WAV files (several MB each) that are only good for the
-// session that made them. Clear out the last session's once, the first time the folder is used, or
-// they pile up by the hundreds of megabytes.
+// Joined tapes are big WAV files (several MB each) that are only good for the session that made them.
+// Each session writes into its own fresh folder, and whatever earlier sessions left behind is cleared
+// away a file at a time, a few seconds in. (Deleting it all in one go could hold the whole app up for
+// many seconds when a lot had piled up: a slow start, or a blank screen.)
 let mixed: Directory | undefined;
 function folder() {
   if (mixed) return mixed;
-  const dir = new Directory(Paths.cache, 'mixed');
-  try {
-    if (dir.exists) dir.delete();
-  } catch {
-    // Something's still open; it goes next time.
-  }
+  const root = new Directory(Paths.cache, 'mixed');
+  root.create({ idempotent: true, intermediates: true });
+  const dir = new Directory(root, `s${Date.now().toString(36)}`);
   dir.create({ idempotent: true, intermediates: true });
   mixed = dir;
+  sweep(root, dir.name);
   return dir;
+}
+
+function sweep(root: Directory, keep: string) {
+  let old: (Directory | File)[];
+  try {
+    old = root.list().filter((item) => item.name !== keep);
+  } catch {
+    return;
+  }
+  const next = () => {
+    const item = old.pop();
+    if (!item) return;
+    try {
+      item.delete();
+    } catch {
+      // Still open somewhere; it goes next time.
+    }
+    setTimeout(next, 40);
+  };
+  setTimeout(next, 4000);
 }
 
 /*

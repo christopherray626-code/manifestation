@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Art, paletteFor } from '@/components/art';
 import { Creating, VOICING_MESSAGES } from '@/components/creating';
 import { categoryIcon } from '@/components/goal-bits';
-import { Slider } from '@/components/slider';
+import { Slider, SliderHold } from '@/components/slider';
 import { SoundList } from '@/components/sound-list';
 import { SOUND_LIST } from '@/lib/sounds';
 import { TrackShelf } from '@/components/track-shelf';
@@ -753,6 +753,8 @@ function BarButton({ icon, label, onPress, active }: { icon: IconName; label: st
 /** A panel that slides up from the bottom over the player. */
 function Sheet({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: ReactNode }) {
   const t = useTheme();
+  // The panel doesn't scroll while a slider in it is being dragged.
+  const [held, setHeld] = useState(false);
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} onPress={onClose} accessibilityLabel="Close" />
@@ -765,8 +767,11 @@ function Sheet({ title, open, onClose, children }: { title: string; open: boolea
             <Txt variant="medium" style={{ color: t.colors.accent }}>Done</Txt>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          {children}
+        <ScrollView
+          scrollEnabled={!held}
+          contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 16, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}>
+          <SliderHold.Provider value={setHeld}>{children}</SliderHold.Provider>
         </ScrollView>
       </View>
     </Modal>
