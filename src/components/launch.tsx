@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/components/ui';
 
@@ -9,6 +10,7 @@ import { useTheme } from '@/components/ui';
  * It sits over the app as it first appears, in the saved theme's colours, and is a short still version
  * for people who turn on Reduce motion. The star and glow are white images tinted to the theme
  * (assets/images/launch-*.png), the same shapes as the web page's launch (public/index.html).
+ * Skip (or a tap anywhere) cuts it short.
  */
 
 const STAR = require('@/assets/images/launch-star.png');
@@ -42,6 +44,17 @@ export function Launch() {
     sparks: SPARKS.map(() => new Animated.Value(0)),
     out: new Animated.Value(0),
   }));
+  const insets = useSafeAreaInsets();
+  const running = useRef<Animated.CompositeAnimation | null>(null);
+  const skipped = useRef(false);
+
+  /** Straight to the app: stop the show and fade away quickly. */
+  function skip() {
+    if (skipped.current) return;
+    skipped.current = true;
+    running.current?.stop();
+    Animated.timing(v.out, { toValue: 1, duration: 160, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => setDone(true));
+  }
 
   useEffect(() => {
     if (done) return;
@@ -49,15 +62,16 @@ export function Launch() {
     AccessibilityInfo.isReduceMotionEnabled()
       .catch(() => false)
       .then((still) => {
-        if (stopped) return;
+        if (stopped || skipped.current) return;
         const timing = (value: Animated.Value, duration: number, easing = EASE_OUT, delay = 0) =>
           Animated.sequence([Animated.delay(delay), Animated.timing(value, { toValue: 1, duration, easing, useNativeDriver: true })]);
         if (still) {
           [v.glow, v.star, ...v.sparks].forEach((a) => a.setValue(1));
-          Animated.sequence([Animated.delay(600), timing(v.out, 300)]).start(() => setDone(true));
+          running.current = Animated.sequence([Animated.delay(600), timing(v.out, 300)]);
+          running.current.start(({ finished }) => finished && setDone(true));
           return;
         }
-        Animated.parallel([
+        running.current = Animated.parallel([
           timing(v.glow, 1100),
           timing(v.star, 850, OVERSHOOT, 120),
           timing(v.ring, 900, EASE_OUT, 480),
@@ -65,7 +79,8 @@ export function Launch() {
           timing(v.shine, 700, Easing.inOut(Easing.quad), 900),
           ...v.sparks.map((s, i) => timing(s, 450, OVERSHOOT, SPARKS[i].delay)),
           timing(v.out, 550, Easing.bezier(0.4, 0, 0.2, 1), 1600),
-        ]).start(() => setDone(true));
+        ]);
+        running.current.start(({ finished }) => finished && setDone(true));
       });
     return () => {
       stopped = true;
@@ -76,7 +91,6 @@ export function Launch() {
   const ink = t.colors.accent;
   return (
     <Animated.View
-      pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
         {
@@ -180,6 +194,17 @@ export function Launch() {
           />
         ))}
       </View>
+
+      {/* A tap anywhere skips, as does the Skip in the corner. */}
+      <Pressable onPress={skip} style={StyleSheet.absoluteFill} accessible={false} />
+      <Pressable
+        onPress={skip}
+        hitSlop={16}
+        accessibilityRole="button"
+        accessibilityLabel="Skip"
+        style={{ position: 'absolute', top: insets.top + 14, right: 20, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: t.colors.border }}>
+        <Text style={{ color: t.colors.muted, fontFamily: t.fonts.body, fontSize: 14 }}>Skip</Text>
+      </Pressable>
     </Animated.View>
   );
 }
