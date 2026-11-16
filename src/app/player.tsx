@@ -26,7 +26,7 @@ import { FREQUENCY_DEFAULT_VOLUME, MODES, SUBLIMINAL_LAYER_CHOICES } from '@/lib
 export default function PlayerScreen() {
   const t = useTheme();
   const { goals, updateGoal } = useStore();
-  const { goal, track, mix, list, voice, setVoice, tape, prep, voiceError, prefs, setPrefs, setMode, toggle, choose } =
+  const { goal, track, mix, list, voice, setVoice, tape, prep, making, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
   const [sheet, setSheet] = useState<'sound' | 'voice' | 'more' | null>(null);
 
@@ -158,6 +158,11 @@ export default function PlayerScreen() {
               .join(' · ')}
           </Txt>
           {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
+          {making ? (
+            <Txt variant="muted" style={{ textAlign: 'center', fontSize: 12 }}>
+              {`Making the rest of the voice while you listen · ${making.done} of ${making.total}`}
+            </Txt>
+          ) : null}
           {goal && !tape.ready && subliminal && (
             <Pressable onPress={() => router.push({ pathname: '/record/[goalId]', params: { goalId: goal.id } })} style={{ alignSelf: 'center' }}>
               <Txt variant="muted" style={{ color: t.colors.accent, textAlign: 'center' }}>

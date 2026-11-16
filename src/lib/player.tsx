@@ -29,8 +29,13 @@ type Player = {
   voice: Voice;
   setVoice: (v: Voice) => void;
   tape: ReturnType<typeof useTape>;
-  /** Voices being made: how many are done, and while Vercel asks us to slow down, the seconds of pause. */
+  /**
+   * The first few lines' voices being made before anything can play: how many are done, and while
+   * Vercel asks us to slow down, the seconds of pause.
+   */
   prep: { done: number; total: number; waiting?: number } | null;
+  /** The rest of the voices, made in the background while the first lines play. */
+  making: { done: number; total: number } | null;
   voiceError: string;
   prefs: PlayerPrefs;
   setPrefs: (patch: Partial<PlayerPrefs>) => void;
@@ -51,6 +56,11 @@ type Player = {
 
 const PlayerContext = createContext<Player | null>(null);
 
+// How many lines' voices to make before a tape starts; the rest are made while it plays.
+const FIRST_LINES = 3;
+// On the web, when to rebuild the joined recording so newly made lines are heard (and at the end).
+const REFRESH_AT = [8, 25, 60, 120];
+
 // After this long paused, pressing play starts a fresh session.
 const SESSION_BREAK_MS = 30 * 60 * 1000;
 
@@ -59,7 +69,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [chosen, setChosen] = useState<Source | undefined>();
   const [trackVoice, setTrackVoice] = useState<Voice>(DEFAULT_VOICE);
   const [prep, setPrep] = useState<{ done: number; total: number; waiting?: number } | null>(null);
+  const [making, setMaking] = useState<{ done: number; total: number } | null>(null);
   const [voiceError, setVoiceError] = useState('');
+  // Each round of voice-making gets a number; switching track or voice moves it on, which stops the old round.
+  const job = useRef(0);
+  // Ask the tape to play (or to pick up newly made lines) after the next render, once it can see them.
+  const [playAsk, setPlayAsk] = useState(0);
+  const [refreshAsk, setRefreshAsk] = useState(0);
 
   // What's loaded: what you picked, else what you last played, else your first goal, else the first track.
   const fallback: Source = goals[0] ? { kind: 'goal', id: goals[0].id } : { kind: 'track', id: TRACKS[0].id };
@@ -84,8 +100,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const prefs = settings.player;
   const trackList = useMemo(() => mixed?.affirmations ?? (track ? trackAffirmations(track) : []), [mixed, track]);
   const favorites = goal?.affirmations.filter((a) => a.favorite) ?? [];
-  const list = track ? trackList : prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
+  const fullList = track ? trackList : prefs.favoritesOnly && favorites.length ? favorites : (goal?.affirmations ?? []);
   const voice: Voice = track ? trackVoice : (goal?.voice ?? DEFAULT_VOICE);
+  // While the rest of the voice is still being made, the tape plays only the lines that are ready, and
+  // more join as they're made (each one re-renders, since making.done changes).
+  const list = making ? fullList.filter((a) => audioFor(a, voice)) : fullList;
   const tape = useTape({ affirmations: list, voice, prefs });
 
   // The daily goal: listening time adds up while a tape plays; reaching the goal counts the day.
@@ -143,29 +162,81 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const setPrefs = (patch: Partial<PlayerPrefs>) => updateSettings({ player: { ...prefs, ...patch } });
 
-  async function start() {
-    if (!list.length || prep) return;
-    tap();
-    const missing = voice === 'my-voice' || !naturalVoices ? [] : list.filter((a) => !audioFor(a, voice));
-    if (missing.length) {
-      setVoiceError('');
-      setPrep({ done: 0, total: missing.length });
-      try {
-        await prepareVoice(
-          missing.map((a) => a.text),
-          voice,
-          (done, total) => setPrep({ done, total }),
-          (seconds) => setPrep((p) => (p ? { ...p, waiting: seconds } : p)),
-        );
-      } catch (e) {
-        setVoiceError(e instanceof Error ? e.message : "Couldn't make the voice. Try again.");
-        return;
-      } finally {
-        setPrep(null);
-      }
-    }
+  useEffect(() => {
+    if (!playAsk) return;
     tape.play();
     if (source) updateSettings({ lastPlayed: source });
+    // Runs once per ask; the tape and source are read as they are now.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playAsk]);
+  useEffect(() => {
+    // The web joins the lines into one recording when it starts, so new lines need a fresh one. On
+    // phones each line is picked as it comes up, so new ones are heard without a restart.
+    if (refreshAsk && Platform.OS === 'web') tape.restart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshAsk]);
+
+  /** Stops making voices for what was loaded before (a different track or voice is coming). */
+  function stopMaking() {
+    job.current++;
+    setPrep(null);
+    setMaking(null);
+  }
+
+  async function start() {
+    if (!fullList.length || prep) return;
+    tap();
+    // Still making the rest in the background: play what's ready.
+    if (making) return setPlayAsk((n) => n + 1);
+    const missing = voice === 'my-voice' || !naturalVoices ? [] : fullList.filter((a) => !audioFor(a, voice));
+    if (!missing.length) return setPlayAsk((n) => n + 1);
+
+    // Make the first few lines, start playing, and make the rest while it plays.
+    const id = ++job.current;
+    const first = Math.min(FIRST_LINES, missing.length);
+    let started = false;
+    let failed = false;
+    setVoiceError('');
+    setPrep({ done: 0, total: first });
+    try {
+      await prepareVoice(
+        missing.map((a) => a.text),
+        voice,
+        (done, total) => {
+          if (job.current !== id) return;
+          if (!started) {
+            setPrep({ done: Math.min(done, first), total: first });
+            if (done < first) return;
+            started = true;
+            setPrep(null);
+            setMaking({ done, total });
+            setPlayAsk((n) => n + 1);
+            return;
+          }
+          setMaking({ done, total });
+          if (REFRESH_AT.includes(done)) setRefreshAsk((n) => n + 1);
+        },
+        (seconds) => {
+          if (job.current === id && !started) setPrep((p) => (p ? { ...p, waiting: seconds } : p));
+        },
+        () => job.current !== id,
+      );
+    } catch (e) {
+      if (job.current !== id) return;
+      failed = !started;
+      setVoiceError(e instanceof Error ? e.message : "Couldn't make the voice. Try again.");
+      // Whatever was made still plays.
+      if (!started) setPrep(null);
+    } finally {
+      if (job.current === id) {
+        setMaking(null);
+        setPrep(null);
+        // Started early: pick up the last lines. Never started (fewer lines were missing than it looked, or
+        // they were already saved on this device): play now, unless it failed.
+        if (started) setRefreshAsk((n) => n + 1);
+        else if (!failed) setPlayAsk((n) => n + 1);
+      }
+    }
   }
 
   function toggle() {
@@ -189,6 +260,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   function setVoice(v: Voice) {
     tape.pause();
+    stopMaking();
     if (goal) updateGoal(goal.id, (g) => ({ ...g, voice: v }));
     else setTrackVoice(v);
   }
@@ -196,6 +268,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   function choose(next: Source) {
     if (source && next.kind === source.kind && next.id === source.id) return;
     tape.pause();
+    stopMaking();
     setChosen(next);
   }
 
@@ -228,6 +301,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setVoice,
     tape,
     prep,
+    making,
     voiceError,
     prefs,
     setPrefs,

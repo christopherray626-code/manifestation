@@ -118,12 +118,15 @@ export async function prepareVoice(
   voice: Voice,
   onProgress: (done: number, total: number) => void,
   onWait?: (seconds: number) => void,
+  /** Checked before each line: true stops making the rest (they switched track or voice). */
+  stopped?: () => boolean,
 ) {
   if (isWeb && voice !== 'my-voice' && naturalVoices) await loadSaved(texts, voice);
   const missing = texts.filter((t) => !voiceAudioUri(t, voice));
   let done = 0;
   onProgress(0, missing.length);
   for (const t of missing) {
+    if (stopped?.()) return;
     const at = texts.indexOf(t);
     await makeOne(t, voice, texts[at - 1], texts[at + 1], onWait);
     done++;
