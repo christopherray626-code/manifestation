@@ -28,6 +28,7 @@ import { PlayerProvider } from '@/lib/player';
 import { StoreProvider, useStore } from '@/lib/store';
 import { setAppOpens } from '@/lib/today';
 import { useWidget } from '@/widget/use-widget';
+import { Launch } from '@/components/launch';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -133,6 +134,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
       </Stack>
       <StreakCelebration />
       <ThemeFade />
+      <Launch />
     </ThemeProvider>
   );
 }
