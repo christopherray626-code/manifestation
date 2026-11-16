@@ -128,7 +128,7 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="goal/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="goal/[id]" />
         <Stack.Screen name="track/[id]" />
-        <Stack.Screen name="journal" />
+        <Stack.Screen name="journal" options={{ animation: 'none' }} />
         <Stack.Screen name="mix" />
         <Stack.Screen name="streak" />
         <Stack.Screen name="dev/index" />

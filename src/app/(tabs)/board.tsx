@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
+import { JournalPanel, WHY_SCRIPTING } from '@/components/journal';
 import { Button, Chip, ChipRow, Field, Icon, Screen, Txt, useTheme, WithInfo } from '@/components/ui';
 import { confirm } from '@/lib/confirm';
 import { tap } from '@/lib/haptics';
@@ -11,9 +12,20 @@ import { deletePhoto as deleteFile, savePhoto, usePhotoUris } from '@/lib/photos
 import { useStore } from '@/lib/store';
 import { newId, type BoardPhoto } from '@/lib/types';
 
-/** Your own photos of what's already yours, as a board and as a slideshow. No AI images. */
+/**
+ * The Board tab: the vision board (your own photos of what's already yours, as a board and as a
+ * slideshow, no AI images) and the scripting journal, one tap apart.
+ */
 export default function BoardScreen() {
   const t = useTheme();
+  // Links to the journal (Today's card, old /journal links) open this tab on it.
+  const { show } = useLocalSearchParams<{ show?: string }>();
+  const [view, setView] = useState<'board' | 'journal'>(show === 'journal' ? 'journal' : 'board');
+  const [seenShow, setSeenShow] = useState(show);
+  if (show !== seenShow) {
+    setSeenShow(show);
+    if (show === 'journal' || show === 'board') setView(show);
+  }
   const { board, goals, addPhotos } = useStore();
   const uris = usePhotoUris(board.map((p) => p.file));
   const [editing, setEditing] = useState<string | null>(null);
@@ -46,9 +58,34 @@ export default function BoardScreen() {
     }
   }
 
+  const header = (
+    <View style={{ gap: 14 }}>
+      {view === 'journal' ? (
+        <WithInfo info={WHY_SCRIPTING} about="scripting">
+          <Txt variant="display">Journal</Txt>
+        </WithInfo>
+      ) : (
+        <Txt variant="display">Vision board</Txt>
+      )}
+      <ChipRow>
+        <Chip label="Vision board" selected={view === 'board'} onPress={() => setView('board')} />
+        <Chip label="Journal" selected={view === 'journal'} onPress={() => setView('journal')} />
+      </ChipRow>
+    </View>
+  );
+
+  if (view === 'journal') {
+    return (
+      <Screen>
+        {header}
+        <JournalPanel />
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
-      <Txt variant="display">Vision board</Txt>
+      {header}
 
       {board.length === 0 ? (
         <View style={{ alignItems: 'center', gap: 10, paddingVertical: 40 }}>

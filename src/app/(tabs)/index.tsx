@@ -42,7 +42,7 @@ function JournalCard() {
   const t = useTheme();
   const { journal } = useStore();
   return (
-    <Card onPress={() => router.push('/journal')}>
+    <Card onPress={() => router.navigate({ pathname: '/board', params: { show: 'journal' } })}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Icon name="create-outline" size={20} color={t.colors.accent} />
         <View style={{ flex: 1 }}>

@@ -59,16 +59,6 @@ export default function CreateScreen() {
 
       <Button title="Make a mix" icon="layers-outline" kind="ghost" onPress={() => router.push('/mix')} />
 
-      <Card onPress={() => router.push('/journal')}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Icon name="create-outline" size={20} color={t.colors.accent} />
-          <Txt variant="medium" style={{ flex: 1 }}>
-            Journal
-          </Txt>
-          <Icon name="chevron-forward" size={18} color={t.colors.muted} />
-        </View>
-      </Card>
-
       <Txt variant="display" style={{ fontSize: 22, lineHeight: 28, marginTop: 8 }}>
         Ready-made tracks
       </Txt>
