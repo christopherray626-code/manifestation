@@ -12,6 +12,9 @@ import { trackAffirmations, trackById, TRACKS, type Track } from '@/lib/tracks';
 import { DEFAULT_VOICE, type Affirmation, type Goal, type PlayerPrefs, type TapeMode, type Voice } from '@/lib/types';
 import { audioFor, MODES, useTape } from '@/lib/use-tape';
 import { naturalVoices, prepareVoice } from '@/lib/voices';
+import { paletteFor } from '@/lib/palette';
+import { getTheme } from '@/themes';
+import { usePlayerWidget } from '@/widget/use-widget';
 
 /*
  * The one player for the whole app. It lives at the root, so a tape keeps playing while you move
@@ -54,6 +57,8 @@ type Player = {
   celebrate: number | null;
   /** Seconds played of what's loaded, kept through pauses and closing the player. */
   sessionSeconds: () => number;
+  /** Affirmations actually played this session (each layer of a layered tape counts its own). */
+  sessionHeard: () => number;
   dismissCelebration: () => void;
 };
 
@@ -78,7 +83,7 @@ const REFRESH_AT = [8, 25, 60, 120];
 const SESSION_BREAK_MS = 30 * 60 * 1000;
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const { goals, settings, updateSettings, updateGoal, mixes } = useStore();
+  const { goals, settings, updateSettings, updateGoal, mixes, loaded } = useStore();
   const [chosen, setChosen] = useState<Source | undefined>();
   const [trackVoice, setTrackVoice] = useState<Voice>(DEFAULT_VOICE);
   const [prep, setPrep] = useState<{ done: number; total: number; waiting?: number } | null>(null);
@@ -123,29 +128,49 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const title = track?.title ?? goal?.title ?? '';
   const tape = useTape({ affirmations: list, voice, prefs, growing: !!making, title, onRemotePlay: () => void start() });
 
+  // The home-screen player widget (Android): what's loaded, whether it's playing, and its buttons.
+  const tone = mixed ? undefined : track ? track.id : goal && goal.category !== 'other' ? goal.category : undefined;
+  const toneIndex = track ? Math.max(TRACKS.findIndex((x) => x.id === track.id), 0) : Math.max(goals.findIndex((g) => g.id === goal?.id), 0);
+  usePlayerWidget(
+    {
+      title: title || 'Manifest',
+      subtitle: prep ? 'Getting the voice ready…' : tape.playing ? `Playing · ${MODES[tape.mode].label}` : 'Paused',
+      playing: tape.playing,
+      colors: paletteFor(tone, toneIndex, getTheme(settings.themeId)),
+    },
+    { toggle: () => toggle(), skip: (by) => tape.skip(by) },
+    loaded,
+  );
+
   // The daily goal: listening time adds up while a tape plays; reaching the goal counts the day.
   const [celebrate, setCelebrate] = useState<number | null>(null);
 
   // This listening session: counted here, not on the player screen, so pausing or closing the player
   // doesn't start it over. A different track, or coming back after a long break, starts a new one.
-  const session = useRef({ key: '', seconds: 0, since: null as number | null, pausedAt: null as number | null });
+  const session = useRef({ key: '', seconds: 0, since: null as number | null, pausedAt: null as number | null, heardFrom: 0 });
   const sessionKey = source ? `${source.kind}:${source.id}` : '';
   useEffect(() => {
     const s = session.current;
     const now = Date.now();
     if (s.key !== sessionKey) {
-      session.current = { key: sessionKey, seconds: 0, since: tape.playing ? now : null, pausedAt: null };
+      session.current = { key: sessionKey, seconds: 0, since: tape.playing ? now : null, pausedAt: null, heardFrom: tape.heard() };
       return;
     }
     if (tape.playing && s.since === null) {
-      if (s.pausedAt && now - s.pausedAt > SESSION_BREAK_MS) s.seconds = 0;
+      if (s.pausedAt && now - s.pausedAt > SESSION_BREAK_MS) {
+        s.seconds = 0;
+        s.heardFrom = tape.heard();
+      }
       s.since = now;
     } else if (!tape.playing && s.since !== null) {
       s.seconds += (now - s.since) / 1000;
       s.since = null;
       s.pausedAt = now;
     }
+    // tape.heard only reads a counter; it doesn't need to re-run this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tape.playing, sessionKey]);
+  const sessionHeard = () => Math.max(0, tape.heard() - session.current.heardFrom);
   const sessionSeconds = () => {
     const s = session.current;
     return Math.floor(s.seconds + (s.since !== null ? (Date.now() - s.since) / 1000 : 0));
@@ -355,6 +380,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     celebrate,
     dismissCelebration: () => setCelebrate(null),
     sessionSeconds,
+    sessionHeard,
   };
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

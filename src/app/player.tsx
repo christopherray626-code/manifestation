@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AccessibilityInfo, Animated, Easing, Modal, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
@@ -45,7 +45,14 @@ export default function PlayerScreen() {
   const colors = paletteFor(tone, toneIndex, t);
   const subliminal = tape.mode === 'subliminal';
   const opening = useOpening();
-  const session = useSession(tape.playing, subliminal ? (prefs.subLayers ?? 3) : (prefs.layers ?? 1), prefs.speed ?? 1);
+  const session = useSession(tape.playing);
+  // Opened from the home-screen widget's play button with the app closed: start playing.
+  const { play: playNow } = useLocalSearchParams<{ play?: string }>();
+  useEffect(() => {
+    if (playNow === '1' && !tape.playing && !prep) toggle();
+    // Once, when the link opens the player.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playNow]);
   const now = useNow(tape.playing && !!tape.endsAt);
 
   const changeFavorite = (affId: string) =>
@@ -154,7 +161,7 @@ export default function PlayerScreen() {
           {!subliminal && list.length > 1 && <Segments count={list.length} at={tape.index} />}
           <Txt variant="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 8, minHeight: 16, color: t.colors.text, opacity: 0.8 }}>
             {[
-              session.seconds ? `${session.clock} · about ${session.heard} affirmation${session.heard === 1 ? '' : 's'} heard` : '',
+              session.seconds ? `${session.clock} · ${session.heard} affirmation${session.heard === 1 ? '' : 's'} heard` : '',
               tape.endsAt ? `fades out in ${Math.max(1, Math.round((tape.endsAt - now) / 60000))} min` : '',
             ]
               .filter(Boolean)
@@ -666,21 +673,27 @@ const RISE_SIZE = [4, 6, 5, 3, 3, 6, 4];
  * How long this session has played and roughly how many affirmations went in: one line every few
  * seconds per voice, faster at higher speeds, three voices at once in a subliminal.
  */
-function useSession(playing: boolean, layers: number, speed: number) {
-  // The count itself lives in the player (src/lib/player.tsx); this just refreshes the display.
-  const { sessionSeconds } = usePlayer();
+function useSession(playing: boolean) {
+  // The counts themselves live in the player (src/lib/player.tsx); this just refreshes the display.
+  const { sessionSeconds, sessionHeard } = usePlayer();
   const [seconds, setSeconds] = useState(() => sessionSeconds());
+  const [heard, setHeard] = useState(() => sessionHeard());
   useEffect(() => {
-    const tick = () => setSeconds(sessionSeconds());
-    const timer = setInterval(tick, playing ? 1000 : 5000);
+    // Looked at four times a second, and redrawn only when a number changes: a once-a-second timer
+    // drifts against the real clock, so the display would sit on one second and then skip the next.
+    const tick = () => {
+      setSeconds(sessionSeconds());
+      setHeard(sessionHeard());
+    };
+    tick();
+    const timer = setInterval(tick, playing ? 250 : 3000);
     return () => clearInterval(timer);
-  }, [playing, sessionSeconds]);
-  const heard = Math.floor((seconds / SECONDS_PER_LINE) * layers * speed);
+    // The two readers are recreated each render; they only read counters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
   const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   return { seconds, heard, clock };
 }
-// A typical line plus the pause after it, at normal speed.
-const SECONDS_PER_LINE = 4;
 
 /** The time now, refreshed every half minute while `on`, for the timer countdown. */
 function useNow(on: boolean) {

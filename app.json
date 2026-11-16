@@ -2,7 +2,7 @@
   "expo": {
     "name": "Manifest",
     "slug": "manifestation",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "manifestation",
@@ -75,6 +75,32 @@
               "targetCellHeight": 2,
               "maxResizeWidth": "520dp",
               "maxResizeHeight": "400dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "Player",
+              "label": "Player",
+              "description": "Play, pause and skip your tape from the home screen.",
+              "minWidth": "250dp",
+              "minHeight": "50dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 1,
+              "maxResizeWidth": "520dp",
+              "maxResizeHeight": "160dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "Streak",
+              "label": "Streak",
+              "description": "Your streak, this week and today, on your home screen.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "320dp",
+              "maxResizeHeight": "320dp",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }

@@ -200,6 +200,13 @@ export function useTape({
   // The whole tape plays as one stitched recording (see stitch.ts).
   const track = useMixLayer(null, 200);
   const stitched = useRef<Stitched | null>(null);
+  /*
+   * How many affirmations have actually been played, counted as each one starts: one for a single
+   * voice, and one per layer when several read at once (every layer says its own line).
+   */
+  const heard = useRef(0);
+  // In the joined recording: which line was last counted, where it had got to, and its layers.
+  const counted = useRef({ line: -1, time: 0, layers: 1 });
   // Which mode the joined recording that's playing was made for.
   const stitchedMode = useRef<TapeMode | null>(null);
   // Called when a chunk of a long tape finishes, to start the next one.
@@ -263,6 +270,14 @@ export function useTape({
         if (!t || !status.playing) return;
         let p = 0;
         while (p + 1 < t.starts.length && t.starts[p + 1] <= status.currentTime) p++;
+        const c = counted.current;
+        // Time going backwards means the recording looped (or was replayed): its first line is new again.
+        if (status.currentTime < c.time - 0.5) c.line = -1;
+        c.time = status.currentTime;
+        if (p !== c.line) {
+          c.line = p;
+          heard.current += c.layers;
+        }
         setIndex(t.order[p]);
       }),
     );
@@ -474,6 +489,7 @@ export function useTape({
     const at = wrap(i, list.length);
     const item = list[at];
     setIndex(at);
+    heard.current += 1;
     const next = () => {
       if (thisRun !== run.current) return;
       gapTimers.current[0] = later(MODES.spoken.gapMs / (latest.current.prefs.speed ?? 1), () => speakAt(at + 1, thisRun));
@@ -510,6 +526,7 @@ export function useTape({
     if (!files.length) return;
     const at = wrap(i, files.length);
     if (k === 0) setIndex(list.indexOf(files[at]));
+    heard.current += 1;
     playFile(k, [layer0, layer1, layer2][k], audioFor(files[at], v)!, p.voiceVolume, () => {
       if (thisRun !== run.current) return;
       gapTimers.current[k] = later(MODES.subliminal.gapMs, () => layerAt(k, at + 1, thisRun));
@@ -543,6 +560,7 @@ export function useTape({
     if (leading) {
       const at = files[start];
       setIndex(at);
+      heard.current += 1;
       afterLead = new Promise<void>((open) => {
         playFile(0, layer0, uris[at]!, latest.current.prefs.voiceVolume, () => {
           gapTimers.current[0] = later(MODES[m].gapMs / (latest.current.prefs.speed ?? 1), open);
@@ -618,6 +636,7 @@ export function useTape({
         const old = stitched.current;
         stitched.current = t;
         stitchedMode.current = m;
+        counted.current = { line: -1, time: 0, layers };
         const looping = c === loopAt;
         track.replace({ uri: t.uri });
         track.loop = looping;
@@ -825,5 +844,5 @@ export function useTape({
 
   // The list can get shorter under a tape (favorites only, a line removed): never point past its end.
   const at = Math.min(index, Math.max(affirmations.length - 1, 0));
-  return { playing, index: at, endsAt, ready, mode, play, pause, skip, retime, restart, setLevels };
+  return { playing, index: at, endsAt, ready, mode, play, pause, skip, retime, restart, setLevels, heard: () => heard.current };
 }
