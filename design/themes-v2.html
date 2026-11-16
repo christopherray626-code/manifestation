@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Theme rework options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,400&family=Syne:wght@600;800&family=DM+Sans:wght@400;500;700&family=Libre+Caslon+Text:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #0c0c10; color: #eee; font-family: Inter, sans-serif; padding: 28px; }
+  h1 { font-size: 15px; letter-spacing: .22em; text-transform: uppercase; color: #9a98a8; font-weight: 600; margin-bottom: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 300px); gap: 34px 30px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .name { font-size: 17px; font-weight: 600; color: #fff; }
+  .blurb { font-size: 12.5px; color: #a3a1b0; line-height: 1.45; min-height: 36px; }
+  .phone { position: relative; width: 300px; height: 600px; border-radius: 38px; overflow: hidden; padding: 46px 20px 0; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+  .greet { font-size: 26px; line-height: 1.1; }
+  .quote { font-size: 12px; opacity: .75; margin-top: 4px; }
+  .card { border-radius: 20px; padding: 18px; position: relative; overflow: hidden; }
+  .label { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; opacity: .7; margin-bottom: 8px; }
+  .aff { font-size: 19px; line-height: 1.3; }
+  .play { height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .row { display: flex; gap: 10px; }
+  .tile { flex: 1; height: 110px; border-radius: 16px; padding: 10px; display: flex; align-items: flex-end; font-size: 12px; font-weight: 600; color: #fff; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: flex; justify-content: space-around; align-items: center; font-size: 10px; }
+  .tabs span { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .dot { width: 18px; height: 18px; border-radius: 6px; }
+  .star { position: absolute; border-radius: 50%; background: #fff; }
+
+  /* 1 Starlight */
+  .starlight { background: radial-gradient(120% 70% at 50% 0%, #1b2552 0%, #0a0f26 55%, #070a1a 100%); color: #f3ead2; font-family: Inter; }
+  .starlight .greet { font-family: 'Cormorant Garamond'; font-weight: 600; font-size: 30px; background: linear-gradient(90deg, #f6e3a4, #d4a94a, #f6e3a4); -webkit-background-clip: text; color: transparent; }
+  .starlight .card { background: rgba(255,255,255,.05); border: 1px solid rgba(217,185,92,.35); }
+  .starlight .aff { font-family: 'Cormorant Garamond'; font-style: italic; font-size: 23px; }
+  .starlight .play { background: linear-gradient(90deg, #e7c766, #c99a3a); color: #1a1405; box-shadow: 0 0 24px rgba(231,199,102,.35); }
+  .starlight .tabs { background: rgba(7,10,26,.9); border-top: 1px solid rgba(217,185,92,.2); color: #8d8a7a; }
+  .starlight .tabs .on { color: #e7c766; }
+
+  /* 2 Aura */
+  .aura { background: #f3e9ff; color: #2a1640; }
+  .aura .blob { position: absolute; border-radius: 50%; filter: blur(46px); opacity: .9; }
+  .aura .greet { font-family: 'Fraunces'; font-weight: 500; }
+  .aura .card { background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.8); backdrop-filter: blur(16px); box-shadow: 0 8px 30px rgba(120,60,180,.12); }
+  .aura .aff { font-family: 'Fraunces'; font-style: italic; font-weight: 400; }
+  .aura .play { background: linear-gradient(90deg, #ff8fd2, #a98bff, #7fd6ff); color: #fff; }
+  .aura .tabs { background: rgba(255,255,255,.55); backdrop-filter: blur(14px); color: #8d7aa8; }
+  .aura .tabs .on { color: #8a4dff; }
+
+  /* 3 Moon */
+  .moon { background: linear-gradient(180deg, #0e1420 0%, #121a2b 100%); color: #dfe5ef; }
+  .moon .greet { font-family: 'Cormorant Garamond'; font-weight: 500; letter-spacing: .02em; }
+  .moon .card { background: transparent; border: 1px solid rgba(200,210,230,.22); }
+  .moon .aff { font-family: 'Cormorant Garamond'; font-size: 22px; }
+  .moon .play { background: transparent; border: 1px solid #c9d2e3; color: #e9eef7; }
+  .moon .tabs { background: #0d1320; border-top: 1px solid rgba(200,210,230,.12); color: #6c7890; }
+  .moon .tabs .on { color: #e9eef7; }
+  .moon .orb { position: absolute; right: -40px; top: 40px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f4f6fb, #b9c3d6 60%, #8592ab); opacity: .16; box-shadow: 0 0 60px rgba(230,236,248,.25); }
+
+  /* 4 Old money */
+  .oldmoney { background: #f4efe3; color: #1f2e24; }
+  .oldmoney .greet { font-family: 'Libre Caslon Text'; font-size: 25px; }
+  .oldmoney .card { background: #fbf8f0; border: 1px solid #c9b78a; border-radius: 6px; box-shadow: inset 0 0 0 4px #fbf8f0, inset 0 0 0 5px #e1d4b2; }
+  .oldmoney .aff { font-family: 'Libre Caslon Text'; font-style: italic; font-size: 18px; }
+  .oldmoney .label { font-family: 'Libre Caslon Text'; letter-spacing: .3em; color: #8a6d2f; opacity: 1; }
+  .oldmoney .play { background: #1f3a2b; color: #f4efe3; border-radius: 6px; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+  .oldmoney .tile { border-radius: 6px; }
+  .oldmoney .tabs { background: #efe8d8; border-top: 1px solid #d8cba8; color: #8c8670; }
+  .oldmoney .tabs .on { color: #1f3a2b; }
+
+  /* 5 Y2K glow-up */
+  .y2k { background: linear-gradient(160deg, #ffe3f3 0%, #f2e6ff 45%, #dff4ff 100%); color: #1d0a24; font-family: 'DM Sans'; }
+  .y2k .greet { font-family: 'Syne'; font-weight: 800; font-size: 27px; letter-spacing: -.02em; }
+  .y2k .card { background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.55)); border: 2px solid transparent; background-clip: padding-box; box-shadow: 0 0 0 2px #ff5fc8, 0 10px 30px rgba(255,95,200,.25); }
+  .y2k .holo { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 20%, rgba(255,140,220,.35) 35%, rgba(140,220,255,.35) 50%, rgba(200,255,170,.3) 62%, transparent 78%); }
+  .y2k .aff { font-family: 'Syne'; font-weight: 600; font-size: 18px; position: relative; }
+  .y2k .label { position: relative; color: #ff2aa8; opacity: 1; font-weight: 700; }
+  .y2k .play { background: linear-gradient(180deg, #ffffff, #d7dbe6 45%, #ffffff 55%, #c6ccda); color: #1d0a24; border: 1px solid #b9bfcc; box-shadow: 0 4px 0 #ff5fc8; }
+  .y2k .tabs { background: rgba(255,255,255,.7); color: #9b7aa6; }
+  .y2k .tabs .on { color: #ff2aa8; }
+
+  /* 6 Clean */
+  .clean { background: #fafaf8; color: #161616; }
+  .clean .greet { font-family: Inter; font-weight: 600; font-size: 24px; letter-spacing: -.02em; }
+  .clean .card { background: #fff; border: 1px solid #ececea; }
+  .clean .aff { font-weight: 500; font-size: 18px; letter-spacing: -.01em; }
+  .clean .play { background: #161616; color: #fff; }
+  .clean .tile { border-radius: 14px; }
+  .clean .tabs { background: #fff; border-top: 1px solid #ececea; color: #a3a3a0; }
+  .clean .tabs .on { color: #161616; }
+
+  .note { margin-top: 26px; font-size: 13px; color: #a3a1b0; max-width: 960px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<h1>Theme rework · six options (each also gets a light or dark twin)</h1>
+<div class="grid" id="grid"></div>
+<p class="note">Each theme changes more than colour: fonts, card style, button style, the background (stars, aura blobs, moon, paper, holographic shine) and, in the app, its own motion and default background sound. Pick the ones you like, or mix (for example Aura's glass cards with Starlight's colours).</p>
+<script>
+  const T = [
+    { id: 'starlight', name: 'Starlight', blurb: 'Night sky and gold. Twinkling stars, a gold shimmer on headings, elegant serif. The signature look.', tiles: [['#f7c45c','#9c2c77'],['#5ef0d0','#2a1b6e']], icons: '✦' },
+    { id: 'aura', name: 'Aura', blurb: 'Dreamy pastel aura that slowly shifts behind glassy cards. Soft, Gen Z, very TikTok.', tiles: [['#ffb8d9','#a98bff'],['#a8ebff','#c9b0ff']] },
+    { id: 'moon', name: 'Moon', blurb: 'Silver and deep blue, very quiet. Thin lines, a soft moon, made for night listening.', tiles: [['#2c3a57','#141c2c'],['#3b4766','#18203a']] },
+    { id: 'oldmoney', name: 'Old money', blurb: 'Cream, forest green and gold serif. A luxury hotel or a black card. Restrained, no sparkles.', tiles: [['#2e5640','#1f3a2b'],['#b8955a','#7a5f2c']] },
+    { id: 'y2k', name: 'Y2K glow-up', blurb: 'Chrome buttons, hot pink, holographic shine on cards. Loud and playful.', tiles: [['#ff5fc8','#a98bff'],['#7fd6ff','#ff9ad5']] },
+    { id: 'clean', name: 'Clean', blurb: 'Plain white (or black), one font, nothing mystical. For people who just want the words.', tiles: [['#2b2b2b','#111'],['#d9d9d6','#a5a5a2']] },
+  ];
+  const grid = document.getElementById('grid');
+  for (const t of T) {
+    let deco = '';
+    if (t.id === 'starlight') for (let i = 0; i < 40; i++) deco += `<i class="star" style="left:${(i * 37) % 300}px;top:${(i * 71) % 600}px;width:${1 + (i % 3)}px;height:${1 + (i % 3)}px;opacity:${0.25 + (i % 5) / 8}"></i>`;
+    if (t.id === 'aura') deco = `<i class="blob" style="width:240px;height:240px;background:#ffb3e1;left:-80px;top:-40px"></i><i class="blob" style="width:220px;height:220px;background:#b9a3ff;right:-90px;top:180px"></i><i class="blob" style="width:220px;height:220px;background:#a8e8ff;left:-40px;bottom:-40px"></i>`;
+    if (t.id === 'moon') { deco = '<i class="orb"></i>'; for (let i = 0; i < 14; i++) deco += `<i class="star" style="left:${(i * 53) % 300}px;top:${(i * 97) % 560}px;width:1px;height:1px;opacity:.5"></i>`; }
+    const holo = t.id === 'y2k' ? '<i class="holo"></i>' : '';
+    grid.insertAdjacentHTML('beforeend', `
+      <div class="col">
+        <div class="name">${t.name}</div>
+        <div class="blurb">${t.blurb}</div>
+        <div class="phone ${t.id}">
+          ${deco}
+          <div style="position:relative">
+            <div class="greet">Good evening, Chris</div>
+            <div class="quote">“Live in the end.” — Neville Goddard</div>
+          </div>
+          <div class="card">${holo}<div class="label">Today's affirmation</div><div class="aff">Money comes to you so easily, it almost feels unfair.</div></div>
+          <div class="play">▶ Play your tape</div>
+          <div class="label" style="margin:4px 0 -6px;position:relative">My manifestations</div>
+          <div class="row">${t.tiles.map(([a, b], i) => `<div class="tile" style="background:linear-gradient(150deg,${a},${b})">${i ? 'Dream home' : 'Money'}</div>`).join('')}</div>
+          <div class="tabs"><span class="on"><i class="dot" style="background:currentColor;opacity:.9"></i>Today</span><span><i class="dot" style="background:currentColor;opacity:.5"></i>Manifest</span><span><i class="dot" style="background:currentColor;opacity:.5"></i>Board</span><span><i class="dot" style="background:currentColor;opacity:.5"></i>Settings</span></div>
+        </div>
+      </div>`);
+  }
+</script>
+</body>
+</html>
