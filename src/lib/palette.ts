@@ -50,6 +50,7 @@ const MOODS: Record<string, { accent: number; bg: number; soft: number; mute: nu
   aura: { accent: 0.22, bg: 0.3, soft: 0, mute: 0.1 },
   tarot: { accent: 0.15, bg: 0.45, soft: 0, mute: 0.55 },
   dream: { accent: 0.15, bg: 0, soft: 0.45, mute: 0.05 },
+  sky: { accent: 0.3, bg: 0, soft: 0.3, mute: 0.1 },
   clean: { accent: 0.05, bg: 0, soft: 0.35, mute: 0.3 },
   soft: { accent: 0.25, bg: 0, soft: 0.3, mute: 0.25 },
   oldmoney: { accent: 0.25, bg: 0.4, soft: 0, mute: 0.5 },

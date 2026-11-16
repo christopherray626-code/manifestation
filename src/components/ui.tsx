@@ -148,6 +148,32 @@ function Ambient() {
     ],
   });
 
+  if (t.decor === 'sky') {
+    // Clouds are the round glow stretched wide; they drift sideways, the sun stays put.
+    const cloud = (x: number) => ({
+      transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, x] }) }, { scaleX: 1.9 }, { scaleY: 0.75 }],
+    });
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+        <View style={{ position: 'absolute', top: -200, right: -170 }}>
+          <Glow color="#FFFFFF" size={520} opacity={0.75} />
+        </View>
+        <View style={{ position: 'absolute', top: -60, right: -40 }}>
+          <Glow color="#FFF6DA" size={240} opacity={0.5} />
+        </View>
+        <Animated.View style={[{ position: 'absolute', top: '16%', left: -150 }, cloud(70)]}>
+          <Glow color="#FFFFFF" size={260} opacity={0.7} />
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', top: '46%', right: -170 }, cloud(-60)]}>
+          <Glow color="#FFFFFF" size={300} opacity={0.6} />
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', bottom: -40, left: -60 }, cloud(50)]}>
+          <Glow color="#FFFFFF" size={320} opacity={0.65} />
+        </Animated.View>
+      </View>
+    );
+  }
+
   if (t.decor === 'aura') {
     const [a, b, c] = t.colors.tints;
     return (

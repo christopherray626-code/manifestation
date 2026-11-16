@@ -44,9 +44,8 @@ function ThemeCard({ theme, selected, onPress }: { theme: Theme; selected: boole
           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.muted }} />
         </View>
       </View>
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={{ flex: 1 }}>
         <Txt variant="medium">{theme.name}</Txt>
-        <Txt variant="muted">{theme.blurb}</Txt>
       </View>
       {selected && <Icon name="checkmark-circle" size={22} color={current.colors.accent} />}
     </Pressable>

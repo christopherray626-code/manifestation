@@ -42,7 +42,7 @@ export type Theme = {
   card: 'outline' | 'filled' | 'white' | 'line';
   quote: 'frame' | 'card' | 'bar' | 'plain';
   goalIcon: 'ring' | 'tile' | 'none';
-  decor: 'stars' | 'orb' | 'moon' | 'aura' | 'none';
+  decor: 'stars' | 'orb' | 'moon' | 'aura' | 'sky' | 'none';
   tagline: 'streak' | 'none';
   romanDays: boolean;
 };
@@ -208,6 +208,45 @@ export const themes: Theme[] = [
     quote: 'card',
     goalIcon: 'tile',
     decor: 'aura',
+    tagline: 'none',
+    romanDays: false,
+  },
+  {
+    id: 'sky',
+    name: 'Sky',
+    group: 'mystical',
+    blurb: 'Clear blue sky and soft white clouds',
+    dark: false,
+    colors: {
+      bg: '#D6EBFF',
+      card: '#FFFFFF',
+      field: '#FFFFFF',
+      border: '#BFDBF7',
+      text: '#0F2A4A',
+      muted: '#56769A',
+      accent: '#2D7FF0',
+      onAccent: '#FFFFFF',
+      label: '#4A78AC',
+      tabInactive: '#93B2D3',
+      frame: '#A7CBF2',
+      tints: ['#FFFFFF', '#9FD1FF', '#E6F4FF'],
+    },
+    fonts: {
+      ...inter,
+      display: 'PlayfairDisplay_400Regular',
+      label: 'Inter_500Medium',
+      quote: 'PlayfairDisplay_400Regular_Italic',
+      button: 'Inter_500Medium',
+    },
+    displayCaps: false,
+    labelCaps: false,
+    labelSpacing: 0,
+    buttonCaps: false,
+    radius: 22,
+    card: 'white',
+    quote: 'card',
+    goalIcon: 'tile',
+    decor: 'sky',
     tagline: 'none',
     romanDays: false,
   },
