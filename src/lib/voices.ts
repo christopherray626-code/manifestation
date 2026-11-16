@@ -68,6 +68,9 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Vercel's firewall starts turning requests away when many arrive in a row. Back off and try again
 // rather than failing the whole tape: 3, 8, 15 and 30 seconds.
 const BACKOFF_MS = [3000, 8000, 15000, 30000];
+// After those, keep trying every minute rather than giving up: the firewall lets requests through again
+// once it calms down, and a tape that's already playing can wait for its remaining lines.
+const PATIENT_MS = 60000;
 
 // Where lines made before (by anyone, on any device) can be downloaded straight from shared storage,
 // skipping the voice server and the firewall in front of it. Asked once; null when it isn't set up.
@@ -97,8 +100,16 @@ async function fromShared(text: string, voice: Voice) {
   }
 }
 
-async function makeOne(text: string, voice: Voice, previous?: string, next?: string, onWait?: (seconds: number) => void) {
-  const res = (await fromShared(text, voice)) ?? (await askServer(text, voice, previous, next, onWait));
+async function makeOne(
+  text: string,
+  voice: Voice,
+  previous?: string,
+  next?: string,
+  onWait?: (seconds: number) => void,
+  stopped?: () => boolean,
+) {
+  const res = (await fromShared(text, voice)) ?? (await askServer(text, voice, previous, next, onWait, stopped));
+  if (!res) return;
   if (!res.ok) {
     let message = `The voice server answered ${res.status}.`;
     const body = await res.text().catch(() => '');
@@ -114,7 +125,14 @@ async function makeOne(text: string, voice: Voice, previous?: string, next?: str
   await keep(res, text, voice);
 }
 
-async function askServer(text: string, voice: Voice, previous?: string, next?: string, onWait?: (seconds: number) => void) {
+async function askServer(
+  text: string,
+  voice: Voice,
+  previous?: string,
+  next?: string,
+  onWait?: (seconds: number) => void,
+  stopped?: () => boolean,
+): Promise<Response | null> {
   let res: Response;
   for (let attempt = 0; ; attempt++) {
     res = await fetch(`${SERVER}/api/voice`, {
@@ -124,9 +142,11 @@ async function askServer(text: string, voice: Voice, previous?: string, next?: s
       body: JSON.stringify({ text: text.trim(), voice, previous, next }),
     });
     const blocked = res.status === 403 || res.status === 429;
-    if (!blocked || attempt >= BACKOFF_MS.length) break;
-    onWait?.(BACKOFF_MS[attempt] / 1000);
-    await wait(BACKOFF_MS[attempt]);
+    if (!blocked) break;
+    const pause = BACKOFF_MS[attempt] ?? PATIENT_MS;
+    onWait?.(pause / 1000);
+    await wait(pause);
+    if (stopped?.()) return null;
   }
   return res;
 }
@@ -150,6 +170,9 @@ async function keep(res: Response, text: string, voice: Voice) {
   file.write(bytes);
 }
 
+// Between lines, so a long tape doesn't look like a flood of requests to the firewall.
+const LINE_GAP_MS = 900;
+
 /** Makes any missing audio one line at a time, gently, reporting how many are done. */
 export async function prepareVoice(
   texts: string[],
@@ -166,10 +189,11 @@ export async function prepareVoice(
   for (const t of missing) {
     if (stopped?.()) return;
     const at = texts.indexOf(t);
-    await makeOne(t, voice, texts[at - 1], texts[at + 1], onWait);
+    await makeOne(t, voice, texts[at - 1], texts[at + 1], onWait, stopped);
+    if (stopped?.()) return;
     done++;
     onProgress(done, missing.length);
     // A short pause between lines, so a long mix doesn't look like a flood of requests.
-    if (done < missing.length) await wait(350);
+    if (done < missing.length) await wait(LINE_GAP_MS);
   }
 }

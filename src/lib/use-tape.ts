@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { useMixLayer } from '@/lib/mix-layer';
 import { recordingUri } from '@/lib/recordings';
 import { success } from '@/lib/haptics';
+import { release } from '@/lib/audio-io';
 import { stitch, type Stitched } from '@/lib/stitch';
 import { useToneLayer } from '@/lib/tone';
 import { naturalVoices, voiceAudioUri } from '@/lib/voices';
@@ -65,6 +66,9 @@ export const SUBLIMINAL_LEVELS = [
 
 /** Overlapping voice tracks in a subliminal, each starting at a different affirmation. */
 const SUBLIMINAL_LAYERS = 3;
+// On phones: the longest tape joined into one track, and the most subliminal layers mixed into it.
+const PHONE_MAX_LINES = 60;
+const PHONE_MAX_LAYERS = 6;
 /** The layer counts offered for subliminals. */
 // r/Subliminal: stacking 15-20 at once is common and there's no agreed limit; consistency matters more.
 export const SUBLIMINAL_LAYER_CHOICES = [3, 5, 10, 15, 20];
@@ -143,7 +147,7 @@ export function useTape({
   const layer0 = useAudioPlayer(null, { updateInterval: 100 });
   const layer1 = useAudioPlayer(null, { updateInterval: 100 });
   const layer2 = useAudioPlayer(null, { updateInterval: 100 });
-  // On the web the whole tape plays as one stitched recording (see stitch.ts).
+  // The whole tape plays as one stitched recording (see stitch.ts).
   const track = useMixLayer(null, 200);
   const stitched = useRef<Stitched | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -333,19 +337,22 @@ export function useTape({
   }
 
   /**
-   * Web: join the lines into one recording and loop it from `from`. Returns false when it can't (some
+   * Join the lines into one recording and loop it from `from`. Returns false when it can't (some
    * lines have no audio yet and need the phone's voice), so the line-by-line players take over.
    */
   function startTrack(from: number, thisRun: number) {
-    if (Platform.OS !== 'web') return false;
     const { affirmations: list, voice: v, mode: m } = latest.current;
     const uris = list.map((a) => audioFor(a, v));
     const files = list.flatMap((a, i) => (uris[i] ? [i] : []));
     if (!files.length || (m === 'spoken' && files.length < list.length)) return false;
+    // Phones join tapes in JavaScript too, which is far slower than a browser and holds the whole track in
+    // memory, so very long tapes keep playing line by line there for now.
+    if (Platform.OS !== 'web' && files.length > PHONE_MAX_LINES) return false;
     const start = Math.max(files.indexOf(from), 0);
     const spokenLayers = Math.min(Math.max(latest.current.prefs.layers ?? 1, 1), 3, files.length);
     // The web build mixes any number of layers into one track, even more than there are lines.
-    const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), 20);
+    const maxLayers = Platform.OS === 'web' ? 20 : PHONE_MAX_LAYERS;
+    const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), maxLayers);
     stitch(
       files.map((i) => uris[i]!),
       start,
@@ -354,7 +361,7 @@ export function useTape({
       m === 'spoken',
     ).then((t) => {
       if (!t) return;
-      if (thisRun !== run.current) return URL.revokeObjectURL(t.uri);
+      if (thisRun !== run.current) return release(t.uri);
       const old = stitched.current;
       stitched.current = { ...t, order: t.order.map((p) => files[p]) };
       track.replace({ uri: t.uri });
@@ -362,7 +369,7 @@ export function useTape({
       track.volume = latest.current.prefs.voiceVolume;
       track.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
       track.play();
-      if (old) URL.revokeObjectURL(old.uri);
+      if (old) release(old.uri);
     });
     return true;
   }

@@ -160,7 +160,7 @@ export default function PlayerScreen() {
           {voiceError ? <Txt variant="muted" style={{ textAlign: 'center', color: '#E26D5C' }}>{voiceError}</Txt> : null}
           {making ? (
             <Txt variant="muted" style={{ textAlign: 'center', fontSize: 12 }}>
-              {`Making the rest of the voice while you listen · ${making.done} of ${making.total}`}
+              {`Making the rest of the voice while you listen · ${making.done} of ${making.total}${making.waiting ? ' · taking a short break, it carries on by itself' : ''}`}
             </Txt>
           ) : null}
           {goal && !tape.ready && subliminal && (

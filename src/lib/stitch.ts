@@ -1,6 +1,9 @@
+import { decode, playable } from '@/lib/audio-io';
+import { wav } from '@/lib/wav';
+
 /*
- * Web only: joins a tape's voice clips into one continuous recording, so it plays from a single audio
- * element. Swapping clips on separate players let lines overlap and clicked at each change; one track
+ * Joins a tape's voice clips into one continuous recording, so it plays from a single player (on the web
+ * and on phones; audio-io does the decoding and saving for each). Swapping clips on separate players let lines overlap and clicked at each change; one track
  * can't do either. Each clip has its silent ends trimmed and a tiny fade at both edges, then a set gap.
  */
 
@@ -19,9 +22,8 @@ function clip(uri: string) {
   if (!got) {
     got = (async () => {
       try {
-        const bytes = await (await fetch(uri)).arrayBuffer();
-        const audio = await new OfflineAudioContext(1, 1, RATE).decodeAudioData(bytes);
-        return shape(mono(audio));
+        const audio = await decode(uri, RATE);
+        return audio ? shape(mono(audio.channels)) : null;
       } catch {
         return null;
       }
@@ -31,12 +33,11 @@ function clip(uri: string) {
   return got;
 }
 
-function mono(audio: AudioBuffer) {
-  if (audio.numberOfChannels === 1) return audio.getChannelData(0);
-  const out = new Float32Array(audio.length);
-  for (let c = 0; c < audio.numberOfChannels; c++) {
-    const data = audio.getChannelData(c);
-    for (let i = 0; i < out.length; i++) out[i] += data[i] / audio.numberOfChannels;
+function mono(channels: Float32Array[]) {
+  if (channels.length === 1) return channels[0];
+  const out = new Float32Array(channels[0].length);
+  for (const data of channels) {
+    for (let i = 0; i < out.length; i++) out[i] += data[i] / channels.length;
   }
   return out;
 }
@@ -132,11 +133,11 @@ export async function stitch(
         right[o] += s * r * Math.SQRT2;
       }
     });
-    return { uri: URL.createObjectURL(wav([left, right])), starts: startSamples.map((s) => s / RATE), order };
+    return { uri: await playable(wav([left, right], RATE), 'tape'), starts: startSamples.map((s) => s / RATE), order };
   }
 
   return {
-    uri: URL.createObjectURL(wav([seq])),
+    uri: await playable(wav([seq], RATE), 'tape'),
     starts: startSamples.map((s) => s / RATE),
     order,
   };
@@ -156,33 +157,4 @@ function subliminalVoicings(layers: number) {
     const c = (k * 0.569840 + 0.6) % 1;
     return { rate: 1 + (a * 2 - 1) * 0.08, gain: 0.55 + b * 0.45, pan: (c * 2 - 1) * 0.8 };
   });
-}
-
-/** 16-bit WAV (mono or stereo), which every browser plays and can speed up without changing pitch. */
-function wav(channels: Float32Array[]) {
-  const n = channels.length;
-  const frames = channels[0].length;
-  const bytes = frames * n * 2;
-  const buf = new ArrayBuffer(44 + bytes);
-  const v = new DataView(buf);
-  const text = (at: number, s: string) => [...s].forEach((ch, i) => v.setUint8(at + i, ch.charCodeAt(0)));
-  text(0, 'RIFF');
-  v.setUint32(4, 36 + bytes, true);
-  text(8, 'WAVE');
-  text(12, 'fmt ');
-  v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true);
-  v.setUint16(22, n, true);
-  v.setUint32(24, RATE, true);
-  v.setUint32(28, RATE * n * 2, true);
-  v.setUint16(32, n * 2, true);
-  v.setUint16(34, 16, true);
-  text(36, 'data');
-  v.setUint32(40, bytes, true);
-  for (let i = 0; i < frames; i++) {
-    for (let c = 0; c < n; c++) {
-      v.setInt16(44 + (i * n + c) * 2, Math.max(-1, Math.min(1, channels[c][i])) * 0x7fff, true);
-    }
-  }
-  return new Blob([buf], { type: 'audio/wav' });
 }

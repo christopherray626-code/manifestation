@@ -35,7 +35,7 @@ type Player = {
    */
   prep: { done: number; total: number; waiting?: number } | null;
   /** The rest of the voices, made in the background while the first lines play. */
-  making: { done: number; total: number } | null;
+  making: { done: number; total: number; waiting?: number } | null;
   voiceError: string;
   prefs: PlayerPrefs;
   setPrefs: (patch: Partial<PlayerPrefs>) => void;
@@ -69,7 +69,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [chosen, setChosen] = useState<Source | undefined>();
   const [trackVoice, setTrackVoice] = useState<Voice>(DEFAULT_VOICE);
   const [prep, setPrep] = useState<{ done: number; total: number; waiting?: number } | null>(null);
-  const [making, setMaking] = useState<{ done: number; total: number } | null>(null);
+  const [making, setMaking] = useState<{ done: number; total: number; waiting?: number } | null>(null);
   const [voiceError, setVoiceError] = useState('');
   // Each round of voice-making gets a number; switching track or voice moves it on, which stops the old round.
   const job = useRef(0);
@@ -217,7 +217,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           if (REFRESH_AT.includes(done)) setRefreshAsk((n) => n + 1);
         },
         (seconds) => {
-          if (job.current === id && !started) setPrep((p) => (p ? { ...p, waiting: seconds } : p));
+          if (job.current !== id) return;
+          if (!started) setPrep((p) => (p ? { ...p, waiting: seconds } : p));
+          else setMaking((m) => (m ? { ...m, waiting: seconds } : m));
         },
         () => job.current !== id,
       );

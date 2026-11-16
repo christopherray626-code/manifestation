@@ -3,6 +3,9 @@ import { useAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
 import { useState } from 'react';
 import { Platform } from 'react-native';
 
+import { decode, playable } from '@/lib/audio-io';
+import { wav } from '@/lib/wav';
+
 /*
  * One sound in the mix (the voice track, the background). On phones it's an expo-audio player. On the
  * web it's an <audio> element routed through the Web Audio API, so its level is a gain that can be
@@ -317,12 +320,122 @@ function resolve(source: Source) {
 
 /** A player for one layer of the mix: expo-audio on phones, an eased Web Audio layer on the web. */
 export function useMixLayer(source: Source, updateInterval?: number, kind: 'stream' | 'loop' = 'stream'): MixLayer {
-  const native = useAudioPlayer(isWeb ? null : source, updateInterval ? { updateInterval } : undefined);
-  const [web] = useState(() => {
-    if (!isWeb) return null;
-    const layer = kind === 'loop' ? new WebLoop() : new WebLayer();
-    layer.replace(source);
-    return layer;
+  const loop = kind === 'loop';
+  // A phone loop starts empty: its seamless copy is made first (see NativeLoop).
+  const native = useAudioPlayer(isWeb || loop ? null : source, updateInterval ? { updateInterval } : undefined);
+  const [layer] = useState(() => {
+    if (!isWeb) {
+      if (!loop) return null;
+      const nativeLoop = new NativeLoop(native);
+      nativeLoop.replace(source);
+      return nativeLoop;
+    }
+    const web = loop ? new WebLoop() : new WebLayer();
+    web.replace(source);
+    return web;
   });
-  return (web ?? native) as unknown as MixLayer;
+  return (layer ?? native) as unknown as MixLayer;
+}
+
+/*
+ * Phones: a background loop plays a seamless copy of the sound, blended end-into-start like the web's
+ * (see blendLoop) and saved as a WAV, which the player loops without a gap. Each sound is made once per
+ * session; until it's ready the layer stays quiet, then starts if it was asked to play.
+ */
+const nativeLoops = new Map<string, Promise<string | null>>();
+function seamlessFile(uri: string) {
+  let got = nativeLoops.get(uri);
+  if (!got) {
+    got = (async () => {
+      const audio = await decode(uri);
+      if (!audio) return null;
+      const channels = blendLoop(audio.channels, audio.sampleRate);
+      return playable(wav(channels, audio.sampleRate), 'loop');
+    })().catch(() => null);
+    nativeLoops.set(uri, got);
+  }
+  return got;
+}
+
+class NativeLoop {
+  private uri = '';
+  private want = false;
+  private ready = false;
+  loop = true;
+  constructor(private player: AudioPlayer) {}
+
+  get volume() {
+    return this.player.volume;
+  }
+  set volume(v: number) {
+    this.player.volume = v;
+  }
+
+  replace(source: Source) {
+    const uri = resolve(source);
+    if (!uri || uri === this.uri) return;
+    this.uri = uri;
+    this.ready = false;
+    this.player.pause();
+    (async () => {
+      // Bundled sounds have to be on the phone's disk before they can be decoded.
+      const local = typeof source === 'number' ? ((await Asset.fromModule(source).downloadAsync()).localUri ?? uri) : uri;
+      const file = (await seamlessFile(local)) ?? local;
+      if (uri !== this.uri) return;
+      this.player.replace({ uri: file });
+      this.player.loop = true;
+      this.ready = true;
+      if (this.want) this.player.play();
+    })().catch(() => {});
+  }
+
+  play() {
+    this.want = true;
+    if (this.ready) this.player.play();
+  }
+
+  pause() {
+    this.want = false;
+    this.player.pause();
+  }
+
+  seekTo(seconds: number) {
+    return this.player.seekTo(seconds);
+  }
+
+  setPlaybackRate() {
+    // Backgrounds always play at normal speed.
+  }
+
+  addListener(event: 'playbackStatusUpdate', listener: Listener) {
+    return this.player.addListener(event, listener);
+  }
+}
+
+/** The same blend as seamless() (above), on plain sample arrays, for phones. */
+function blendLoop(channels: Float32Array[], rate: number): Float32Array[] {
+  const data = channels[0];
+  const quiet = 0.0005;
+  let first = 0;
+  while (first < data.length && Math.abs(data[first]) < quiet) first++;
+  let last = data.length - 1;
+  while (last > first && Math.abs(data[last]) < quiet) last--;
+  const max = rate * 0.25;
+  if (first > max) first = 0;
+  if (data.length - 1 - last > max) last = data.length - 1;
+  const n = last + 1 - first;
+  const blend = Math.min(Math.round(BLEND_SEC * rate), Math.floor(n / 4));
+  if (blend < 2) return channels;
+  const length = n - blend;
+  const tail = length - blend;
+  return channels.map((channel) => {
+    const src = channel.subarray(first, first + n);
+    const dst = new Float32Array(length);
+    dst.set(src.subarray(blend, blend + tail));
+    for (let j = tail; j < length; j++) {
+      const k = (j - tail) / blend;
+      dst[j] = src[blend + j] * Math.cos((k * Math.PI) / 2) + src[j - tail] * Math.sin((k * Math.PI) / 2);
+    }
+    return dst;
+  });
 }
