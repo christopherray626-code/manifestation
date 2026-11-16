@@ -21,6 +21,28 @@ export function Slider({ value, onChange, label }: { value: number; onChange: (v
   // The knob's centre travels from half a knob in from the left to half a knob in from the right.
   const travel = Math.max(width - KNOB, 1);
 
+  // While dragging, the knob follows your finger every frame, but the new level goes out at most every
+  // 80ms (and once more on release): each change re-saves settings, which is too slow to do per frame.
+  const sent = useRef(0);
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latest = useRef(value);
+  const send = (v: number, now = false) => {
+    latest.current = v;
+    if (pending.current) return;
+    const wait = now ? 0 : Math.max(0, 80 - (Date.now() - sent.current));
+    pending.current = setTimeout(() => {
+      pending.current = null;
+      sent.current = Date.now();
+      onChange(latest.current);
+    }, wait);
+  };
+  const release = () => {
+    if (pending.current) clearTimeout(pending.current);
+    pending.current = null;
+    if (dragging !== null) onChange(latest.current);
+    setDragging(null);
+  };
+
   const valueAt = (pageX: number) => Math.min(1, Math.max(0, (pageX - left.current - KNOB / 2) / travel));
   const grant = (e: GestureResponderEvent) => {
     const x = e.nativeEvent.pageX;
@@ -28,13 +50,13 @@ export function Slider({ value, onChange, label }: { value: number; onChange: (v
       left.current = px;
       const v = valueAt(x);
       setDragging(v);
-      onChange(v);
+      send(v, true);
     });
   };
   const move = (e: GestureResponderEvent) => {
     const v = valueAt(e.nativeEvent.pageX);
     setDragging(v);
-    onChange(v);
+    send(v);
   };
 
   return (
@@ -52,8 +74,8 @@ export function Slider({ value, onChange, label }: { value: number; onChange: (v
       onResponderTerminationRequest={() => false}
       onResponderGrant={grant}
       onResponderMove={move}
-      onResponderRelease={() => setDragging(null)}
-      onResponderTerminate={() => setDragging(null)}
+      onResponderRelease={release}
+      onResponderTerminate={release}
       style={{ height: HEIGHT, justifyContent: 'center' }}>
       {/* Track, inset so its ends line up with the knob's centre at 0 and 100. */}
       <View style={{ marginHorizontal: KNOB / 2, height: 6, borderRadius: 3, backgroundColor: t.colors.border }}>

@@ -1,11 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import { BottomTabBar } from 'expo-router/build/react-navigation/bottom-tabs';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, View, type ColorValue } from 'react-native';
 
 import { MiniPlayer } from '@/components/mini-player';
 import { useTheme, type IconName } from '@/components/ui';
 import { tap } from '@/lib/haptics';
+import { NATIVE, useReducedMotion } from '@/lib/motion';
 import { useStore } from '@/lib/store';
 
 // Four tabs, each a one-word label with an outline icon that fills in when active.
@@ -51,9 +53,7 @@ export default function TabLayout() {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? tab.iconOn : tab.icon} size={22} color={color} />
-            ),
+            tabBarIcon: ({ color, focused }) => <TabIcon name={focused ? tab.iconOn : tab.icon} color={color} focused={focused} />,
           }}
         />
       ))}
@@ -61,5 +61,28 @@ export default function TabLayout() {
         <Tabs.Screen key={name} name={name} options={{ href: null }} />
       ))}
     </Tabs>
+  );
+}
+
+/** A tab's icon: it pops with a little bounce and a tilt when its tab becomes the one you're on. */
+function TabIcon({ name, color, focused }: { name: IconName; color: ColorValue; focused: boolean }) {
+  const still = useReducedMotion();
+  const [pop] = useState(() => new Animated.Value(focused ? 1 : 0));
+  useEffect(() => {
+    if (still || !focused) return pop.setValue(focused ? 1 : 0);
+    pop.setValue(0);
+    Animated.spring(pop, { toValue: 1, useNativeDriver: NATIVE, speed: 14, bounciness: 14 }).start();
+  }, [focused, pop, still]);
+  return (
+    <Animated.View
+      style={{
+        transform: [
+          { scale: pop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.25, 1.08] }) },
+          { translateY: pop.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },
+          { rotate: pop.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '-10deg', '0deg'] }) },
+        ],
+      }}>
+      <Ionicons name={name} size={22} color={color} />
+    </Animated.View>
   );
 }

@@ -123,8 +123,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoaded(true));
   }, []);
 
+  // Saved a moment after the last change, so a burst of changes (dragging a slider) is one write.
   useEffect(() => {
-    if (loaded) AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
+    if (!loaded) return;
+    const timer = setTimeout(() => AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {}), 400);
+    return () => clearTimeout(timer);
   }, [state, loaded]);
 
   const store: Store = {

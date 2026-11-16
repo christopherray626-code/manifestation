@@ -41,22 +41,31 @@ export function usePress(depth = 0.96) {
   };
 }
 
-/** A soft fade-and-rise, replayed whenever `key` changes (a screen coming into focus, say). */
-export function useRise(key: unknown) {
+/**
+ * A soft fade-and-rise, replayed whenever `key` changes (a screen coming into focus, say). `delay` lets a
+ * screen's sections follow one another in a cascade.
+ */
+export function useRise(key: unknown, delay = 0) {
   const [v] = useState(() => new Animated.Value(1));
   useEffect(() => {
     if (reduced) return;
     v.setValue(0);
-    const anim = Animated.timing(v, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE });
+    const anim = Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(v, { toValue: 1, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE }),
+    ]);
     // Always land on fully shown, even if the animation is interrupted.
     anim.start(() => v.setValue(1));
     return () => {
       anim.stop();
       v.setValue(1);
     };
-  }, [key, v]);
+  }, [key, v, delay]);
   return {
     opacity: v,
-    transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+    transform: [
+      { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) },
+      { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) },
+    ],
   };
 }

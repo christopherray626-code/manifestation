@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Children, useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -185,6 +185,12 @@ export function Orb({ size = 150 }: { size?: number }) {
   );
 }
 
+/** One section of a scrolling screen, rising in a beat after the one above it. */
+function RiseIn({ visit, index, children }: { visit: number; index: number; children: ReactNode }) {
+  const rise = useRise(visit, Math.min(index, 7) * 55);
+  return <Animated.View style={rise}>{children}</Animated.View>;
+}
+
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   const t = useTheme();
   // Each time the screen comes into view, its content rises softly into place.
@@ -197,7 +203,13 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         {scroll ? (
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Animated.View style={[styles.content, rise]}>{children}</Animated.View>
+            <View style={styles.content}>
+              {Children.toArray(children).map((child, i) => (
+                <RiseIn key={i} visit={visit} index={i}>
+                  {child}
+                </RiseIn>
+              ))}
+            </View>
           </ScrollView>
         ) : (
           <Animated.View style={[styles.content, { flex: 1 }, rise]}>{children}</Animated.View>

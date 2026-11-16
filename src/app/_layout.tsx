@@ -115,7 +115,15 @@ function Root({ fontsReady }: { fontsReady: boolean }) {
         },
       }}>
       <StatusBar style={t.dark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.colors.bg } }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: t.colors.bg },
+          // Pages slide in from the right over a dimmed, slightly receding page, like iPhone apps, and
+          // can be swiped back from anywhere on the screen.
+          animation: 'ios_from_right',
+          fullScreenGestureEnabled: true,
+        }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="goal/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="goal/[id]" />
