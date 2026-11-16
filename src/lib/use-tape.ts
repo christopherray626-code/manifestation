@@ -1,7 +1,7 @@
 import { setAudioModeAsync, useAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { useMixLayer } from '@/lib/mix-layer';
 import { recordingUri } from '@/lib/recordings';
@@ -107,13 +107,18 @@ function pickVoice(voices: Speech.Voice[], kind: 'calm-female' | 'deep-male') {
 
 const wrap = (i: number, n: number) => ((i % n) + n) % n;
 
-const glides = new WeakMap<AudioPlayer, ReturnType<typeof setInterval>>();
-/** Moves a player's volume to `to` in small steps over about a sixth of a second. */
-function glideVolume(player: AudioPlayer, to: number) {
+type HasVolume = { volume: number };
+const glides = new WeakMap<HasVolume, ReturnType<typeof setInterval>>();
+/**
+ * Moves a player's volume to `to` in small steps over about a sixth of a second. With the app closed,
+ * Android pauses JavaScript timers, so a glide would stall half-way: there it jumps straight to the level.
+ */
+function glideVolume(player: HasVolume, to: number) {
   const running = glides.get(player);
   if (running) clearInterval(running);
+  glides.delete(player);
   const from = player.volume;
-  if (Math.abs(to - from) < 0.002) {
+  if (Math.abs(to - from) < 0.002 || AppState.currentState !== 'active') {
     player.volume = to;
     return;
   }
@@ -134,10 +139,13 @@ export function useTape({
   affirmations,
   voice,
   prefs,
+  growing = false,
 }: {
   affirmations: Affirmation[];
   voice: Voice;
   prefs: PlayerPrefs;
+  /** True while more lines' voices are still being made: the tape picks them up at the end of each pass. */
+  growing?: boolean;
 }) {
   const mode = modeOf(prefs);
   const background = useMixLayer(SOUNDS.pad, undefined, 'loop');
@@ -173,8 +181,8 @@ export function useTape({
   const loaded = useRef<(string | undefined)[]>([undefined, undefined, undefined]);
   const fade = useRef<ReturnType<typeof setInterval> | null>(null);
   const voiceIds = useRef<{ 'calm-female'?: string; 'deep-male'?: string }>({});
-  const latest = useRef({ affirmations, voice, prefs, mode });
-  latest.current = { affirmations, voice, prefs, mode };
+  const latest = useRef({ affirmations, voice, prefs, mode, growing });
+  latest.current = { affirmations, voice, prefs, mode, growing };
 
   /** Subliminals need real audio files: live phone speech can't be mixed quietly enough. */
   const ready =
@@ -245,11 +253,21 @@ export function useTape({
   // Glide to a new level rather than jumping: a sudden volume step on a playing sound is heard as a
   // crackle, and dragging a slider makes dozens of them.
   useEffect(() => {
-    // The mix layers (background, the stitched voice track) ease their own level.
-    if (!fade.current) background.volume = prefs.soundVolume;
-    track.volume = prefs.voiceVolume;
-    for (const player of [layer0, layer1, layer2]) glideVolume(player, prefs.voiceVolume);
+    setLevels({ voiceVolume: prefs.voiceVolume, soundVolume: prefs.soundVolume });
+    // setLevels is recreated each render; only the levels matter here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs.soundVolume, prefs.voiceVolume, background, layer0, layer1, layer2, track]);
+
+  /**
+   * Moves the sound to new levels straight away, without saving anything: a slider calls this while it's
+   * dragged, so the mix follows your finger without re-drawing the app, and saves once on release.
+   */
+  function setLevels(l: { voiceVolume?: number; soundVolume?: number; frequencyVolume?: number }) {
+    if (l.voiceVolume !== undefined) for (const player of [track, layer0, layer1, layer2]) glideVolume(player, l.voiceVolume);
+    if (fade.current) return; // the timer's fade-out owns the other levels
+    if (l.soundVolume !== undefined) glideVolume(background, l.soundVolume);
+    if (l.frequencyVolume !== undefined) tone.setVolume(l.frequencyVolume);
+  }
 
   useEffect(() => {
     if (stitched.current) track.setPlaybackRate(prefs.speed ?? 1, 'high');
@@ -368,7 +386,15 @@ export function useTape({
       chunks.push(ordered.slice(0, FIRST_CHUNK_LINES));
       for (let k = FIRST_CHUNK_LINES; k < ordered.length; k += size) chunks.push(ordered.slice(k, k + size));
     }
-    const looping = chunks.length === 1;
+    // While more lines are still being made, even a short tape plays one pass at a time, so the lines
+    // made meanwhile join at the end of each pass (rather than the first few looping forever).
+    const growing = latest.current.growing;
+    const looping = chunks.length === 1 && !growing;
+    const passStartId = list[ordered[0]]?.id;
+    const grew = () => {
+      const now = latest.current;
+      return now.affirmations.filter((a) => audioFor(a, now.voice)).length !== files.length;
+    };
 
     const build = (c: number) =>
       stitch(
@@ -394,12 +420,24 @@ export function useTape({
         if (looping) return;
         // Build the next chunk now, and hand over to it when this one finishes.
         const next = (c + 1) % chunks.length;
-        const upcoming = build(next);
-        trackEnded.current = () => {
+        const upcoming = chunks.length > 1 ? build(next) : null;
+        const drop = () => void upcoming?.then((u) => u && release(u.uri));
+        const ended = () => {
           trackEnded.current = null;
-          if (thisRun === run.current) playChunk(next, upcoming);
-          else upcoming.then((u) => u && release(u.uri));
+          if (thisRun !== run.current) return drop();
+          // End of a pass and new lines are ready: join the tape again with them in.
+          if (next === 0 && grew()) {
+            drop();
+            const now = latest.current.affirmations;
+            if (!startTrack(Math.max(now.findIndex((a) => a.id === passStartId), 0), thisRun)) startVoices(0);
+            return;
+          }
+          if (upcoming) return playChunk(next, upcoming);
+          // A short tape still waiting on its next lines: play it again.
+          trackEnded.current = ended;
+          void Promise.resolve(track.seekTo(0)).then(() => thisRun === run.current && track.play());
         };
+        trackEnded.current = ended;
       });
     };
     trackEnded.current = null;
@@ -534,5 +572,5 @@ export function useTape({
     [],
   );
 
-  return { playing, index, endsAt, ready, mode, play, pause, skip, retime, restart };
+  return { playing, index, endsAt, ready, mode, play, pause, skip, retime, restart, setLevels };
 }

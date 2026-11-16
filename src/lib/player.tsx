@@ -105,7 +105,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // While the rest of the voice is still being made, the tape plays only the lines that are ready, and
   // more join as they're made (each one re-renders, since making.done changes).
   const list = making ? fullList.filter((a) => audioFor(a, voice)) : fullList;
-  const tape = useTape({ affirmations: list, voice, prefs });
+  const tape = useTape({ affirmations: list, voice, prefs, growing: !!making });
 
   // The daily goal: listening time adds up while a tape plays; reaching the goal counts the day.
   const [celebrate, setCelebrate] = useState<number | null>(null);
@@ -170,8 +170,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playAsk]);
   useEffect(() => {
-    // The web joins the lines into one recording when it starts, so new lines need a fresh one. On
-    // phones each line is picked as it comes up, so new ones are heard without a restart.
+    // The web rejoins straight away so new lines are heard sooner. Phones (and the web too) also pick
+    // up new lines at the end of each pass (see `growing` in use-tape), without stopping the sound.
     if (refreshAsk && Platform.OS === 'web') tape.restart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshAsk]);

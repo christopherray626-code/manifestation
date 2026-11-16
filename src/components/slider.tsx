@@ -10,8 +10,21 @@ const HEIGHT = 40;
  * A simple drag-or-tap slider from 0 to 1. Changes stream out while dragging so you hear the mix move,
  * and screen readers can step it up and down by 10%. The knob is placed in pixels inside its own
  * 40pt-tall lane, so it never spills onto the label above or past either end.
+ *
+ * With `onLive`, the level streams to it while dragging (cheap: it should only move the sound), and
+ * `onChange` gets the final level once, on release. Without it, `onChange` streams instead.
  */
-export function Slider({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+export function Slider({
+  value,
+  onChange,
+  onLive,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  onLive?: (v: number) => void;
+  label: string;
+}) {
   const t = useTheme();
   const lane = useRef<View>(null);
   const left = useRef(0);
@@ -22,24 +35,29 @@ export function Slider({ value, onChange, label }: { value: number; onChange: (v
   const travel = Math.max(width - KNOB, 1);
 
   // While dragging, the knob follows your finger every frame, but the new level goes out at most every
-  // 80ms (and once more on release): each change re-saves settings, which is too slow to do per frame.
+  // 40ms to `onLive` (or 80ms to `onChange`, which re-saves settings and is too slow to do per frame),
+  // and once more on release.
   const sent = useRef(0);
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(value);
+  const stream = onLive ?? onChange;
   const send = (v: number, now = false) => {
     latest.current = v;
     if (pending.current) return;
-    const wait = now ? 0 : Math.max(0, 80 - (Date.now() - sent.current));
+    const wait = now ? 0 : Math.max(0, (onLive ? 40 : 80) - (Date.now() - sent.current));
     pending.current = setTimeout(() => {
       pending.current = null;
       sent.current = Date.now();
-      onChange(latest.current);
+      stream(latest.current);
     }, wait);
   };
   const release = () => {
     if (pending.current) clearTimeout(pending.current);
     pending.current = null;
-    if (dragging !== null) onChange(latest.current);
+    if (dragging !== null) {
+      onLive?.(latest.current);
+      onChange(latest.current);
+    }
     setDragging(null);
   };
 

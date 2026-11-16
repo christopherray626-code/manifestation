@@ -227,6 +227,7 @@ export default function PlayerScreen() {
             icon="mic-outline"
             label={subliminal ? 'Voice (hidden)' : 'Voice'}
             value={prefs.voiceVolume / (subliminal ? SUBLIMINAL_MAX : 1)}
+            onLive={(v) => tape.setLevels({ voiceVolume: v * (subliminal ? SUBLIMINAL_MAX : 1) })}
             onChange={(v) => setPrefs({ voiceVolume: v * (subliminal ? SUBLIMINAL_MAX : 1) })}
           />
           <MixRow
@@ -234,6 +235,7 @@ export default function PlayerScreen() {
             label="Background"
             value={prefs.sound === 'none' ? 0 : prefs.soundVolume}
             disabled={prefs.sound === 'none'}
+            onLive={(soundVolume) => tape.setLevels({ soundVolume })}
             onChange={(soundVolume) => setPrefs({ soundVolume })}
           />
           <MixRow
@@ -241,6 +243,7 @@ export default function PlayerScreen() {
             label="Frequency"
             value={(prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME) / FREQUENCY_MAX}
             disabled={!prefs.frequency || prefs.frequency === 'none'}
+            onLive={(v) => tape.setLevels({ frequencyVolume: v * FREQUENCY_MAX })}
             onChange={(v) => setPrefs({ frequencyVolume: v * FREQUENCY_MAX })}
           />
           {subliminal && <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>}
@@ -779,21 +782,35 @@ const SUBLIMINAL_MAX = 0.072; // was 0.06; Chris and other listeners like to jus
 const SPEEDS = [1, 1.25, 1.5, 1.75, 2];
 const FREQUENCY_MAX = 0.4;
 
-/** One channel of the mix: icon, name, slider and its level. */
+/**
+ * One channel of the mix: icon, name, slider and its level. While dragging, only the sound and this
+ * row's number change (`onLive`); the setting is saved once, on release, so the rest of the app doesn't
+ * re-draw under your finger.
+ */
 function MixRow({
   icon,
   label,
-  value,
+  value: saved,
   onChange,
+  onLive,
   disabled,
 }: {
   icon: IconName;
   label: string;
   value: number;
   onChange: (v: number) => void;
+  onLive: (v: number) => void;
   disabled?: boolean;
 }) {
   const t = useTheme();
+  const [live, setLive] = useState<number | null>(null);
+  // Once the saved level catches up with the release, follow it again.
+  const [seen, setSeen] = useState(saved);
+  if (seen !== saved) {
+    setSeen(saved);
+    setLive(null);
+  }
+  const value = live ?? saved;
   return (
     <View style={{ gap: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: disabled ? 0.45 : 1 }}>
@@ -804,7 +821,17 @@ function MixRow({
         <Txt variant="muted">{disabled ? 'Off' : `${Math.round(Math.min(1, value) * 100)}`}</Txt>
       </View>
       {/* A layer that's off has nothing to turn up; pick one in its panel below first. */}
-      {!disabled && <Slider value={Math.min(1, Math.max(0, value))} onChange={onChange} label={`${label} volume`} />}
+      {!disabled && (
+        <Slider
+          value={Math.min(1, Math.max(0, saved))}
+          onLive={(v) => {
+            setLive(v);
+            onLive(v);
+          }}
+          onChange={onChange}
+          label={`${label} volume`}
+        />
+      )}
     </View>
   );
 }

@@ -1,3 +1,5 @@
+import { AppState } from 'react-native';
+
 import { decode, playable } from '@/lib/audio-io';
 import { wav } from '@/lib/wav';
 
@@ -119,8 +121,10 @@ export async function stitch(
       : // Many overlapping voices add up; scale so 20 layers sit near the loudness 3 do.
         (layers > 3 ? Math.pow(3 / layers, 0.75) : 1) / (used.reduce((n, v) => n + v.gain, 0) / layers);
     for (const [k, v] of used.entries()) {
-      // A breath between layers, so the app stays responsive while a phone mixes a long tape.
-      await new Promise((r) => setTimeout(r, 0));
+      // A breath between layers, so the app stays responsive while a phone mixes a long tape. Not with
+      // the app closed: Android pauses JavaScript timers then, and the next chunk would never be ready,
+      // leaving the background playing with no voice.
+      if (AppState.currentState === 'active') await new Promise((r) => setTimeout(r, 0));
       const shift = Math.floor((length * k) / layers);
       const l = v.gain * level * Math.cos(((v.pan + 1) * Math.PI) / 4);
       const r = v.gain * level * Math.sin(((v.pan + 1) * Math.PI) / 4);

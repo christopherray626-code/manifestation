@@ -1,5 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { hash } from '@/lib/today';
 import type { Voice } from '@/lib/types';
@@ -64,7 +64,24 @@ export function voiceAudioUri(text: string, voice: Voice): string | undefined {
   return file.exists ? file.uri : undefined;
 }
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/**
+ * Waits `ms`. With the app closed on a phone, Android pauses JavaScript timers, so a plain timeout would
+ * stop voice-making until the app is opened again. There, a short pacing pause is skipped, and a longer
+ * one also ends when the app comes back.
+ */
+function wait(ms: number, skipWhenClosed = false) {
+  if (isWeb || AppState.currentState === 'active') return new Promise<void>((r) => setTimeout(r, ms));
+  if (skipWhenClosed) return Promise.resolve();
+  return new Promise<void>((r) => {
+    const done = () => {
+      sub.remove();
+      clearTimeout(timer);
+      r();
+    };
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && done());
+    const timer = setTimeout(done, ms);
+  });
+}
 // Vercel's firewall starts turning requests away when many arrive in a row. Back off and try again
 // rather than failing the whole tape: 3, 8, 15 and 30 seconds.
 const BACKOFF_MS = [3000, 8000, 15000, 30000];
@@ -219,6 +236,6 @@ export async function prepareVoice(
     done += await makeBatch(batch, voice, onWait, stopped);
     if (stopped?.()) return;
     onProgress(done, total);
-    if (i + BATCH < toMake.length) await wait(REQUEST_GAP_MS);
+    if (i + BATCH < toMake.length) await wait(REQUEST_GAP_MS, true);
   }
 }
