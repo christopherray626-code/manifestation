@@ -524,7 +524,7 @@ export function useTape({
    * plays the next is built, then takes over at the gap between two lines. That keeps the work and
    * memory small enough for a phone, whatever the length and however many layers.
    */
-  function startTrack(from: number, thisRun: number) {
+  function startTrack(from: number, thisRun: number, lead = false) {
     const { affirmations: list, voice: v, mode: m } = latest.current;
     const uris = list.map((a) => audioFor(a, v));
     const files = list.flatMap((a, i) => (uris[i] ? [i] : []));
@@ -533,19 +533,59 @@ export function useTape({
     const spokenLayers = Math.min(Math.max(latest.current.prefs.layers ?? 1, 1), 3, files.length);
     const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), 20);
 
-    // The lines in playing order, from where it starts, then cut into chunks.
-    const ordered = files.map((_, k) => files[(start + k) % files.length]);
-    const size = Platform.OS === 'web' ? WEB_CHUNK_LINES : PHONE_CHUNK_LINES;
-    const chunks: number[][] = [];
-    if (ordered.length <= size) chunks.push(ordered);
-    else {
-      chunks.push(ordered.slice(0, FIRST_CHUNK_LINES));
-      for (let k = FIRST_CHUNK_LINES; k < ordered.length; k += size) chunks.push(ordered.slice(k, k + size));
+    /*
+     * Pressing play should be heard at once, and joining even a short piece takes a moment. So with
+     * `lead`, the first line plays straight from its own file, right now, and the joined recording is
+     * made meanwhile, starting from the line after it. It takes over in the pause after that first line.
+     */
+    const leading = lead && files.length > 1;
+    let afterLead: Promise<void> = Promise.resolve();
+    if (leading) {
+      const at = files[start];
+      setIndex(at);
+      afterLead = new Promise<void>((open) => {
+        playFile(0, layer0, uris[at]!, latest.current.prefs.voiceVolume, () => {
+          gapTimers.current[0] = later(MODES[m].gapMs / (latest.current.prefs.speed ?? 1), open);
+        });
+        // If that file never reports finishing, don't wait on it for ever.
+        gapTimers.current[1] = later(30000, () => {
+          layer0.pause();
+          open();
+        });
+      });
     }
+
+    // The lines in playing order, from where it starts, then cut into chunks.
+    const first = leading ? start + 1 : start;
+    const ordered = files.map((_, k) => files[(first + k) % files.length]);
+    const size = Platform.OS === 'web' ? WEB_CHUNK_LINES : PHONE_CHUNK_LINES;
     // While more lines are still being made, even a short tape plays one pass at a time, so the lines
     // made meanwhile join at the end of each pass (rather than the first few looping forever).
     const growing = latest.current.growing;
-    const looping = chunks.length === 1 && !growing;
+    /*
+     * Mixing layers is slow on a phone, and its cost is lines times layers: thirty lines in ten layers
+     * took about ten seconds, all of it silence after pressing play. So a layered tape opens with a
+     * short piece (the more layers, the fewer lines) that's ready in a moment, and the rest is mixed
+     * while that plays.
+     */
+    const quick = layers > 1 ? Math.min(FIRST_CHUNK_LINES, Math.max(2, Math.round(24 / layers))) : FIRST_CHUNK_LINES;
+    const chunks: number[][] = [];
+    // The chunk that loops by itself once it's playing (no more work, and nothing to wait for), if any.
+    let loopAt = -1;
+    if (ordered.length <= size) {
+      if (layers > 1 && ordered.length > quick && !growing) {
+        // The short piece, then the whole tape carrying on from where the piece ends, looping.
+        chunks.push(ordered.slice(0, quick));
+        chunks.push([...ordered.slice(quick), ...ordered.slice(0, quick)]);
+        loopAt = 1;
+      } else {
+        chunks.push(ordered);
+        if (!growing) loopAt = 0;
+      }
+    } else {
+      chunks.push(ordered.slice(0, quick));
+      for (let k = quick; k < ordered.length; k += size) chunks.push(ordered.slice(k, k + size));
+    }
     const passStartId = list[ordered[0]]?.id;
     const grew = () => {
       const now = latest.current;
@@ -562,13 +602,20 @@ export function useTape({
         () => thisRun !== run.current,
       ).then((t) => (t ? { ...t, order: t.order.map((p) => chunks[c][p]) } : null));
 
-    const playChunk = (c: number, ready: Promise<Stitched | null>) => {
-      ready.then((t) => {
-        if (!t) return;
+    const playChunk = (c: number, ready: Promise<Stitched | null>, wait: Promise<void> = Promise.resolve()) => {
+      Promise.all([ready, wait]).then(([t]) => {
+        if (!t) {
+          // Joining failed at the very start (not just called off): play it the plain way, not silence.
+          if (c === 0 && thisRun === run.current && !stitched.current) lineByLine(chunks[0][0], thisRun);
+          return;
+        }
         if (thisRun !== run.current) return release(t.uri);
+        if (upcomingChunk.current === ready) upcomingChunk.current = null;
+        gapTimers.current.forEach(cancel);
         const old = stitched.current;
         stitched.current = t;
         stitchedMode.current = m;
+        const looping = c === loopAt;
         track.replace({ uri: t.uri });
         track.loop = looping;
         setVolume(track, latest.current.prefs.voiceVolume);
@@ -580,10 +627,14 @@ export function useTape({
         const next = (c + 1) % chunks.length;
         const upcoming = chunks.length > 1 ? build(next) : null;
         upcomingChunk.current = upcoming;
-        const drop = () => void upcoming?.then((u) => u && release(u.uri));
+        let upcomingReady = false;
+        void upcoming?.then(() => (upcomingReady = true));
+        const drop = () => {
+          if (upcomingChunk.current === upcoming) upcomingChunk.current = null;
+          void upcoming?.then((u) => u && release(u.uri));
+        };
         const ended = () => {
           trackEnded.current = null;
-          if (upcomingChunk.current === upcoming) upcomingChunk.current = null;
           if (thisRun !== run.current) return drop();
           // End of a pass and new lines are ready: join the tape again with them in.
           if (next === 0 && grew()) {
@@ -592,8 +643,12 @@ export function useTape({
             if (!startTrack(Math.max(now.findIndex((a) => a.id === passStartId), 0), thisRun)) startVoices(0);
             return;
           }
-          if (upcoming) return playChunk(next, upcoming);
-          // A short tape still waiting on its next lines: play it again.
+          if (upcoming && upcomingReady) {
+            if (upcomingChunk.current === upcoming) upcomingChunk.current = null;
+            return playChunk(next, upcoming);
+          }
+          // The next part is still being mixed (or a short tape is waiting on its next lines): play
+          // this one again meanwhile, rather than going quiet.
           trackEnded.current = ended;
           void Promise.resolve(track.seekTo(0)).then(() => thisRun === run.current && track.play());
         };
@@ -601,13 +656,21 @@ export function useTape({
       });
     };
     trackEnded.current = null;
-    playChunk(0, build(0));
+    const opening = build(0);
+    // Kept where a stop can find it, in case it's stopped before the first line has finished.
+    if (leading) upcomingChunk.current = opening;
+    playChunk(0, opening, afterLead);
     return true;
   }
 
   function startVoices(from: number) {
     const thisRun = run.current;
-    if (startTrack(from, thisRun)) return;
+    if (startTrack(from, thisRun, true)) return;
+    lineByLine(from, thisRun);
+  }
+
+  /** The older way, one file after another on separate players: for when a tape can't be joined. */
+  function lineByLine(from: number, thisRun: number) {
     if (latest.current.mode === 'spoken') {
       speakAt(from, thisRun);
       return;

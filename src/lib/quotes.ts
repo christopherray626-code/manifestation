@@ -1,20 +1,23 @@
 /**
  * A quote to read on the way in: a new one each time the app opens.
  *
- * Each one was checked against its book or talk (Oct 2026); misattributed and unsourced lines were
- * dropped or reworded to the original. Add more only once they're traced to a source.
+ * Each one was checked against its book or talk (Oct 2026, again Nov 2026); misattributed and unsourced
+ * lines were dropped or reworded to the original. Add more only once they're traced to a source.
+ *
+ * Rules: one name per quote, and it's the person whose words they are. No "X, quoting Y": if the only
+ * record of Y saying it is X, use something X said in their own words instead. Catchphrases that sum up
+ * a teaching but aren't a sentence the person wrote or said ("Live in the end") don't go in.
  */
 export type Quote = { text: string; who: string };
 
 export const QUOTES: Quote[] = [
   // Neville Goddard
-  { text: 'Assume the feeling of your wish fulfilled.', who: 'Neville Goddard' },
-  { text: 'An assumption, though false, if persisted in will harden into fact.', who: 'Neville Goddard, quoting Anthony Eden' },
+  { text: 'Assume the feeling of the wish fulfilled.', who: 'Neville Goddard' },
+  { text: 'Assumptions harden into fact.', who: 'Neville Goddard' },
   { text: 'Change your conception of yourself and you will automatically change the world in which you live.', who: 'Neville Goddard' },
   { text: 'Dare to believe in the reality of your assumption and watch the world play its part relative to its fulfillment.', who: 'Neville Goddard' },
   { text: 'Prayer is the art of assuming the feeling of being and having that which you want.', who: 'Neville Goddard' },
   { text: 'Feeling is the secret.', who: 'Neville Goddard' },
-  { text: 'Live in the end.', who: 'Neville Goddard' },
   // Joe Dispenza
   { text: 'Your personality creates your personal reality.', who: 'Dr. Joe Dispenza' },
   { text: 'Where you place your attention is where you place your energy.', who: 'Dr. Joe Dispenza' },
@@ -25,7 +28,7 @@ export const QUOTES: Quote[] = [
   { text: 'Faith knows it has already received and acts accordingly.', who: 'Florence Scovel Shinn' },
   // Wayne Dyer
   { text: 'You’ll see it when you believe it.', who: 'Wayne Dyer' },
-  { text: 'Change the way you look at things, and the things you look at change.', who: 'Wayne Dyer' },
+  { text: 'If you change the way you look at things, the things you look at change.', who: 'Wayne Dyer' },
   // Louise Hay
   { text: 'Every thought we think is creating our future.', who: 'Louise Hay' },
   // Abraham Hicks
@@ -41,7 +44,7 @@ export const QUOTES: Quote[] = [
   { text: 'Men do not attract that which they want, but that which they are.', who: 'James Allen' },
   { text: 'Circumstance does not make the man; it reveals him to himself.', who: 'James Allen' },
   // Marcus Aurelius
-  { text: 'Our life is what our thoughts make it.', who: 'Marcus Aurelius' },
+  { text: 'The soul is dyed by the thoughts.', who: 'Marcus Aurelius' },
   // Spiritual teachers and writers
   { text: 'The world without is a reflection of the world within.', who: 'Charles Haanel' },
   { text: 'A thought, in this substance, produces the thing that is imaged by the thought.', who: 'Wallace Wattles' },
