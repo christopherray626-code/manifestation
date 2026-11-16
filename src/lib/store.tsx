@@ -41,7 +41,60 @@ type Store = State & {
   /** Adds the mix, or replaces the saved one with the same id. */
   saveMix: (mix: SavedMix) => void;
   deleteMix: (id: string) => void;
+  /** Everything worth moving to another device, as text (see importData). */
+  exportData: () => string;
+  /** Adds what's in text from exportData to what's here. Returns how many manifestations and mixes came in. */
+  importData: (text: string) => { goals: number; mixes: number };
 };
+
+/*
+ * Moving data between devices (the website and the phone app keep separate storage). Photos and
+ * own-voice recordings are files on the device they were made on, so they stay behind.
+ */
+const EXPORT_TAG = 'manifest-data';
+
+function forExport(state: State) {
+  const goals = state.goals.map((g) => ({ ...g, affirmations: g.affirmations.map(({ recording: _, ...a }) => a) }));
+  return JSON.stringify({ app: EXPORT_TAG, v: 1, settings: state.settings, goals, journal: state.journal, mixes: state.mixes });
+}
+
+/** Merges by id: anything already here stays, anything new is added. */
+function mergeIn(state: State, text: string): { state: State; goals: number; mixes: number } {
+  let data: Partial<State> & { app?: string };
+  try {
+    data = JSON.parse(text.trim());
+  } catch {
+    throw new Error('That doesn’t look like copied data. Copy it again and paste the whole thing.');
+  }
+  if (data?.app !== EXPORT_TAG) throw new Error('That doesn’t look like data copied from this app.');
+  const add = <T extends { id: string }>(here: T[], incoming: T[] | undefined) => {
+    const ids = new Set(here.map((x) => x.id));
+    const fresh = (incoming ?? []).filter((x) => !ids.has(x.id));
+    return { list: [...fresh, ...here], count: fresh.length };
+  };
+  const goals = add(state.goals, data.goals);
+  const mixes = add(state.mixes, data.mixes);
+  const journal = add(state.journal, data.journal);
+  const incoming = data.settings ?? ({} as Partial<Settings>);
+  return {
+    goals: goals.count,
+    mixes: mixes.count,
+    state: {
+      ...state,
+      goals: goals.list,
+      mixes: mixes.list,
+      journal: journal.list,
+      settings: {
+        ...state.settings,
+        ...incoming,
+        // Keep this device's reminders (they're scheduled here) unless it has none.
+        reminders: state.settings.reminders.length ? state.settings.reminders : (incoming.reminders ?? []),
+        listenDays: [...new Set([...(state.settings.listenDays ?? []), ...(incoming.listenDays ?? [])])].sort((a, b) => a - b),
+        onboarded: true,
+      },
+    },
+  };
+}
 
 const StoreContext = createContext<Store | null>(null);
 
@@ -101,6 +154,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         mixes: s.mixes.some((m) => m.id === mix.id) ? s.mixes.map((m) => (m.id === mix.id ? mix : m)) : [mix, ...s.mixes],
       })),
     deleteMix: (id) => setState((s) => ({ ...s, mixes: s.mixes.filter((m) => m.id !== id) })),
+    exportData: () => forExport(state),
+    importData: (text) => {
+      const result = mergeIn(state, text);
+      applyTrackEdits(result.state.settings.trackEdits);
+      setState(result.state);
+      return { goals: result.goals, mixes: result.mixes };
+    },
     movePhoto: (id, by) =>
       setState((s) => {
         const at = s.board.findIndex((p) => p.id === id);

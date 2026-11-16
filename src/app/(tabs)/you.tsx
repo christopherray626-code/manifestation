@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { RotationPicker } from '@/components/goal-bits';
+import { MoveData } from '@/components/move-data';
 import { ReminderList } from '@/components/reminder-list';
 import { ThemePicker } from '@/components/theme-picker';
 import { Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
@@ -62,6 +63,10 @@ export default function YouScreen() {
           <Chip label="Vibrations on" selected={settings.haptics !== false} onPress={() => updateSettings({ haptics: true })} />
           <Chip label="Off" selected={settings.haptics === false} onPress={() => updateSettings({ haptics: false })} />
         </ChipRow>
+      </Section>
+
+      <Section label="Move your data">
+        <MoveData />
       </Section>
 
       <Section label="Developer mode">
