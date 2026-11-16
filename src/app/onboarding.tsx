@@ -93,21 +93,29 @@ export default function Onboarding() {
 
   return (
     <Screen>
-      {step !== 'welcome' && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
-          <Pressable
-            onPress={() => setStep(STEPS[Math.max(at - 1, 0)])}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Back">
-            <Icon name="chevron-back" size={24} color={t.colors.muted} />
-          </Pressable>
-          {/* Progress */}
-          <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: t.colors.border }}>
-            <View style={{ width: `${((at + 1) / STEPS.length) * 100}%`, height: 4, borderRadius: 2, backgroundColor: t.colors.accent }} />
-          </View>
-        </View>
-      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4, minHeight: 28 }}>
+        {step !== 'welcome' ? (
+          <>
+            <Pressable
+              onPress={() => setStep(STEPS[Math.max(at - 1, 0)])}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Back">
+              <Icon name="chevron-back" size={24} color={t.colors.muted} />
+            </Pressable>
+            {/* Progress */}
+            <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: t.colors.border }}>
+              <View style={{ width: `${((at + 1) / STEPS.length) * 100}%`, height: 4, borderRadius: 2, backgroundColor: t.colors.accent }} />
+            </View>
+          </>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
+        {/* Straight into the app: every answer can be changed later in Settings. */}
+        <Pressable onPress={finish} hitSlop={12} accessibilityRole="button" accessibilityLabel="Skip setup">
+          <Txt variant="muted">Skip</Txt>
+        </Pressable>
+      </View>
 
       {step === 'welcome' && (
         <View style={{ gap: 18, marginTop: 40 }}>
