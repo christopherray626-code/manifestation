@@ -100,60 +100,61 @@ async function fromShared(text: string, voice: Voice) {
   }
 }
 
-async function makeOne(
-  text: string,
-  voice: Voice,
-  previous?: string,
-  next?: string,
-  onWait?: (seconds: number) => void,
-  stopped?: () => boolean,
-) {
-  const res = (await fromShared(text, voice)) ?? (await askServer(text, voice, previous, next, onWait, stopped));
-  if (!res) return;
-  if (!res.ok) {
-    let message = `The voice server answered ${res.status}.`;
-    const body = await res.text().catch(() => '');
-    try {
-      message = (JSON.parse(body) as { error?: string }).error ?? message;
-    } catch {
-      // Not from our voice server: Vercel stopped the request before it got there.
-      if (res.status === 403 || res.status === 429)
-        message = `Vercel blocked the voice request (${res.status}). Its firewall or bot protection may be on, or too many lines were asked for at once. Try again in a minute.`;
-    }
-    throw new Error(message);
+/** Why a request to the voice server failed, in words. */
+async function failure(res: Response) {
+  let message = `The voice server answered ${res.status}.`;
+  const body = await res.text().catch(() => '');
+  try {
+    message = (JSON.parse(body) as { error?: string }).error ?? message;
+  } catch {
+    // Not from our voice server: Vercel stopped the request before it got there.
+    if (res.status === 403 || res.status === 429)
+      message = `Vercel blocked the voice request (${res.status}). Its firewall or bot protection may be on, or too many lines were asked for at once. Try again in a minute.`;
   }
-  await keep(res, text, voice);
+  return new Error(message);
 }
 
-async function askServer(
-  text: string,
-  voice: Voice,
-  previous?: string,
-  next?: string,
-  onWait?: (seconds: number) => void,
-  stopped?: () => boolean,
-): Promise<Response | null> {
-  let res: Response;
+/** Asks the voice server, waiting and trying again while Vercel turns requests away. Null if they moved on. */
+async function ask(body: object, onWait?: (seconds: number) => void, stopped?: () => boolean): Promise<Response | null> {
   for (let attempt = 0; ; attempt++) {
-    res = await fetch(`${SERVER}/api/voice`, {
+    const res = await fetch(`${SERVER}/api/voice`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // The lines either side help the voice read it as part of one flowing script.
-      body: JSON.stringify({ text: text.trim(), voice, previous, next }),
+      body: JSON.stringify(body),
     });
-    const blocked = res.status === 403 || res.status === 429;
-    if (!blocked) break;
+    if (res.status !== 403 && res.status !== 429) return res;
     const pause = BACKOFF_MS[attempt] ?? PATIENT_MS;
     onWait?.(pause / 1000);
     await wait(pause);
     if (stopped?.()) return null;
   }
-  return res;
+}
+
+type Line = { text: string; previous?: string; next?: string };
+
+/** Makes several lines with one request and saves each. Returns how many were saved. */
+async function makeBatch(lines: Line[], voice: Voice, onWait?: (seconds: number) => void, stopped?: () => boolean) {
+  // The lines either side help the voice read each one as part of one flowing script.
+  const res = await ask({ voice, lines: lines.map((l) => ({ ...l, text: l.text.trim() })) }, onWait, stopped);
+  if (!res) return 0;
+  if (!res.ok) throw await failure(res);
+  const { clips } = (await res.json()) as { clips?: ({ audio: string } | { error: string })[] };
+  let saved = 0;
+  let problem = '';
+  for (let i = 0; i < lines.length; i++) {
+    const clip = clips?.[i];
+    if (clip && 'audio' in clip) {
+      await keep(Uint8Array.from(atob(clip.audio), (c) => c.charCodeAt(0)), lines[i].text, voice);
+      saved++;
+    } else problem ||= clip?.error ?? 'The voice server skipped a line.';
+  }
+  // Keep what worked; say why the rest didn't.
+  if (problem) throw new Error(problem);
+  return saved;
 }
 
 /** Saves a line's audio on this device (the browser's cache on the web). */
-async function keep(res: Response, text: string, voice: Voice) {
-  const bytes = new Uint8Array(await res.arrayBuffer());
+async function keep(bytes: Uint8Array<ArrayBuffer>, text: string, voice: Voice) {
   const name = fileName(text, voice);
   if (isWeb) {
     const blob = new Blob([bytes], { type: 'audio/mpeg' });
@@ -170,30 +171,54 @@ async function keep(res: Response, text: string, voice: Voice) {
   file.write(bytes);
 }
 
-// Between lines, so a long tape doesn't look like a flood of requests to the firewall.
-const LINE_GAP_MS = 900;
+// Lines asked for in one request, and the pause between requests, so a long tape is a few gentle
+// requests rather than a flood of them (which Vercel's own protection slows down).
+const BATCH = 5;
+const REQUEST_GAP_MS = 1200;
+// Shared copies are downloaded this many at a time (plain files, no firewall in front of them).
+const SHARED_AT_ONCE = 4;
 
-/** Makes any missing audio one line at a time, gently, reporting how many are done. */
+/**
+ * Makes any missing audio, reporting how many lines are done. Lines made before (on any device) come
+ * straight from shared storage first; the rest are made in order, a few per request, gently.
+ */
 export async function prepareVoice(
   texts: string[],
   voice: Voice,
   onProgress: (done: number, total: number) => void,
   onWait?: (seconds: number) => void,
-  /** Checked before each line: true stops making the rest (they switched track or voice). */
+  /** Checked between steps: true stops making the rest (they switched track or voice). */
   stopped?: () => boolean,
 ) {
   if (isWeb && voice !== 'my-voice' && naturalVoices) await loadSaved(texts, voice);
   const missing = texts.filter((t) => !voiceAudioUri(t, voice));
+  const total = missing.length;
   let done = 0;
-  onProgress(0, missing.length);
-  for (const t of missing) {
+  onProgress(0, total);
+
+  const left = new Set<string>();
+  for (let i = 0; i < missing.length; i += SHARED_AT_ONCE) {
     if (stopped?.()) return;
-    const at = texts.indexOf(t);
-    await makeOne(t, voice, texts[at - 1], texts[at + 1], onWait, stopped);
+    await Promise.all(
+      missing.slice(i, i + SHARED_AT_ONCE).map(async (t) => {
+        const res = await fromShared(t, voice);
+        if (!res) return void left.add(t);
+        await keep(new Uint8Array(await res.arrayBuffer()), t, voice);
+        onProgress(++done, total);
+      }),
+    );
+  }
+
+  const toMake = missing.filter((t) => left.has(t));
+  for (let i = 0; i < toMake.length; i += BATCH) {
     if (stopped?.()) return;
-    done++;
-    onProgress(done, missing.length);
-    // A short pause between lines, so a long mix doesn't look like a flood of requests.
-    if (done < missing.length) await wait(LINE_GAP_MS);
+    const batch = toMake.slice(i, i + BATCH).map((t) => {
+      const at = texts.indexOf(t);
+      return { text: t, previous: texts[at - 1], next: texts[at + 1] };
+    });
+    done += await makeBatch(batch, voice, onWait, stopped);
+    if (stopped?.()) return;
+    onProgress(done, total);
+    if (i + BATCH < toMake.length) await wait(REQUEST_GAP_MS);
   }
 }

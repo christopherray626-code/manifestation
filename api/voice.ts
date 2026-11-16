@@ -90,46 +90,32 @@ function GET() {
   });
 }
 
-async function POST(request: Request) {
-  const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) return reply(500, 'The voice server has no ElevenLabs key yet.');
+type Clip = { audio: ArrayBuffer; cached: boolean } | { error: string; status: number };
 
-  const token = process.env.APP_TOKEN;
-  if (token && request.headers.get('x-app-token') !== token) return reply(401, 'Not allowed.');
+// The lines around one, so it's read as part of a flowing script rather than on its own.
+const around = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_CHARS) : undefined);
 
-  let body: { text?: unknown; voice?: unknown; previous?: unknown; next?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return reply(400, 'Send JSON with text and voice.');
-  }
-
-  const text = typeof body.text === 'string' ? body.text.trim() : '';
-  const voice = typeof body.voice === 'string' ? body.voice : '';
-  if (!text || text.length > MAX_CHARS) return reply(400, `Text must be 1 to ${MAX_CHARS} characters.`);
-  if (!VOICES[voice]) return reply(400, 'Unknown voice.');
-  // The lines around this one, so it's read as part of a flowing script rather than on its own.
-  const around = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_CHARS) : undefined);
+/** One line in one voice: the shared copy if it was made before, else a fresh one from ElevenLabs (then saved). */
+async function makeClip(key: string, text: string, voice: string, previous?: unknown, next?: unknown): Promise<Clip> {
+  if (!text || text.length > MAX_CHARS) return { error: `Text must be 1 to ${MAX_CHARS} characters.`, status: 400 };
+  if (!VOICES[voice]) return { error: 'Unknown voice.', status: 400 };
 
   const path = clipPath(text, voice);
   const hit = await saved(path);
-  if (hit) return new Response(hit.body, { headers: { ...AUDIO_HEADERS, 'x-voice-cache': 'hit' } });
+  if (hit) return { audio: await hit.arrayBuffer(), cached: true };
 
-  const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${VOICES[voice]}?output_format=mp3_44100_128`,
-    {
-      method: 'POST',
-      headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-      body: JSON.stringify({
-        text,
-        model_id: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2',
-        // Steady and warm, a touch slower than normal speech.
-        voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0, speed: 0.92, use_speaker_boost: true },
-        previous_text: around(body.previous),
-        next_text: around(body.next),
-      }),
-    },
-  );
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICES[voice]}?output_format=mp3_44100_128`, {
+    method: 'POST',
+    headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+    body: JSON.stringify({
+      text,
+      model_id: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2',
+      // Steady and warm, a touch slower than normal speech.
+      voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0, speed: 0.92, use_speaker_boost: true },
+      previous_text: around(previous),
+      next_text: around(next),
+    }),
+  });
 
   if (!res.ok) {
     const detail = await res.text();
@@ -148,7 +134,7 @@ async function POST(request: Request) {
       detected_unusual_activity: 'ElevenLabs paused free use on this account. A paid plan fixes it.',
       voice_not_found: 'That voice isn’t available on this ElevenLabs account.',
     };
-    return reply(502, plain[why] ?? `ElevenLabs couldn't make the audio (status ${res.status}${why ? `, ${why}` : ''}).`);
+    return { error: plain[why] ?? `ElevenLabs couldn't make the audio (status ${res.status}${why ? `, ${why}` : ''}).`, status: 502 };
   }
   const audio = await res.arrayBuffer();
   try {
@@ -156,7 +142,60 @@ async function POST(request: Request) {
   } catch (e) {
     console.error('Could not save the clip to Blob', e); // still hand it back
   }
-  return new Response(audio, { headers: { ...AUDIO_HEADERS, 'x-voice-cache': 'miss' } });
+  return { audio, cached: false };
+}
+
+/** Base64 without Node's Buffer (this runs on the edge), in slices so long clips don't overflow the stack. */
+function base64(audio: ArrayBuffer) {
+  const bytes = new Uint8Array(audio);
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text);
+}
+
+// A batch: up to this many lines in one request, so a long tape needs far fewer requests (Vercel's own
+// protection slows down floods of them). Made two at a time to stay inside ElevenLabs' concurrency limit.
+const MAX_BATCH = 6;
+const AT_ONCE = 2;
+
+async function POST(request: Request) {
+  const key = process.env.ELEVENLABS_API_KEY;
+  if (!key) return reply(500, 'The voice server has no ElevenLabs key yet.');
+
+  const token = process.env.APP_TOKEN;
+  if (token && request.headers.get('x-app-token') !== token) return reply(401, 'Not allowed.');
+
+  let body: { text?: unknown; voice?: unknown; previous?: unknown; next?: unknown; lines?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return reply(400, 'Send JSON with text and voice.');
+  }
+  const voice = typeof body.voice === 'string' ? body.voice : '';
+
+  // Several lines: { voice, lines: [{ text, previous, next }] } -> { clips: [{ audio (base64) } | { error }] }.
+  if (Array.isArray(body.lines)) {
+    const lines = (body.lines as { text?: unknown; previous?: unknown; next?: unknown }[]).slice(0, MAX_BATCH);
+    const clips: ({ audio: string } | { error: string })[] = new Array(lines.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < lines.length) {
+        const i = next++;
+        const line = lines[i] ?? {};
+        const text = typeof line.text === 'string' ? line.text.trim() : '';
+        const clip = await makeClip(key, text, voice, line.previous, line.next);
+        clips[i] = 'audio' in clip ? { audio: base64(clip.audio) } : { error: clip.error };
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(AT_ONCE, lines.length) }, worker));
+    return Response.json({ clips }, { headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // One line: the MP3 itself (what older versions of the app ask for).
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const clip = await makeClip(key, text, voice, body.previous, body.next);
+  if ('error' in clip) return reply(clip.status, clip.error);
+  return new Response(clip.audio, { headers: { ...AUDIO_HEADERS, 'x-voice-cache': clip.cached ? 'hit' : 'miss' } });
 }
 
 export default function handler(request: Request) {

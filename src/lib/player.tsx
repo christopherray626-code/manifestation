@@ -191,13 +191,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const missing = voice === 'my-voice' || !naturalVoices ? [] : fullList.filter((a) => !audioFor(a, voice));
     if (!missing.length) return setPlayAsk((n) => n + 1);
 
-    // Make the first few lines, start playing, and make the rest while it plays.
+    // Make the first few lines, start playing, and make the rest while it plays. When enough lines are
+    // ready already (coming back to a tape you were listening to), it plays straight away.
     const id = ++job.current;
-    const first = Math.min(FIRST_LINES, missing.length);
-    let started = false;
+    const ready = fullList.length - missing.length;
+    const first = Math.max(0, Math.min(FIRST_LINES - ready, missing.length));
+    let started = first === 0;
     let failed = false;
     setVoiceError('');
-    setPrep({ done: 0, total: first });
+    if (started) {
+      setMaking({ done: 0, total: missing.length });
+      setPlayAsk((n) => n + 1);
+    } else setPrep({ done: 0, total: first });
     try {
       await prepareVoice(
         missing.map((a) => a.text),

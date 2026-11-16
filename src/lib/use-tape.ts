@@ -66,9 +66,11 @@ export const SUBLIMINAL_LEVELS = [
 
 /** Overlapping voice tracks in a subliminal, each starting at a different affirmation. */
 const SUBLIMINAL_LAYERS = 3;
-// On phones: the longest tape joined into one track, and the most subliminal layers mixed into it.
-const PHONE_MAX_LINES = 60;
-const PHONE_MAX_LAYERS = 6;
+// Long tapes are joined in chunks of this many lines (phones are far slower at it than browsers), the
+// first one short so playing starts quickly.
+const PHONE_CHUNK_LINES = 30;
+const WEB_CHUNK_LINES = 120;
+const FIRST_CHUNK_LINES = 8;
 /** The layer counts offered for subliminals. */
 // r/Subliminal: stacking 15-20 at once is common and there's no agreed limit; consistency matters more.
 export const SUBLIMINAL_LAYER_CHOICES = [3, 5, 10, 15, 20];
@@ -150,6 +152,8 @@ export function useTape({
   // The whole tape plays as one stitched recording (see stitch.ts).
   const track = useMixLayer(null, 200);
   const stitched = useRef<Stitched | null>(null);
+  // Called when a chunk of a long tape finishes, to start the next one.
+  const trackEnded = useRef<(() => void) | null>(null);
   const [playing, setPlaying] = useState(false);
   const [index, setIndex] = useState(0);
   const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -198,6 +202,7 @@ export function useTape({
     // The stitched track: show whichever line it's on.
     subs.push(
       track.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) trackEnded.current?.();
         const t = stitched.current;
         if (!t || !status.playing) return;
         let p = 0;
@@ -257,6 +262,7 @@ export function useTape({
     Speech.stop();
     for (const player of [layer0, layer1, layer2, track]) player.pause();
     stitched.current = null;
+    trackEnded.current = null;
   }
 
   function silence() {
@@ -339,38 +345,65 @@ export function useTape({
   /**
    * Join the lines into one recording and loop it from `from`. Returns false when it can't (some
    * lines have no audio yet and need the phone's voice), so the line-by-line players take over.
+   *
+   * A long tape is joined in chunks instead: the first is short so it starts quickly, and while one
+   * plays the next is built, then takes over at the gap between two lines. That keeps the work and
+   * memory small enough for a phone, whatever the length and however many layers.
    */
   function startTrack(from: number, thisRun: number) {
     const { affirmations: list, voice: v, mode: m } = latest.current;
     const uris = list.map((a) => audioFor(a, v));
     const files = list.flatMap((a, i) => (uris[i] ? [i] : []));
     if (!files.length || (m === 'spoken' && files.length < list.length)) return false;
-    // Phones join tapes in JavaScript too, which is far slower than a browser and holds the whole track in
-    // memory, so very long tapes keep playing line by line there for now.
-    if (Platform.OS !== 'web' && files.length > PHONE_MAX_LINES) return false;
     const start = Math.max(files.indexOf(from), 0);
     const spokenLayers = Math.min(Math.max(latest.current.prefs.layers ?? 1, 1), 3, files.length);
-    // The web build mixes any number of layers into one track, even more than there are lines.
-    const maxLayers = Platform.OS === 'web' ? 20 : PHONE_MAX_LAYERS;
-    const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), maxLayers);
-    stitch(
-      files.map((i) => uris[i]!),
-      start,
-      MODES[m].gapMs,
-      layers,
-      m === 'spoken',
-    ).then((t) => {
-      if (!t) return;
-      if (thisRun !== run.current) return release(t.uri);
-      const old = stitched.current;
-      stitched.current = { ...t, order: t.order.map((p) => files[p]) };
-      track.replace({ uri: t.uri });
-      track.loop = true;
-      track.volume = latest.current.prefs.voiceVolume;
-      track.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
-      track.play();
-      if (old) release(old.uri);
-    });
+    const layers = m === 'spoken' ? spokenLayers : Math.min(Math.max(latest.current.prefs.subLayers ?? SUBLIMINAL_LAYERS, 1), 20);
+
+    // The lines in playing order, from where it starts, then cut into chunks.
+    const ordered = files.map((_, k) => files[(start + k) % files.length]);
+    const size = Platform.OS === 'web' ? WEB_CHUNK_LINES : PHONE_CHUNK_LINES;
+    const chunks: number[][] = [];
+    if (ordered.length <= size) chunks.push(ordered);
+    else {
+      chunks.push(ordered.slice(0, FIRST_CHUNK_LINES));
+      for (let k = FIRST_CHUNK_LINES; k < ordered.length; k += size) chunks.push(ordered.slice(k, k + size));
+    }
+    const looping = chunks.length === 1;
+
+    const build = (c: number) =>
+      stitch(
+        chunks[c].map((i) => uris[i]!),
+        0,
+        MODES[m].gapMs,
+        layers,
+        m === 'spoken',
+      ).then((t) => (t ? { ...t, order: t.order.map((p) => chunks[c][p]) } : null));
+
+    const playChunk = (c: number, ready: Promise<Stitched | null>) => {
+      ready.then((t) => {
+        if (!t) return;
+        if (thisRun !== run.current) return release(t.uri);
+        const old = stitched.current;
+        stitched.current = t;
+        track.replace({ uri: t.uri });
+        track.loop = looping;
+        track.volume = latest.current.prefs.voiceVolume;
+        track.setPlaybackRate(latest.current.prefs.speed ?? 1, 'high');
+        track.play();
+        if (old) release(old.uri);
+        if (looping) return;
+        // Build the next chunk now, and hand over to it when this one finishes.
+        const next = (c + 1) % chunks.length;
+        const upcoming = build(next);
+        trackEnded.current = () => {
+          trackEnded.current = null;
+          if (thisRun === run.current) playChunk(next, upcoming);
+          else upcoming.then((u) => u && release(u.uri));
+        };
+      });
+    };
+    trackEnded.current = null;
+    playChunk(0, build(0));
     return true;
   }
 
@@ -437,7 +470,10 @@ export function useTape({
       return;
     }
     stopVoices();
-    speakAt(target, run.current);
+    setIndex(target);
+    // A long tape skipping past its current chunk: join again from there.
+    if (t) startVoices(target);
+    else speakAt(target, run.current);
   }
 
   /** Changing the timer mid-tape restarts it from now. */

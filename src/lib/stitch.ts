@@ -118,7 +118,9 @@ export async function stitch(
       ? 1 / Math.max(1, used.reduce((n, v) => n + v.gain, 0) * 0.75)
       : // Many overlapping voices add up; scale so 20 layers sit near the loudness 3 do.
         (layers > 3 ? Math.pow(3 / layers, 0.75) : 1) / (used.reduce((n, v) => n + v.gain, 0) / layers);
-    used.forEach((v, k) => {
+    for (const [k, v] of used.entries()) {
+      // A breath between layers, so the app stays responsive while a phone mixes a long tape.
+      await new Promise((r) => setTimeout(r, 0));
       const shift = Math.floor((length * k) / layers);
       const l = v.gain * level * Math.cos(((v.pan + 1) * Math.PI) / 4);
       const r = v.gain * level * Math.sin(((v.pan + 1) * Math.PI) / 4);
@@ -132,7 +134,7 @@ export async function stitch(
         left[o] += s * l * Math.SQRT2;
         right[o] += s * r * Math.SQRT2;
       }
-    });
+    }
     return { uri: await playable(wav([left, right], RATE), 'tape'), starts: startSamples.map((s) => s / RATE), order };
   }
 
