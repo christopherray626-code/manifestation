@@ -63,6 +63,8 @@ export default function Onboarding() {
 
   function finish() {
     player.tape.pause();
+    // Done here, not when the paywall is closed: closing the app on the paywall used to start onboarding over.
+    updateSettings({ onboarded: true });
     router.replace({ pathname: '/paywall', params: { from: 'onboarding' } });
   }
 
@@ -239,6 +241,7 @@ export default function Onboarding() {
         visible={step === 'building' || (step === 'listen' && !!player.prep)}
         messages={step === 'building' ? WRITING_MESSAGES : VOICING_MESSAGES}
         detail={player.prep ? `${player.prep.done} of ${player.prep.total} lines` : undefined}
+        onCancel={step === 'listen' ? player.cancelPrep : undefined}
       />
     </Screen>
   );

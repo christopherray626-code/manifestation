@@ -6,10 +6,12 @@ import { AppState, Platform } from 'react-native';
 import { useMixLayer } from '@/lib/mix-layer';
 import { recordingUri } from '@/lib/recordings';
 import { success } from '@/lib/haptics';
-import { release } from '@/lib/audio-io';
+import { playable, release } from '@/lib/audio-io';
+import { cancel, later, pulse } from '@/lib/clock';
 import { stitch, type Stitched } from '@/lib/stitch';
 import { useToneLayer } from '@/lib/tone';
 import { naturalVoices, voiceAudioUri } from '@/lib/voices';
+import { wav } from '@/lib/wav';
 import type { Affirmation, BackgroundSound, Frequency, PlayerPrefs, TapeMode, Voice } from '@/lib/types';
 
 export const SOUNDS: Record<Exclude<BackgroundSound, 'none'>, number> = {
@@ -135,15 +137,30 @@ function glideVolume(player: HasVolume, to: number) {
   glides.set(player, timer);
 }
 
+const isWeb = Platform.OS === 'web';
+
+// Two seconds of silence, looped by the "keeper" player (see useTape).
+let quiet: Promise<string | null> | null = null;
+function quietFile() {
+  quiet ??= playable(wav([new Float32Array(16000)], 8000), 'quiet').catch(() => null);
+  return quiet;
+}
+
 export function useTape({
   affirmations,
   voice,
   prefs,
   growing = false,
+  title = '',
+  onRemotePlay,
 }: {
   affirmations: Affirmation[];
   voice: Voice;
   prefs: PlayerPrefs;
+  /** What's playing, for the lock screen and the notification. */
+  title?: string;
+  /** Play pressed on the lock screen, the notification or headphones (defaults to play()). */
+  onRemotePlay?: () => void;
   /** True while more lines' voices are still being made: the tape picks them up at the end of each pass. */
   growing?: boolean;
 }) {
@@ -151,6 +168,15 @@ export function useTape({
   const background = useMixLayer(SOUNDS.pad, undefined, 'loop');
   const tone = useToneLayer(FREQUENCY_FILES);
   const ending = useAudioPlayer(null);
+  /*
+   * The keeper (phones): a silent loop that plays for as long as the tape does. It is the player the
+   * phone shows on the lock screen and in the notification, which is also what lets Android keep the
+   * sound going with the app closed (without it, Android stops everything after about three minutes).
+   * Pause or play pressed out there pauses or plays it, and the tape follows. Its steady reports also
+   * drive the timers that have to work with the app closed (see clock.ts).
+   */
+  const keeper = useAudioPlayer(null, { updateInterval: 500 });
+  const keep = useRef({ want: false, seen: false, changedAt: 0, loaded: false, active: false, asked: false, title: '' });
   const frequency = prefs.frequency ?? 'none';
   const frequencyVolume = prefs.frequencyVolume ?? FREQUENCY_DEFAULT_VOLUME;
   // Frequent status updates on the voice players, so a line can hand over to the next on time.
@@ -175,14 +201,18 @@ export function useTape({
 
   // Each start/stop bumps the run number, so callbacks from an old run do nothing.
   const run = useRef(0);
-  const gapTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null]);
+  const gapTimers = useRef<(number | null)[]>([null, null, null]);
+  // The next chunk of a long tape, being joined while the current one plays.
+  const upcomingChunk = useRef<Promise<Stitched | null> | null>(null);
   const onDone = useRef<((() => void) | null)[]>([null, null, null]);
   // What each voice player has loaded but not yet played.
   const loaded = useRef<(string | undefined)[]>([undefined, undefined, undefined]);
-  const fade = useRef<ReturnType<typeof setInterval> | null>(null);
+  // The timer's fade-out, while it runs (the id of its next step).
+  const fade = useRef<number | null>(null);
   const voiceIds = useRef<{ 'calm-female'?: string; 'deep-male'?: string }>({});
-  const latest = useRef({ affirmations, voice, prefs, mode, growing });
-  latest.current = { affirmations, voice, prefs, mode, growing };
+  const latest = useRef({ affirmations, voice, prefs, mode, growing, title });
+  latest.current = { affirmations, voice, prefs, mode, growing, title };
+  const remote = useRef({ play: () => {}, pause: () => {} });
 
   /** Subliminals need real audio files: live phone speech can't be mixed quietly enough. */
   const ready =
@@ -198,8 +228,9 @@ export function useTape({
   }, []);
 
   useEffect(() => {
-    const subs = [layer0, layer1, layer2].map((player, k) =>
+    const subs: { remove: () => void }[] = [layer0, layer1, layer2].map((player, k) =>
       player.addListener('playbackStatusUpdate', (status) => {
+        pulse();
         const done = onDone.current[k];
         if (status.didJustFinish && done) {
           onDone.current[k] = null;
@@ -210,6 +241,7 @@ export function useTape({
     // The stitched track: show whichever line it's on.
     subs.push(
       track.addListener('playbackStatusUpdate', (status) => {
+        pulse();
         if (status.didJustFinish) trackEnded.current?.();
         const t = stitched.current;
         if (!t || !status.playing) return;
@@ -218,8 +250,107 @@ export function useTape({
         setIndex(t.order[p]);
       }),
     );
+    // The timer's ending sound keeps the clock going for its own few seconds.
+    subs.push(ending.addListener('playbackStatusUpdate', () => pulse()));
+    // Back on screen: catch up on anything that came due meanwhile.
+    subs.push(AppState.addEventListener('change', (state) => void (state === 'active' && pulse())));
     return () => subs.forEach((s) => s.remove());
-  }, [layer0, layer1, layer2, track]);
+  }, [layer0, layer1, layer2, track, ending]);
+
+  // The keeper: pause or play from the lock screen, the notification, headphones, or the phone itself
+  // (a call, another app taking over the sound) shows up here as the keeper stopping or starting.
+  useEffect(() => {
+    if (isWeb) return;
+    const sub = keeper.addListener('playbackStatusUpdate', (status) => {
+      pulse();
+      const k = keep.current;
+      // Just after we start or stop it ourselves, its reports can still be on their way.
+      const now = Date.now();
+      if (now - k.changedAt < 1200) {
+        if (status.playing) k.seen = true;
+        return;
+      }
+      if (status.playing) {
+        k.seen = true;
+        if (k.want) return;
+        if (k.asked) {
+          // Asked a moment ago and the tape didn't start (still making voices, or nothing to play).
+          k.asked = false;
+          k.changedAt = now;
+          keeper.pause();
+          return;
+        }
+        k.asked = true;
+        k.changedAt = now;
+        remote.current.play();
+      } else if (k.want && k.seen && !status.isBuffering) {
+        remote.current.pause();
+      }
+    });
+    return () => sub.remove();
+  }, [keeper]);
+
+  useEffect(() => {
+    const k = keep.current;
+    if (isWeb || !k.active || k.title === title) return;
+    k.title = title;
+    try {
+      keeper.updateLockScreenMetadata({ title: title || 'Manifest', artist: 'Your affirmations' });
+    } catch {
+      // The lock screen just keeps the old name.
+    }
+  }, [title, keeper]);
+
+  function keeperStart() {
+    if (isWeb) return;
+    const k = keep.current;
+    k.want = true;
+    k.seen = false;
+    k.asked = false;
+    k.changedAt = Date.now();
+    const go = () => {
+      if (!k.want) return;
+      if (!k.active) {
+        k.active = true;
+        k.title = latest.current.title;
+        try {
+          // "Live" hides the progress bar and seek buttons: the keeper is only a two-second loop.
+          keeper.setActiveForLockScreen(true, { title: k.title || 'Manifest', artist: 'Your affirmations' }, { isLiveStream: true });
+        } catch {
+          k.active = false;
+        }
+      }
+      keeper.play();
+    };
+    if (k.loaded) return go();
+    quietFile().then((uri) => {
+      if (!uri) return;
+      if (!k.loaded) {
+        keeper.replace({ uri });
+        keeper.loop = true;
+        k.loaded = true;
+      }
+      go();
+    });
+  }
+
+  /** `clear` also takes the controls off the lock screen and lets Android stop keeping the app awake. */
+  function keeperStop(clear: boolean) {
+    if (isWeb) return;
+    const k = keep.current;
+    k.want = false;
+    k.asked = false;
+    k.changedAt = Date.now();
+    keeper.pause();
+    if (clear && k.active) {
+      k.active = false;
+      try {
+        keeper.clearLockScreenControls();
+      } catch {
+        // Already gone.
+      }
+    }
+  }
 
   // Background sound: swap it when changed, keep looping.
   useEffect(() => {
@@ -275,17 +406,21 @@ export function useTape({
 
   function stopVoices() {
     run.current++;
-    gapTimers.current.forEach((t) => t && clearTimeout(t));
+    gapTimers.current.forEach(cancel);
     onDone.current = [null, null, null];
     Speech.stop();
     for (const player of [layer0, layer1, layer2, track]) player.pause();
+    // The joined recordings are big files: free the one that was playing and the one being got ready.
+    if (stitched.current) release(stitched.current.uri);
+    upcomingChunk.current?.then((u) => u && release(u.uri));
+    upcomingChunk.current = null;
     stitched.current = null;
     trackEnded.current = null;
   }
 
   function silence() {
     stopVoices();
-    if (fade.current) clearInterval(fade.current);
+    cancel(fade.current);
     fade.current = null;
   }
 
@@ -320,7 +455,7 @@ export function useTape({
     setIndex(at);
     const next = () => {
       if (thisRun !== run.current) return;
-      gapTimers.current[0] = setTimeout(() => speakAt(at + 1, thisRun), MODES.spoken.gapMs / (latest.current.prefs.speed ?? 1));
+      gapTimers.current[0] = later(MODES.spoken.gapMs / (latest.current.prefs.speed ?? 1), () => speakAt(at + 1, thisRun));
     };
 
     const uri = audioFor(item, v);
@@ -356,7 +491,7 @@ export function useTape({
     if (k === 0) setIndex(list.indexOf(files[at]));
     playFile(k, [layer0, layer1, layer2][k], audioFor(files[at], v)!, p.voiceVolume, () => {
       if (thisRun !== run.current) return;
-      gapTimers.current[k] = setTimeout(() => layerAt(k, at + 1, thisRun), MODES.subliminal.gapMs);
+      gapTimers.current[k] = later(MODES.subliminal.gapMs, () => layerAt(k, at + 1, thisRun));
     });
   }
 
@@ -421,9 +556,11 @@ export function useTape({
         // Build the next chunk now, and hand over to it when this one finishes.
         const next = (c + 1) % chunks.length;
         const upcoming = chunks.length > 1 ? build(next) : null;
+        upcomingChunk.current = upcoming;
         const drop = () => void upcoming?.then((u) => u && release(u.uri));
         const ended = () => {
           trackEnded.current = null;
+          if (upcomingChunk.current === upcoming) upcomingChunk.current = null;
           if (thisRun !== run.current) return drop();
           // End of a pass and new lines are ready: join the tape again with them in.
           if (next === 0 && grew()) {
@@ -460,7 +597,7 @@ export function useTape({
     for (let k = 0; k < layers; k++) {
       // Spread the layers out so they say different affirmations at once, and stagger their starts.
       const startAt = first + Math.floor((count * k) / layers);
-      gapTimers.current[k] = setTimeout(() => layerAt(k, startAt, thisRun), k * 700);
+      gapTimers.current[k] = later(k * 700, () => layerAt(k, startAt, thisRun));
     }
   }
 
@@ -470,6 +607,7 @@ export function useTape({
     if (mode === 'spoken' ? !affirmations.length : !files.length) return;
     silence();
     setPlaying(true);
+    keeperStart();
     if (prefs.sound !== 'none') {
       background.loop = true;
       background.volume = prefs.soundVolume;
@@ -484,13 +622,16 @@ export function useTape({
     startVoices(index);
   }
 
-  function pause() {
+  function stop(clearLockScreen: boolean) {
     silence();
     background.pause();
     tone.pause();
+    keeperStop(clearLockScreen);
     setPlaying(false);
     setEndsAt(null);
   }
+  const pause = () => stop(false);
+  remote.current = { play: onRemotePlay ?? play, pause };
 
   function skip(by: number) {
     const count = affirmations.length;
@@ -536,7 +677,7 @@ export function useTape({
       ending.volume = 0.6;
       ending.play();
       // The sounds are loops; let one ring out, then stop.
-      setTimeout(() => ending.pause(), 7000);
+      later(7000, () => ending.pause());
     }
   }
 
@@ -544,22 +685,27 @@ export function useTape({
   useEffect(() => {
     if (!playing || !endsAt) return;
     const fadeMs = (prefs.fadeSec ?? 20) * 1000;
-    const wait = setTimeout(() => {
+    // Timed by the clock, not by counting steps, so it ends on time with the app closed too.
+    const wait = later(Math.max(endsAt - Date.now() - fadeMs, 0), () => {
       const start = background.volume;
-      const steps = 40;
-      let step = 0;
+      const began = Date.now();
       stopVoices();
-      fade.current = setInterval(() => {
-        step++;
-        background.volume = start * (1 - step / steps);
-        tone.setVolume(frequencyVolume * (1 - step / steps));
-        if (step >= steps) {
-          pause();
+      const step = () => {
+        const done = Math.min(1, (Date.now() - began) / fadeMs);
+        background.volume = start * (1 - done);
+        tone.setVolume(frequencyVolume * (1 - done));
+        if (done >= 1) {
+          fade.current = null;
+          // The night is over: take the controls off the lock screen too.
+          stop(true);
           timerEnded();
+          return;
         }
-      }, fadeMs / steps);
-    }, Math.max(endsAt - Date.now() - fadeMs, 0));
-    return () => clearTimeout(wait);
+        fade.current = later(fadeMs / 40, step);
+      };
+      step();
+    });
+    return () => cancel(wait);
     // pause() and stopVoices() are recreated each render; the timer only depends on when it ends.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, endsAt]);
@@ -572,5 +718,7 @@ export function useTape({
     [],
   );
 
-  return { playing, index, endsAt, ready, mode, play, pause, skip, retime, restart, setLevels };
+  // The list can get shorter under a tape (favorites only, a line removed): never point past its end.
+  const at = Math.min(index, Math.max(affirmations.length - 1, 0));
+  return { playing, index: at, endsAt, ready, mode, play, pause, skip, retime, restart, setLevels };
 }

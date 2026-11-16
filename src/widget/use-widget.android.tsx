@@ -1,3 +1,7 @@
+'use no memo';
+// ^ The widget library calls these components as plain functions, outside React. The React Compiler
+// (on for this app) rewrites components to use a hook, which throws there, and the widget stayed blank.
+
 import { useEffect } from 'react';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 

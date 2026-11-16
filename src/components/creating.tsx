@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Modal, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Modal, Pressable, View } from 'react-native';
 
 import { Icon, Txt, useTheme } from '@/components/ui';
 
@@ -12,11 +12,14 @@ export function Creating({
   visible,
   messages,
   detail,
+  onCancel,
 }: {
   visible: boolean;
   messages: string[];
   /** A progress line under the message, e.g. "3 of 12". */
   detail?: string;
+  /** Shows a Cancel (and lets the phone's back button close it), for waits that can run long. */
+  onCancel?: () => void;
 }) {
   const t = useTheme();
   const [step, setStep] = useState(0);
@@ -58,7 +61,7 @@ export function Creating({
 
   const message = messages[Math.min(step, messages.length - 1)];
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <View style={{ flex: 1, backgroundColor: t.colors.bg, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 40 }}>
         <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
           {rings.map((v, i) => (
@@ -92,8 +95,13 @@ export function Creating({
           <Txt variant="title" style={{ textAlign: 'center' }}>
             {message}
           </Txt>
-          {detail ? <Txt variant="muted">{detail}</Txt> : null}
+          {detail ? <Txt variant="muted" style={{ textAlign: 'center' }}>{detail}</Txt> : null}
         </View>
+        {onCancel ? (
+          <Pressable onPress={onCancel} hitSlop={12} accessibilityRole="button" style={{ padding: 10 }}>
+            <Txt variant="muted">Cancel</Txt>
+          </Pressable>
+        ) : null}
       </View>
     </Modal>
   );

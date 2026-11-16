@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
+import { cancel, later } from '@/lib/clock';
 import { success, tap } from '@/lib/haptics';
 import { buildMix } from '@/lib/mix';
 import { DEFAULT_GOAL_MIN, streakOf, withToday } from '@/lib/streak';
@@ -37,6 +38,8 @@ type Player = {
   /** The rest of the voices, made in the background while the first lines play. */
   making: { done: number; total: number; waiting?: number } | null;
   voiceError: string;
+  /** Stops waiting for the first voices (the tape doesn't start). */
+  cancelPrep: () => void;
   prefs: PlayerPrefs;
   setPrefs: (patch: Partial<PlayerPrefs>) => void;
   setMode: (mode: TapeMode) => void;
@@ -87,8 +90,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const name = mixes.find((m) => m.parts === wanted.id)?.name.trim();
     return built && name ? { ...built, track: { ...built.track, title: name } } : built;
   }, [wanted.kind, wanted.id, goals, mixes]);
-  const track = mixed?.track ?? (wanted.kind === 'track' ? trackById(wanted.id) : undefined);
-  const goal = wanted.kind === 'goal' || (wanted.kind === 'mix' && !mixed) ? (goals.find((g) => g.id === wanted.id) ?? goals[0]) : undefined;
+  const wantedTrack = mixed?.track ?? (wanted.kind === 'track' ? trackById(wanted.id) : undefined);
+  const goal = wantedTrack ? undefined : (goals.find((g) => g.id === wanted.id) ?? goals[0]);
+  // Whatever was asked for is gone (a removed manifestation, an old track): fall back to the first track.
+  const track = wantedTrack ?? (goal ? undefined : TRACKS[0]);
   const source: Source | undefined = mixed
     ? { kind: 'mix', id: mixed.track.id }
     : track
@@ -105,7 +110,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // While the rest of the voice is still being made, the tape plays only the lines that are ready, and
   // more join as they're made (each one re-renders, since making.done changes).
   const list = making ? fullList.filter((a) => audioFor(a, voice)) : fullList;
-  const tape = useTape({ affirmations: list, voice, prefs, growing: !!making });
+  const title = track?.title ?? goal?.title ?? '';
+  const tape = useTape({ affirmations: list, voice, prefs, growing: !!making, title, onRemotePlay: () => void start() });
 
   // The daily goal: listening time adds up while a tape plays; reaching the goal counts the day.
   const [celebrate, setCelebrate] = useState<number | null>(null);
@@ -140,24 +146,42 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   });
   useEffect(() => {
     if (!tape.playing) return;
-    const STEP = 5;
-    const timer = setInterval(() => {
+    // Counted by the clock, not by ticks: with the app closed the ticks come late or not at all, and
+    // the time listened with the screen off has to count too.
+    let last = Date.now();
+    let timer: number | null = null;
+    const count = () => {
+      const add = Math.floor((Date.now() - last) / 1000);
+      if (add <= 0) return;
+      last += add * 1000;
       const s = latestSettings.current;
       const day = localDay(Date.now());
       const before = s.listenToday?.day === day ? s.listenToday.seconds : 0;
-      const seconds = before + STEP;
+      const seconds = before + add;
       const goal = (s.dailyGoalMin ?? DEFAULT_GOAL_MIN) * 60;
       const listenDays = s.listenDays ?? [];
+      // Two counts can land before the settings catch up; keep the newest total for the next one.
+      latestSettings.current = { ...s, listenToday: { day, seconds } };
       if (before < goal && seconds >= goal && !listenDays.includes(day)) {
         const next = withToday(listenDays);
+        latestSettings.current = { ...latestSettings.current, listenDays: next };
         updateSettings({ listenToday: { day, seconds }, listenDays: next });
         success();
         setCelebrate(streakOf(next));
       } else {
         updateSettings({ listenToday: { day, seconds } });
       }
-    }, STEP * 1000);
-    return () => clearInterval(timer);
+    };
+    const tick = () => {
+      count();
+      timer = later(5000, tick);
+    };
+    timer = later(5000, tick);
+    return () => {
+      cancel(timer);
+      // The last few seconds before the pause count too.
+      count();
+    };
   }, [tape.playing, updateSettings]);
 
   const setPrefs = (patch: Partial<PlayerPrefs>) => updateSettings({ player: { ...prefs, ...patch } });
@@ -285,7 +309,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }
 
   // Web: the phone's lock screen and headphone buttons control the tape (Media Session).
-  const title = track?.title ?? goal?.title ?? '';
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'Your affirmations' });
@@ -310,6 +333,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     prep,
     making,
     voiceError,
+    cancelPrep: stopMaking,
     prefs,
     setPrefs,
     setMode,

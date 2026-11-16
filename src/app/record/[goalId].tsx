@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { BackHeader, Button, Icon, Screen, Txt, useTheme } from '@/components/ui';
+import { usePlayer } from '@/lib/player';
 import { deleteRecording, keepRecording, recordingUri } from '@/lib/recordings';
 import { useStore } from '@/lib/store';
 
@@ -24,6 +25,7 @@ export default function RecordScreen() {
   const t = useTheme();
   const { goalId, start } = useLocalSearchParams<{ goalId: string; start?: string }>();
   const { goals, updateGoal } = useStore();
+  const { tape } = usePlayer();
   const goal = goals.find((g) => g.id === goalId);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -50,21 +52,33 @@ export default function RecordScreen() {
   async function startRecording() {
     setError('');
     preview.pause();
-    const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-    if (!granted) {
-      setError('Allow microphone access in your phone settings to record your voice.');
-      return;
+    // A tape left playing would be recorded along with your voice.
+    tape.pause();
+    try {
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) {
+        setError('Allow microphone access in your phone settings to record your voice.');
+        return;
+      }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+    } catch {
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+      setError('Couldn’t start recording. Close other apps that use the microphone and try again.');
     }
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-    await recorder.prepareToRecordAsync();
-    recorder.record();
   }
 
   async function stopRecording() {
-    await recorder.stop();
-    // Switch recording mode off again, or iPhones play everything through the earpiece.
-    await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-    setTake(recorder.uri);
+    try {
+      await recorder.stop();
+      setTake(recorder.uri);
+    } catch {
+      setError('That take didn’t save. Try once more.');
+    } finally {
+      // Switch recording mode off again, or iPhones play everything through the earpiece.
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+    }
   }
 
   function listen(uri: string) {
@@ -81,7 +95,14 @@ export default function RecordScreen() {
 
   function save() {
     if (!take) return;
-    const name = keepRecording(take);
+    let name: string;
+    try {
+      name = keepRecording(take);
+    } catch {
+      setError('That take didn’t save. Try once more.');
+      setTake(null);
+      return;
+    }
     const old = aff.recording;
     updateGoal(goal!.id, (g) => ({
       ...g,

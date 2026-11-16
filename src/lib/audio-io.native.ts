@@ -22,8 +22,20 @@ export async function decode(uri: string, sampleRate?: number): Promise<Decoded 
   }
 }
 
+// Joined tapes and blended loops are big WAV files (several MB each) that are only good for the
+// session that made them. Clear out the last session's once, the first time the folder is used, or
+// they pile up by the hundreds of megabytes.
+let cleared = false;
 function folder() {
   const dir = new Directory(Paths.cache, 'mixed');
+  if (!cleared) {
+    cleared = true;
+    try {
+      if (dir.exists) dir.delete();
+    } catch {
+      // Something's still open; it goes next time.
+    }
+  }
   dir.create({ idempotent: true, intermediates: true });
   return dir;
 }

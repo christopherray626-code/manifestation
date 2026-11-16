@@ -22,17 +22,17 @@ export default function MixScreen() {
 
   const has = (p: MixPart) => parts.some((q) => q.kind === p.kind && q.id === p.id);
   const toggle = (p: MixPart) => setParts((now) => (has(p) ? now.filter((q) => !(q.kind === p.kind && q.id === p.id)) : [...now, p]));
-  const move = (i: number, by: -1 | 1) =>
-    setParts((now) => {
-      const to = i + by;
-      if (to < 0 || to >= now.length) return now;
-      const next = [...now];
-      [next[i], next[to]] = [next[to], next[i]];
-      return next;
-    });
   const titleOf = (p: MixPart) =>
     p.kind === 'track' ? TRACKS.find((x) => x.id === p.id)?.title : goals.find((g) => g.id === p.id)?.title;
   const live = parts.filter((p) => titleOf(p));
+  // Moves within the list that's shown (a part whose manifestation was removed isn't shown, and is dropped).
+  const move = (i: number, by: -1 | 1) => {
+    const to = i + by;
+    if (to < 0 || to >= live.length) return;
+    const next = [...live];
+    [next[i], next[to]] = [next[to], next[i]];
+    setParts(next);
+  };
 
   return (
     <Screen>
@@ -132,7 +132,8 @@ export default function MixScreen() {
           kind="ghost"
           onPress={() => {
             deleteMix(editing.id);
-            router.back();
+            if (router.canGoBack()) router.back();
+            else router.replace('/create');
           }}
         />
       )}

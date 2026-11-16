@@ -15,7 +15,7 @@ import { makeAffirmation, type Affirmation, type Goal } from '@/lib/types';
 export default function GoalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { goals, updateGoal, deleteGoal, settings } = useStore();
-  const { open } = usePlayer();
+  const { open, goal: playingGoal, tape } = usePlayer();
   const t = useTheme();
   const goal = goals.find((g) => g.id === id);
 
@@ -99,17 +99,21 @@ export default function GoalScreen() {
   }
 
   function confirmDelete() {
+    const go = () => {
+      if (playingGoal?.id === goal!.id) tape.pause();
+      goal!.affirmations.forEach((a) => deleteRecording(a.recording));
+      deleteGoal(goal!.id);
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
+    };
+    // The website has no alert boxes of its own: this button did nothing there.
+    if (Platform.OS === 'web') {
+      if (window.confirm('Remove this? Its affirmations will be removed too.')) go();
+      return;
+    }
     Alert.alert('Remove this?', 'Its affirmations will be removed too.', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          goal!.affirmations.forEach((a) => deleteRecording(a.recording));
-          deleteGoal(goal!.id);
-          router.back();
-        },
-      },
+      { text: 'Remove', style: 'destructive', onPress: go },
     ]);
   }
 

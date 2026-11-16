@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AppState, Platform } from 'react-native';
 
 import { withToday } from '@/lib/streak';
 import { applyTrackEdits } from '@/lib/tracks';
@@ -71,7 +72,7 @@ function mergeIn(state: State, text: string): { state: State; goals: number; mix
   if (data?.app !== EXPORT_TAG) throw new Error('That doesn’t look like data copied from this app.');
   const add = <T extends { id: string }>(here: T[], incoming: T[] | undefined) => {
     const ids = new Set(here.map((x) => x.id));
-    const fresh = (incoming ?? []).filter((x) => !ids.has(x.id));
+    const fresh = (Array.isArray(incoming) ? incoming : []).filter((x) => x && typeof x.id === 'string' && !ids.has(x.id));
     return { list: [...fresh, ...here], count: fresh.length };
   };
   const goals = add(state.goals, data.goals);
@@ -89,6 +90,9 @@ function mergeIn(state: State, text: string): { state: State; goals: number; mix
       settings: {
         ...state.settings,
         ...incoming,
+        // What's already been listened to and counted here today stays.
+        listenToday: state.settings.listenToday ?? incoming.listenToday,
+        opens: state.settings.opens,
         // Keep this device's reminders (they're scheduled here) unless it has none.
         reminders: state.settings.reminders.length ? state.settings.reminders : (incoming.reminders ?? []),
         listenDays: [...new Set([...(state.settings.listenDays ?? []), ...(incoming.listenDays ?? [])])].sort((a, b) => a - b),
@@ -96,6 +100,38 @@ function mergeIn(state: State, text: string): { state: State; goals: number; mix
       },
     },
   };
+}
+
+/** Writes any change that hasn't been saved yet. */
+function flush(unsaved: { current: State | null }) {
+  const state = unsaved.current;
+  if (!state) return;
+  unsaved.current = null;
+  const text = JSON.stringify(state);
+  // The web's storage is written at once (AsyncStorage there is localStorage underneath), so it lands
+  // even as the page closes.
+  if (Platform.OS === 'web') {
+    try {
+      window.localStorage.setItem(KEY, text);
+      return;
+    } catch {
+      // Fall through to the usual way.
+    }
+  }
+  AsyncStorage.setItem(KEY, text).catch(() => {});
+}
+
+/**
+ * On the web a recording in your own voice only lasts until the page is closed (it's a link into the
+ * browser's memory). Forget the dead ones when loading, so the tape doesn't try to play nothing.
+ */
+function usable(goals: Goal[]): Goal[] {
+  if (Platform.OS !== 'web') return goals;
+  return goals.map((g) =>
+    g.affirmations?.some((a) => a.recording?.startsWith('blob:'))
+      ? { ...g, affirmations: g.affirmations.map((a) => (a.recording?.startsWith('blob:') ? { ...a, recording: undefined } : a)) }
+      : g,
+  );
 }
 
 const StoreContext = createContext<Store | null>(null);
@@ -113,7 +149,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         applyTrackEdits(saved.settings?.trackEdits);
         setState({
           settings: { ...defaultState.settings, ...saved.settings },
-          goals: saved.goals ?? [],
+          goals: usable(saved.goals ?? []),
           journal: saved.journal ?? [],
           board: saved.board ?? [],
           mixes: saved.mixes ?? [],
@@ -124,11 +160,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Saved a moment after the last change, so a burst of changes (dragging a slider) is one write.
+  const unsaved = useRef<State | null>(null);
   useEffect(() => {
     if (!loaded) return;
-    const timer = setTimeout(() => AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {}), 400);
+    unsaved.current = state;
+    const timer = setTimeout(() => flush(unsaved), 400);
     return () => clearTimeout(timer);
   }, [state, loaded]);
+
+  // And straight away when the app is closed or hidden: phones pause that timer the moment the app
+  // leaves the screen, so a change made just before closing it used to be lost.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (now) => void (now !== 'active' && flush(unsaved)));
+    if (Platform.OS !== 'web') return () => sub.remove();
+    const leaving = () => flush(unsaved);
+    window.addEventListener('pagehide', leaving);
+    return () => {
+      sub.remove();
+      window.removeEventListener('pagehide', leaving);
+    };
+  }, []);
 
   const store: Store = {
     ...state,

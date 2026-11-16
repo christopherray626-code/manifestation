@@ -23,7 +23,8 @@ export function streakOf(days: number[] = [], now = Date.now()) {
 
 /** Counts back from today; returns the length and which missed days were forgiven as rest days. */
 function walk(done: Set<number>, today: number) {
-  let d = done.has(today) ? today : today - 1;
+  const start = done.has(today) ? today : today - 1;
+  let d = start;
   let count = 0;
   let lastMiss = Infinity;
   const rests: number[] = [];
@@ -32,8 +33,9 @@ function walk(done: Set<number>, today: number) {
       count++;
       continue;
     }
-    // One free miss per 7 days, and only between days that count.
-    if (count > 0 && lastMiss - d >= 7 && done.has(d - 1)) {
+    // One free miss per 7 days, and only between days that count. Yesterday can be the rest day while
+    // today is still open: the streak used to read 0 all day, then jump back once today was done.
+    if ((count > 0 || d === start) && lastMiss - d >= 7 && done.has(d - 1)) {
       lastMiss = d;
       rests.push(d);
       continue;

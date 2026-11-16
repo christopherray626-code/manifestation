@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
-import { todaysAffirmation } from '@/lib/today';
+import { localDay, todaysAffirmation } from '@/lib/today';
 import type { Goal, Reminder } from '@/lib/types';
 
 /**
@@ -78,8 +78,16 @@ function contentFor(reminder: Reminder, goals: Goal[], at: Date, dayIndex: numbe
   };
 }
 
+// One at a time: two running together would each clear the list, then both add their own (doubles).
+let queue: Promise<void> = Promise.resolve();
+
 /** Clears every scheduled reminder and schedules the enabled ones again. */
-export async function rescheduleReminders(reminders: Reminder[], goals: Goal[]) {
+export function rescheduleReminders(reminders: Reminder[], goals: Goal[]) {
+  queue = queue.then(() => reschedule(reminders, goals)).catch(() => {});
+  return queue;
+}
+
+async function reschedule(reminders: Reminder[], goals: Goal[]) {
   if (!supported) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
   const active = reminders.filter((r) => r.enabled).slice(0, MAX_REMINDERS);
@@ -98,7 +106,9 @@ export async function rescheduleReminders(reminders: Reminder[], goals: Goal[]) 
       if (at.getTime() <= now + 30_000) continue;
       jobs.push(
         Notifications.scheduleNotificationAsync({
-          content: contentFor(reminder, goals, at, day),
+          // By the calendar day, not by how far ahead it is: counted from today, tomorrow's reminder
+          // was always about the same manifestation however many there were.
+          content: contentFor(reminder, goals, at, localDay(at.getTime())),
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: CHANNEL },
         }),
       );

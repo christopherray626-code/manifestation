@@ -1,3 +1,7 @@
+'use no memo';
+// ^ The widget library calls these components as plain functions, outside React. The React Compiler
+// (on for this app) rewrites components to use a hook, which throws there, and the widget stayed blank.
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 

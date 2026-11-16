@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { AppState, Platform } from 'react-native';
 
+import { later } from '@/lib/clock';
 import { hash } from '@/lib/today';
 import type { Voice } from '@/lib/types';
 
@@ -70,17 +71,9 @@ export function voiceAudioUri(text: string, voice: Voice): string | undefined {
  * one also ends when the app comes back.
  */
 function wait(ms: number, skipWhenClosed = false) {
-  if (isWeb || AppState.currentState === 'active') return new Promise<void>((r) => setTimeout(r, ms));
-  if (skipWhenClosed) return Promise.resolve();
-  return new Promise<void>((r) => {
-    const done = () => {
-      sub.remove();
-      clearTimeout(timer);
-      r();
-    };
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && done());
-    const timer = setTimeout(done, ms);
-  });
+  if (skipWhenClosed && !isWeb && AppState.currentState !== 'active') return Promise.resolve();
+  // later() is also run by the playing tape's own clock (see clock.ts), and when the app comes back.
+  return new Promise<void>((r) => later(ms, r));
 }
 // Vercel's firewall starts turning requests away when many arrive in a row. Back off and try again
 // rather than failing the whole tape: 3, 8, 15 and 30 seconds.
@@ -149,11 +142,11 @@ async function ask(body: object, onWait?: (seconds: number) => void, stopped?: (
 
 type Line = { text: string; previous?: string; next?: string };
 
-/** Makes several lines with one request and saves each. Returns how many were saved. */
+/** Makes several lines with one request and saves each. Returns how many were saved, and why any weren't. */
 async function makeBatch(lines: Line[], voice: Voice, onWait?: (seconds: number) => void, stopped?: () => boolean) {
   // The lines either side help the voice read each one as part of one flowing script.
   const res = await ask({ voice, lines: lines.map((l) => ({ ...l, text: l.text.trim() })) }, onWait, stopped);
-  if (!res) return 0;
+  if (!res) return { saved: 0, problem: '' };
   if (!res.ok) throw await failure(res);
   const { clips } = (await res.json()) as { clips?: ({ audio: string } | { error: string })[] };
   let saved = 0;
@@ -166,8 +159,7 @@ async function makeBatch(lines: Line[], voice: Voice, onWait?: (seconds: number)
     } else problem ||= clip?.error ?? 'The voice server skipped a line.';
   }
   // Keep what worked; say why the rest didn't.
-  if (problem) throw new Error(problem);
-  return saved;
+  return { saved, problem };
 }
 
 /** Saves a line's audio on this device (the browser's cache on the web). */
@@ -227,15 +219,23 @@ export async function prepareVoice(
   }
 
   const toMake = missing.filter((t) => left.has(t));
+  let problem = '';
   for (let i = 0; i < toMake.length; i += BATCH) {
     if (stopped?.()) return;
     const batch = toMake.slice(i, i + BATCH).map((t) => {
       const at = texts.indexOf(t);
       return { text: t, previous: texts[at - 1], next: texts[at + 1] };
     });
-    done += await makeBatch(batch, voice, onWait, stopped);
+    const made = await makeBatch(batch, voice, onWait, stopped);
     if (stopped?.()) return;
+    done += made.saved;
     onProgress(done, total);
+    // One line that can't be made (too long, say) used to stop every line after it, for good. Carry on
+    // while the others are working; stop only when nothing in a request could be made (no credits,
+    // server trouble), and say why at the end either way.
+    problem ||= made.problem;
+    if (made.problem && !made.saved) break;
     if (i + BATCH < toMake.length) await wait(REQUEST_GAP_MS, true);
   }
+  if (problem) throw new Error(problem);
 }

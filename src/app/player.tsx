@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AccessibilityInfo, Animated, Easing, Modal, Platform, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Modal, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Art, paletteFor } from '@/components/art';
@@ -26,7 +26,7 @@ import { FREQUENCY_DEFAULT_VOLUME, MODES, SUBLIMINAL_LAYER_CHOICES } from '@/lib
 export default function PlayerScreen() {
   const t = useTheme();
   const { goals, updateGoal } = useStore();
-  const { goal, track, mix, list, voice, setVoice, tape, prep, making, voiceError, prefs, setPrefs, setMode, toggle, choose } =
+  const { goal, track, mix, list, voice, setVoice, tape, prep, cancelPrep, making, voiceError, prefs, setPrefs, setMode, toggle, choose } =
     usePlayer();
   const [sheet, setSheet] = useState<'sound' | 'voice' | 'more' | null>(null);
 
@@ -256,7 +256,7 @@ export default function PlayerScreen() {
           </ChipRow>
           <Txt variant="muted">Faster tapes fit more repetitions in, without changing the pitch.</Txt>
         </PanelCard>
-        {subliminal && Platform.OS === 'web' && (
+        {subliminal && (
           <PanelCard label="Layers">
             <ChipRow>
               {SUBLIMINAL_LAYER_CHOICES.map((n) => (
@@ -275,7 +275,7 @@ export default function PlayerScreen() {
             <Txt variant="muted">What matters most is listening every day, not how many layers.</Txt>
           </PanelCard>
         )}
-        {!subliminal && Platform.OS === 'web' && (
+        {!subliminal && (
           <PanelCard label="Layers">
             <ChipRow>
               {[1, 2, 3].map((n) => (
@@ -330,8 +330,22 @@ export default function PlayerScreen() {
         {goal && (
           <PanelCard label="Which lines">
             <ChipRow>
-              <Chip label="All affirmations" selected={!prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: false })} />
-              <Chip label="Only favorites" selected={prefs.favoritesOnly} onPress={() => setPrefs({ favoritesOnly: true })} />
+              <Chip
+                label="All affirmations"
+                selected={!prefs.favoritesOnly}
+                onPress={() => {
+                  setPrefs({ favoritesOnly: false });
+                  tape.restart();
+                }}
+              />
+              <Chip
+                label="Only favorites"
+                selected={prefs.favoritesOnly}
+                onPress={() => {
+                  setPrefs({ favoritesOnly: true });
+                  tape.restart();
+                }}
+              />
             </ChipRow>
           </PanelCard>
         )}
@@ -376,6 +390,7 @@ export default function PlayerScreen() {
         visible={!!prep}
         messages={VOICING_MESSAGES}
         detail={prep ? `${prep.done} of ${prep.total} lines${prep.waiting ? ' · pausing a moment so the voice server can catch up' : ''}` : undefined}
+        onCancel={cancelPrep}
       />
     </Animated.View>
   );
