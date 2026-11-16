@@ -232,7 +232,7 @@ export default function PlayerScreen() {
       </SafeAreaView>
 
       <Sheet title="Sound" open={sheet === 'sound'} onClose={() => setSheet(null)}>
-        <PanelCard label="Levels">
+        <PanelCard label="Levels" info={subliminal ? 'In subliminal mode the voice stays far under the music, even at full.' : undefined}>
           <MixRow
             icon="mic-outline"
             label={subliminal ? 'Voice (hidden)' : 'Voice'}
@@ -256,18 +256,20 @@ export default function PlayerScreen() {
             onLive={(v) => tape.setLevels({ frequencyVolume: v * FREQUENCY_MAX }, true)}
             onChange={(v) => setPrefs({ frequencyVolume: v * FREQUENCY_MAX })}
           />
-          {subliminal && <Txt variant="muted">In subliminal mode the voice stays far under the music, even at full.</Txt>}
         </PanelCard>
-        <PanelCard label="Speed">
+        <PanelCard label="Speed" info="Faster tapes fit more repetitions in, without changing the pitch.">
           <ChipRow>
             {SPEEDS.map((v) => (
               <Chip key={v} label={`${v}×`} selected={(prefs.speed ?? 1) === v} onPress={() => setPrefs({ speed: v })} />
             ))}
           </ChipRow>
-          <Txt variant="muted">Faster tapes fit more repetitions in, without changing the pitch.</Txt>
         </PanelCard>
         {subliminal && (
-          <PanelCard label="Layers">
+          <PanelCard
+            label="Layers"
+            info={
+              'How many copies of your affirmations play over each other, each starting at a different line, a little higher or lower, quieter or louder, and to the left or right. Stacking 15 to 20 is common. If you feel worn out after listening, use fewer.\n\nWhat matters most is listening every day, not how many layers.'
+            }>
             <ChipRow>
               {SUBLIMINAL_LAYER_CHOICES.map((n) => (
                 <Chip
@@ -281,12 +283,10 @@ export default function PlayerScreen() {
                 />
               ))}
             </ChipRow>
-            <Txt variant="muted">How many copies of your affirmations play over each other, each starting at a different line, a little higher or lower, quieter or louder, and to the left or right. Stacking 15 to 20 is common. If you feel worn out after listening, use fewer.</Txt>
-            <Txt variant="muted">What matters most is listening every day, not how many layers.</Txt>
           </PanelCard>
         )}
         {!subliminal && (
-          <PanelCard label="Layers">
+          <PanelCard label="Layers" info="Extra voices read other lines at the same time, a little lower or higher, quieter and to each side.">
             <ChipRow>
               {[1, 2, 3].map((n) => (
                 <Chip
@@ -300,24 +300,25 @@ export default function PlayerScreen() {
                 />
               ))}
             </ChipRow>
-            <Txt variant="muted">Extra voices read other lines at the same time, a little lower or higher, quieter and to each side.</Txt>
           </PanelCard>
         )}
         <PanelCard label="Background">
           <SoundList value={prefs.sound} onChange={(sound) => setPrefs({ sound })} allowNone={!subliminal} />
         </PanelCard>
-        <PanelCard label="Frequency" right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}>
-          <Why text={WHY.frequencies} label="What these do" />
+        <PanelCard
+          label="Frequency"
+          right={FREQUENCY_LIST.find((f) => f.id === prefs.frequency)?.label ?? 'None'}
+          info={(() => {
+            const f = FREQUENCY_LIST.find((x) => x.id === prefs.frequency);
+            const about = f ? `${f.label}: ${f.headphones ? `${f.about} Best with headphones.` : f.about}\n\n` : '';
+            return about + WHY.frequencies;
+          })()}>
           <ChipRow>
             <Chip label="None" selected={!prefs.frequency || prefs.frequency === 'none'} onPress={() => setPrefs({ frequency: 'none' })} />
             {FREQUENCY_LIST.map((f) => (
               <Chip key={f.id} label={f.label} selected={prefs.frequency === f.id} onPress={() => setPrefs({ frequency: f.id })} />
             ))}
           </ChipRow>
-          {(() => {
-            const f = FREQUENCY_LIST.find((x) => x.id === prefs.frequency);
-            return f ? <Txt variant="muted">{f.headphones ? `${f.about} Best with headphones.` : f.about}</Txt> : null;
-          })()}
         </PanelCard>
       </Sheet>
 
@@ -792,8 +793,22 @@ function Sheet({ title, open, onClose, children }: { title: string; open: boolea
 }
 
 /** A rounded panel with a small heading, like a mixer channel. */
-function PanelCard({ label, right, tinted, children }: { label: string; right?: string; tinted?: boolean; children: ReactNode }) {
+function PanelCard({
+  label,
+  right,
+  tinted,
+  info,
+  children,
+}: {
+  label: string;
+  right?: string;
+  tinted?: boolean;
+  /** The explanation, kept behind a small (i) next to the heading until it's tapped. */
+  info?: string;
+  children: ReactNode;
+}) {
   const t = useTheme();
+  const [showInfo, setShowInfo] = useState(false);
   return (
     <View
       style={{
@@ -802,10 +817,22 @@ function PanelCard({ label, right, tinted, children }: { label: string; right?: 
         padding: 18,
         gap: 14,
       }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Txt variant="label">{label}</Txt>
+        {info ? (
+          <Pressable
+            onPress={() => setShowInfo((on) => !on)}
+            hitSlop={14}
+            accessibilityRole="button"
+            accessibilityLabel={`About ${label}`}
+            accessibilityState={{ expanded: showInfo }}>
+            <Icon name={showInfo ? 'information-circle' : 'information-circle-outline'} size={17} color={showInfo ? t.colors.accent : t.colors.muted} />
+          </Pressable>
+        ) : null}
+        <View style={{ flex: 1 }} />
         {right ? <Txt variant="muted">{right}</Txt> : null}
       </View>
+      {info && showInfo ? <Txt variant="muted">{info}</Txt> : null}
       {children}
     </View>
   );
