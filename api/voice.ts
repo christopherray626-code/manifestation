@@ -79,10 +79,14 @@ function reply(status: number, message: string) {
 
 /** Lets us check the setup without spending any credits. */
 function GET() {
+  const token = blobToken();
   return Response.json({
     ok: true,
     hasKey: Boolean(process.env.ELEVENLABS_API_KEY),
-    sharedStorage: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    sharedStorage: Boolean(token),
+    // Where shared clips can be downloaded straight from (public anyway), so the app can skip this
+    // function, and the firewall in front of it, for lines that were made before.
+    shared: token ? blobUrl(token, 'voices/') : null,
   });
 }
 

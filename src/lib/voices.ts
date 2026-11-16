@@ -69,7 +69,52 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // rather than failing the whole tape: 3, 8, 15 and 30 seconds.
 const BACKOFF_MS = [3000, 8000, 15000, 30000];
 
+// Where lines made before (by anyone, on any device) can be downloaded straight from shared storage,
+// skipping the voice server and the firewall in front of it. Asked once; null when it isn't set up.
+let sharedBase: Promise<string | null> | null = null;
+function shared() {
+  sharedBase ??= fetch(`${SERVER}/api/voice`)
+    .then((r) => (r.ok ? (r.json() as Promise<{ shared?: string | null }>) : null))
+    .then((info) => info?.shared ?? null)
+    .catch(() => null)
+    .then((base) => {
+      // Ask again next time if it couldn't be reached, rather than giving up for the whole session.
+      if (!base) setTimeout(() => (sharedBase = null), 60000);
+      return base;
+    });
+  return sharedBase;
+}
+
+/** The line's shared copy, if it was made before. */
+async function fromShared(text: string, voice: Voice) {
+  const base = await shared();
+  if (!base) return null;
+  try {
+    const res = await fetch(base + fileName(text, voice));
+    return res.ok ? res : null;
+  } catch {
+    return null;
+  }
+}
+
 async function makeOne(text: string, voice: Voice, previous?: string, next?: string, onWait?: (seconds: number) => void) {
+  const res = (await fromShared(text, voice)) ?? (await askServer(text, voice, previous, next, onWait));
+  if (!res.ok) {
+    let message = `The voice server answered ${res.status}.`;
+    const body = await res.text().catch(() => '');
+    try {
+      message = (JSON.parse(body) as { error?: string }).error ?? message;
+    } catch {
+      // Not from our voice server: Vercel stopped the request before it got there.
+      if (res.status === 403 || res.status === 429)
+        message = `Vercel blocked the voice request (${res.status}). Its firewall or bot protection may be on, or too many lines were asked for at once. Try again in a minute.`;
+    }
+    throw new Error(message);
+  }
+  await keep(res, text, voice);
+}
+
+async function askServer(text: string, voice: Voice, previous?: string, next?: string, onWait?: (seconds: number) => void) {
   let res: Response;
   for (let attempt = 0; ; attempt++) {
     res = await fetch(`${SERVER}/api/voice`, {
@@ -83,18 +128,11 @@ async function makeOne(text: string, voice: Voice, previous?: string, next?: str
     onWait?.(BACKOFF_MS[attempt] / 1000);
     await wait(BACKOFF_MS[attempt]);
   }
-  if (!res.ok) {
-    let message = `The voice server answered ${res.status}.`;
-    const body = await res.text().catch(() => '');
-    try {
-      message = (JSON.parse(body) as { error?: string }).error ?? message;
-    } catch {
-      // Not from our voice server: Vercel stopped the request before it got there.
-      if (res.status === 403 || res.status === 429)
-        message = `Vercel blocked the voice request (${res.status}). Its firewall or bot protection may be on, or too many lines were asked for at once. Try again in a minute.`;
-    }
-    throw new Error(message);
-  }
+  return res;
+}
+
+/** Saves a line's audio on this device (the browser's cache on the web). */
+async function keep(res: Response, text: string, voice: Voice) {
   const bytes = new Uint8Array(await res.arrayBuffer());
   const name = fileName(text, voice);
   if (isWeb) {
