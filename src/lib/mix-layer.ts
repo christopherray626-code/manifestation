@@ -20,11 +20,32 @@ const FADE_IN = 0.12;
 const FADE_OUT = 0.12;
 
 let shared: AudioContext | undefined;
+/** What is playing through the context right now, so it's woken again if the phone pauses it. */
+const wanted = new Set<string>();
+
+/** Marks something as playing (or not) through the shared context. */
+export function wantAudio(key: string, on: boolean) {
+  if (on) wanted.add(key);
+  else wanted.delete(key);
+  if (on) wake();
+}
+
+// Phones can suspend or "interrupt" Web Audio mid-play (a notification, a call, Bluetooth reconnecting,
+// the screen going off) and don't always resume it. Anything still meant to be playing wakes it up.
+function wake() {
+  if (shared && wanted.size && shared.state !== 'running' && shared.state !== 'closed') shared.resume().catch(() => {});
+}
+
 /** The one Web Audio context everything on the web plays through. */
 export function audioContext() {
   if (!shared) {
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     shared = new Ctx();
+    shared.addEventListener('statechange', () => setTimeout(wake, 300));
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    window.addEventListener('pointerdown', wake, true);
+    setInterval(wake, 3000);
   }
   return shared;
 }

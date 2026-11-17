@@ -2,7 +2,7 @@ import { useAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { audioContext } from '@/lib/mix-layer';
+import { audioContext, wantAudio } from '@/lib/mix-layer';
 import type { Frequency } from '@/lib/types';
 
 /*
@@ -31,7 +31,15 @@ export type ToneLayer = {
   setVolume: (v: number) => void;
 };
 
-type WebState = { ctx?: AudioContext; gain?: GainNode; oscs: OscillatorNode[]; freq: Frequency | 'none'; volume: number; on: boolean };
+type WebState = {
+  ctx?: AudioContext;
+  gain?: GainNode;
+  oscs: OscillatorNode[];
+  freq: Frequency | 'none';
+  volume: number;
+  on: boolean;
+  watch?: ReturnType<typeof setInterval>;
+};
 
 export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
   const native = useAudioPlayer(null);
@@ -63,6 +71,7 @@ export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
   };
   const startOscs = () => {
     stopOscs();
+    wantAudio('tone', w.on && w.freq !== 'none');
     if (w.freq === 'none' || !w.on) return;
     if (!w.ctx) {
       w.ctx = audioContext();
@@ -87,9 +96,19 @@ export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
         out = pan;
       }
       out.connect(w.gain!);
+      // A tone should never end on its own while it's meant to be on; if one does, start it again.
+      osc.onended = () => {
+        if (w.on && w.oscs.includes(osc)) setTimeout(() => w.on && w.oscs.includes(osc) && startOscs(), 200);
+      };
       osc.start();
       w.oscs.push(osc);
     });
+    // Belt and braces: if the tones went missing while it's meant to be on, bring them back.
+    if (!w.watch) {
+      w.watch = setInterval(() => {
+        if (w.on && w.freq !== 'none' && !w.oscs.length) startOscs();
+      }, 4000);
+    }
   };
 
   return {
@@ -103,6 +122,7 @@ export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
     },
     pause: () => {
       w.on = false;
+      wantAudio('tone', false);
       // Ease out before stopping: cutting a tone off mid-wave clicks.
       if (w.ctx && w.gain && w.oscs.length) {
         const g = w.gain.gain;
