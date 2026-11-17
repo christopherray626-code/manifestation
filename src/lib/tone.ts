@@ -1,5 +1,5 @@
 import { useAudioPlayer, type AudioPlayer } from 'expo-audio';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import { audioContext, wantAudio } from '@/lib/mix-layer';
@@ -29,6 +29,8 @@ export type ToneLayer = {
   play: () => void;
   pause: () => void;
   setVolume: (v: number) => void;
+  /** Phones: starts the tone again if it stopped by itself while it's meant to be on. Safe to call often. */
+  check: () => void;
 };
 
 type WebState = {
@@ -44,17 +46,57 @@ type WebState = {
 export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
   const native = useAudioPlayer(null);
   const web = useRef<WebState>({ oscs: [], freq: 'none', volume: 0.15, on: false });
+  // Phones: whether the tone is meant to be playing, and when it was last started again.
+  const phone = useRef({ on: false, freq: 'none' as Frequency | 'none', kicked: 0 });
+
+  /*
+   * Android can stop one player on its own after a long listen (a notification taking the sound for a
+   * moment, the player hitting an error at the loop point) while the rest of the tape plays on. Nothing
+   * else would notice, so the tone goes quiet until pause and play. Start it again instead.
+   */
+  const kick = () => {
+    const p = phone.current;
+    if (!p.on || p.freq === 'none' || native.playing || native.isBuffering) return;
+    const now = Date.now();
+    if (now - p.kicked < 3000) return;
+    p.kicked = now;
+    // A player that ended or failed needs its file again before it will play.
+    if (!native.isLoaded || (native.duration > 0 && native.currentTime >= native.duration - 0.05)) {
+      native.replace(files[p.freq]);
+      setLoop(native);
+    }
+    native.play();
+  };
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = native.addListener('playbackStatusUpdate', (status) => {
+      if (!status.playing && phone.current.on) setTimeout(kick, 1500);
+    });
+    return () => sub.remove();
+    // kick reads everything it needs from refs and the player.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [native]);
 
   if (Platform.OS !== 'web') {
     return {
       setFrequency: (f) => {
+        phone.current.freq = f;
         if (f === 'none') return native.pause();
         native.replace(files[f]);
         setLoop(native);
       },
-      play: () => native.play(),
-      pause: () => native.pause(),
+      play: () => {
+        phone.current.on = true;
+        phone.current.kicked = Date.now();
+        native.play();
+      },
+      pause: () => {
+        phone.current.on = false;
+        native.pause();
+      },
       setVolume: (v) => setVolume(native, v),
+      check: kick,
     };
   }
 
@@ -140,6 +182,8 @@ export function useToneLayer(files: Record<Frequency, number>): ToneLayer {
       w.volume = v;
       if (w.ctx && w.gain) w.gain.gain.setTargetAtTime(v, w.ctx.currentTime, 0.1);
     },
+    // The web has its own watch (above).
+    check: () => {},
   };
 }
 

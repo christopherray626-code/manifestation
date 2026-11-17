@@ -181,6 +181,10 @@ export function useTape({
   const mode = modeOf(prefs);
   const background = useMixLayer(SOUNDS.pad, undefined, 'loop');
   const tone = useToneLayer(FREQUENCY_FILES);
+  const toneCheck = useRef(() => {});
+  useEffect(() => {
+    toneCheck.current = tone.check;
+  });
   const ending = useAudioPlayer(null);
   /*
    * The keeper (phones): a silent loop that plays for as long as the tape does. It is the player the
@@ -294,6 +298,8 @@ export function useTape({
     if (isWeb) return;
     const sub = keeper.addListener('playbackStatusUpdate', (status) => {
       pulse();
+      // The keeper reports twice a second even with the app closed: a chance to restart a stopped tone.
+      if (status.playing) toneCheck.current();
       const k = keep.current;
       // Just after we start or stop it ourselves, its reports can still be on their way.
       const now = Date.now();
