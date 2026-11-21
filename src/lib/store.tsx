@@ -143,6 +143,12 @@ export function useThemeId() {
   return useContext(ThemeIdContext);
 }
 
+// Kept apart like the theme, so changing it redraws only what shows affirmations.
+const QuoteFontContext = createContext<string | undefined>(undefined);
+export function useQuoteFont() {
+  return useContext(QuoteFontContext);
+}
+
 /** Everything lives on the phone for now; no accounts or server. */
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(defaultState);
@@ -237,7 +243,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <StoreContext.Provider value={store}>
-      <ThemeIdContext.Provider value={state.settings.themeId}>{children}</ThemeIdContext.Provider>
+      <ThemeIdContext.Provider value={state.settings.themeId}>
+        <QuoteFontContext.Provider value={state.settings.quoteFont}>{children}</QuoteFontContext.Provider>
+      </ThemeIdContext.Provider>
     </StoreContext.Provider>
   );
 }

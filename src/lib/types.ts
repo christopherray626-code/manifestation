@@ -120,6 +120,8 @@ export type Settings = {
   opens?: number;
   /** What the Listen tab last played, for "Continue listening" on Home. */
   lastPlayed?: { kind: 'goal' | 'track' | 'mix'; id: string };
+  /** The font affirmations are shown in (a loaded font's name). Missing means the theme's own. */
+  quoteFont?: string;
   /** Shows the developer tools in Settings. */
   devMode?: boolean;
   /** Developer mode: your own wording for ready-made tracks, by track id. Used in place of the built-in lines. */

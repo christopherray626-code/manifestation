@@ -72,7 +72,7 @@ export function GoalRow({ goal, index, onPress }: { goal: Goal; index: number; o
             {goal.title}
           </Txt>
           <Txt variant="muted">
-            {count} affirmation{count === 1 ? '' : 's'} · {dayLabel(goal, t.romanDays).toLowerCase()}
+            {count} affirmation{count === 1 ? '' : 's'}
           </Txt>
         </View>
         <Icon name="chevron-forward" size={18} color={t.colors.accent} />

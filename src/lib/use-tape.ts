@@ -68,6 +68,9 @@ export const SUBLIMINAL_LEVELS = [
 
 /** Overlapping voice tracks in a subliminal, each starting at a different affirmation. */
 const SUBLIMINAL_LAYERS = 3;
+// How far ahead of the player's reported time the words on screen move to the next line.
+const LYRIC_LEAD_SEC = 0.2;
+
 // Long tapes are joined in chunks of this many lines (phones are far slower at it than browsers), the
 // first one short so playing starts quickly.
 const PHONE_CHUNK_LINES = 30;
@@ -202,7 +205,8 @@ export function useTape({
   const layer1 = useAudioPlayer(null, { updateInterval: 100 });
   const layer2 = useAudioPlayer(null, { updateInterval: 100 });
   // The whole tape plays as one stitched recording (see stitch.ts).
-  const track = useMixLayer(null, 200);
+  // Reports often, so the words on screen change with the voice rather than a beat after it.
+  const track = useMixLayer(null, 100);
   const stitched = useRef<Stitched | null>(null);
   /*
    * How many affirmations have actually been played, counted as each one starts: one for a single
@@ -273,7 +277,10 @@ export function useTape({
         const t = stitched.current;
         if (!t || !status.playing) return;
         let p = 0;
-        while (p + 1 < t.starts.length && t.starts[p + 1] <= status.currentTime) p++;
+        // A little ahead of the reported time: the report is already a moment old when it arrives, and the
+        // next line should show as its first word is heard, not after.
+        const ahead = status.currentTime + LYRIC_LEAD_SEC;
+        while (p + 1 < t.starts.length && t.starts[p + 1] <= ahead) p++;
         const c = counted.current;
         // Time going backwards means the recording looped (or was replayed): its first line is new again.
         if (status.currentTime < c.time - 0.5) c.line = -1;

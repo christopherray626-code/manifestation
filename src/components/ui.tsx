@@ -20,14 +20,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { select, tap } from '@/lib/haptics';
 import { usePress, useRise } from '@/lib/motion';
-import { useThemeId } from '@/lib/store';
+import { useQuoteFont, useThemeId } from '@/lib/store';
 import { getTheme, type Theme } from '@/themes';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
 export function useTheme(): Theme {
-  return getTheme(useThemeId());
+  const theme = getTheme(useThemeId());
+  const quote = useQuoteFont();
+  return quote ? { ...theme, fonts: { ...theme.fonts, quote } } : theme;
 }
+
+/** Fonts affirmations can be shown in (Settings). Each is loaded in app/_layout.tsx. */
+export const QUOTE_FONTS: { font?: string; label: string }[] = [
+  { label: 'Theme' },
+  { font: 'PlayfairDisplay_400Regular_Italic', label: 'Elegant' },
+  { font: 'PlayfairDisplay_400Regular', label: 'Classic' },
+  { font: 'CormorantGaramond_400Regular_Italic', label: 'Soft' },
+  { font: 'DMSerifDisplay_400Regular', label: 'Bold' },
+  { font: 'DMSerifDisplay_400Regular_Italic', label: 'Bold italic' },
+  { font: 'Inter_400Regular', label: 'Clean' },
+  { font: 'Cinzel_400Regular', label: 'Carved' },
+];
 
 export function Icon({ name, size = 20, color }: { name: IconName; size?: number; color?: string }) {
   const t = useTheme();
@@ -418,7 +432,7 @@ export function Button({
   );
 }
 
-export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
+export function Chip({ label, selected, onPress, font }: { label: string; selected?: boolean; onPress: () => void; font?: string }) {
   const t = useTheme();
   const press = usePress(0.93);
   const pressed = () => {
@@ -442,8 +456,8 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
         ]}>
       <Text
         style={{
-          fontFamily: t.fonts.body,
-          fontSize: 14,
+          fontFamily: font ?? t.fonts.body,
+          fontSize: font ? 16 : 14,
           color: selected ? (t.dark ? t.colors.accent : t.colors.text) : t.colors.muted,
         }}>
         {label}

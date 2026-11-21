@@ -5,6 +5,7 @@ import { RotationPicker } from '@/components/goal-bits';
 import { AppVersion } from '@/components/app-update';
 import { MoveData } from '@/components/move-data';
 import { ReminderList } from '@/components/reminder-list';
+import { FontPicker } from '@/components/font-picker';
 import { ThemePicker } from '@/components/theme-picker';
 import { Card, Chip, ChipRow, Field, Icon, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { BILLING_LIVE } from '@/lib/premium';
@@ -48,6 +49,10 @@ export default function YouScreen() {
 
       <Section label="Theme">
         <ThemePicker />
+      </Section>
+
+      <Section label="Affirmation font">
+        <FontPicker />
       </Section>
 
       <Section label="When you add a new manifestation">

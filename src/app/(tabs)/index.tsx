@@ -4,7 +4,7 @@ import { Pressable, Share, View } from 'react-native';
 
 import { UpdateReady } from '@/components/app-update';
 import { Shelf, ShelfCard } from '@/components/art';
-import { categoryIcon, dayLabel } from '@/components/goal-bits';
+import { categoryIcon } from '@/components/goal-bits';
 import { TrackShelf } from '@/components/track-shelf';
 import { Button, Card, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { usePlayer } from '@/lib/player';
@@ -118,7 +118,6 @@ function TodayCard() {
 }
 
 export default function HomeScreen() {
-  const t = useTheme();
   const { goals, settings } = useStore();
 
   return (
@@ -159,7 +158,7 @@ export default function HomeScreen() {
                 index={i}
                 tone={g.category === 'other' ? undefined : g.category}
                 title={g.title}
-                subtitle={dayLabel(g, t.romanDays)}
+                subtitle={`${g.affirmations.length} affirmation${g.affirmations.length === 1 ? '' : 's'}`}
                 onPress={() => router.push({ pathname: '/goal/[id]', params: { id: g.id } })}
               />
             ))}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 
 import { useEnhance } from '@/components/enhance';
+import { FontPicker } from '@/components/font-picker';
 import { RotationPicker } from '@/components/goal-bits';
 import { BackHeader, Button, Card, Field, Icon, QuoteBlock, Screen, Section, Txt, useTheme } from '@/components/ui';
 import { writeAffirmationsSmart } from '@/lib/affirmations';
@@ -25,6 +26,7 @@ export default function GoalScreen() {
   const [showRotation, setShowRotation] = useState(false);
   const [note, setNote] = useState('');
   const [writing, setWriting] = useState(false);
+  const [showFonts, setShowFonts] = useState(false);
   // A long list (a 250-line tape) is slow to open and to scroll past: show the first few until asked.
   const [showAll, setShowAll] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -231,6 +233,20 @@ export default function GoalScreen() {
         )}
 
         <Section label="Your affirmations">
+          <Pressable
+            onPress={() => setShowFonts((s) => !s)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }}
+            accessibilityRole="button"
+            accessibilityLabel="Change the font">
+            <Txt variant="muted" style={{ color: t.colors.accent, fontFamily: t.fonts.quote, fontSize: 17 }}>
+              Aa
+            </Txt>
+            <Txt variant="muted" style={{ color: t.colors.accent }}>
+              Font
+            </Txt>
+            <Icon name={showFonts ? 'chevron-up' : 'chevron-down'} size={14} color={t.colors.accent} />
+          </Pressable>
+          {showFonts && <FontPicker />}
           {enhanceable.length > 0 && (
             <Button
               title={enhance.busy && enhancing.length > 1 ? 'Enhancing…' : 'Enhance my affirmations'}
